@@ -108,33 +108,3 @@ fracture_table_c <- fracture_table_c %>%
 
 ### d) Remove fractures on the same day as death or after
 
-fracture_table_d <- fracture_table_c %>% 
-  
-  
-  
-  ### A) First fracture (index) >= 01/04/2012 and <= 31/03/2018 
-  fracture_table_a <- fracture_table %>%
-  group_by(subject_id) %>%
-  arrange(condition_start_date) %>%  
-  slice(1) %>%  # Select the first fracture for each subject
-  filter(condition_start_date >= as.Date("2012-04-01") &
-           condition_start_date <= as.Date("2018-03-31")) %>%
-  ungroup()
-
-### B) No history of fracture in the 2 years prior to index date
-fracture_table_b <- fracture_table_a %>%
-  dplyr::group_by(subject_id) %>%
-  mutate(
-    gap = condition_start_date - lag(cohort_start_date)) %>%
-  filter(gap>=730|is.na(gap)) %>%
-  dplyr::select(-gap) %>% 
-  ungroup()
-
-### C) At least 50 at time of fracture
-fracture_table_c <- fracture_table_b %>% 
-  dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>%
-  dplyr::mutate(age_fracture = lubridate::year(condition_start_date) - year_of_birth) %>%
-  dplyr::filter(age_fracture >= 50) %>%
-  dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date, fracture_site)
-
-### D)
