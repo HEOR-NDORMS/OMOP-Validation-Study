@@ -1,4 +1,6 @@
+# Set up the R environ
 # renv::activate()
+# usethis::edit_r_environ()
 
 # install.packages("DBI")
 # install.packages("RPostgres")

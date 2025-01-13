@@ -3,7 +3,7 @@
 #	Author: Njoki Njuki	
 # Do file name: Cleaning Fractures	
 # Date: 24.12.2024
-# Last date edited: 24.12.2024
+# Last date edited: 09.01.2025
 # ****************************************************************************** #
 
 # Notes From Antonella:
@@ -35,7 +35,7 @@
 # _fa_ = first after
 # _faon = first after or on
 # index = index_date
-# mi = myocardial infarcion
+# mi = myocardial infarction
 # ra = rheumatoid arthritis
 # 
 # 4.	Your analyses should be saved in the “results” schema, as for the rest of the project
@@ -49,12 +49,19 @@ library(tidyr)
 # Collect the table called “_validation” ----
 all_patients <- my_dm$`_validation` %>%  collect()
 
+### Start and end dates ----
+study_start_date <- as.Date("2010-04-01")
+study_end_date <- as.Date("2018-03-31")
+
 # consulations <- my_dm$`validation_consultation` %>%  collect()
 # 
 # observations <- my_dm$`validation_observation` %>%  collect()
+# 
+# drug_issue <- my_dm$validation_drugissue %>%  collect()
+# 
+# staff <- my_dm$validation_staff %>%  collect()
 
 # Data Cleaning ----
-
 
 # Check the structure of the data
 str(all_patients)
@@ -110,3 +117,130 @@ fracture_table.1 <- fracture_table %>%
   distinct()
 # no rows removed, noice!
 
+# a) Remove fractures before the birth year ----
+
+fracture_table_a <- fracture_table %>% 
+  dplyr::mutate(fracture_year_index = year(index_date)) %>% 
+  dplyr::mutate(fracture_year_fa_index = year(fa_index_dt)) %>%
+  dplyr::filter(fracture_year_index > yob) %>%
+  dplyr::filter(fracture_year_fa_index > yob) 
+
+# count of patients
+n_distinct(fracture_table_a$patid)
+
+# count of fractures
+dim(fracture_table_a)
+
+trauma_fract_table_a <- fracture_table_a %>%
+  dplyr::mutate(trauma_year_faon = year(trauma_faon_index_dt)) %>%
+  dplyr::filter(trauma_year_faon > yob)
+
+# count of patients
+n_distinct(trauma_fract_table_a$patid)
+
+# count of trauma
+dim(trauma_fract_table_a)
+
+# b) Remove fracture outside of study period ----
+fracture_table_b <- trauma_fract_table_a %>% 
+  dplyr::filter(index_date >= study_start_date & index_date <= study_end_date) %>% 
+  dplyr::filter(fa_index_dt >= study_start_date & fa_index_dt <= study_end_date)
+
+# count of patients
+n_distinct(fracture_table_b$patid)
+
+# count of fractures
+dim(fracture_table_b)
+
+trauma_fract_table_b <- fracture_table_b %>%
+  dplyr::filter(trauma_faon_index_dt >= study_start_date & trauma_faon_index_dt <= study_end_date)
+
+# count of patients
+n_distinct(trauma_fract_table_b$patid)
+
+# count of trauma
+dim(trauma_fract_table_b)
+
+# c) Remove fractures on the same day as trauma codes ----
+fracture_table_c <- trauma_fract_table_b %>% 
+  dplyr::filter(index_date != trauma_faon_index_dt) %>% 
+  dplyr::filter(fa_index_dt != trauma_faon_index_dt)
+
+# count of patients
+n_distinct(fracture_table_c$patid)
+
+# count of fractures
+dim(fracture_table_c)
+
+# d) Remove fractures on the same day as death or after ----
+fracture_table_d <- fracture_table_c %>% 
+  group_by(patid) %>% 
+  dplyr::filter(index_date < death_date) %>% 
+  dplyr::filter(fa_index_dt < death_date) %>% 
+  ungroup()
+
+# count of patients
+n_distinct(fracture_table_d$patid)
+
+# count of fractures
+dim(fracture_table_d)
+
+trauma_fract_table_d <- fracture_table_d %>%
+  group_by(patid) %>% 
+  dplyr::filter(trauma_faon_index_dt < death_date) %>% 
+  ungroup()
+
+# count of patients
+n_distinct(trauma_fract_table_d$patid)
+
+# count of trauma
+dim(trauma_fract_table_d)
+
+# e) Remove fractures on the last day of observation period ("aurum_max_accept_date") ----
+fracture_table_e <- trauma_fract_table_d %>% 
+  group_by(patid) %>% 
+  dplyr::filter(index_date != aurum_max_accept_date) %>% 
+  dplyr:: filter(fa_index_dt != aurum_max_accept_date) %>% 
+  ungroup()
+
+# count of patients
+n_distinct(fracture_table_e$patid)
+
+# count of fractures
+dim(fracture_table_e)
+
+trauma_fract_table_e <- fracture_table_e %>%
+  group_by(patid) %>% 
+  dplyr::filter(trauma_faon_index_dt != aurum_max_accept_date) %>% 
+  ungroup()
+
+# count of patients
+n_distinct(trauma_fract_table_e$patid)
+
+# count of trauma
+dim(trauma_fract_table_e)
+
+# f) Remove fractures after the last day of observation period ("aurum_max_accept_date") ----
+
+fracture_table_f <- trauma_fract_table_e %>% 
+  group_by(patid) %>% 
+  dplyr::filter(index_date < aurum_max_accept_date) %>% 
+  dplyr:: filter(fa_index_dt < aurum_max_accept_date) %>% 
+  ungroup()
+
+# count of patients
+n_distinct(fracture_table_f$patid)
+
+# count of fractures
+dim(fracture_table_f)
+
+trauma_fract_table_f <- fracture_table_f %>%
+  group_by(patid) %>% 
+  dplyr::filter(trauma_faon_index_dt < aurum_max_accept_date) %>% 
+  ungroup()
+
+# count of patients
+n_distinct(trauma_fract_table_f$patid)
+
+# count of trauma
+dim(trauma_fract_table_f)
