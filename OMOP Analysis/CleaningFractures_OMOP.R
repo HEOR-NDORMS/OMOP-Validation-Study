@@ -1,6 +1,6 @@
 # ****************************************************************************** #
 #	Project name: Validation Study			    	
-#	Author: Gianluca Fabiano & Njoki Njuki	
+#	Author: Gianluca Fabiano & Njoki Njuki, Rafa	
 # Do file name: Cleaning Fractures (a to e in the attrition table)	
 # Date: 20.12.2024
 # Last date edited: 23.12.2024
