@@ -30,4 +30,3 @@ visit_specialty_source_value <- joined_visit_provider_tables %>%
     dplyr::rename(specialty = specialty_source_value) %>%  # renaming for consistency with other countries as this variable is used for the HCRU and costs too
     computeQuery()
   info(logger, "PRODUCING VISIT DATA FOR UK IS DONE")
-}
