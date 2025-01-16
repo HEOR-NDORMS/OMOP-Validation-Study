@@ -183,10 +183,6 @@ cohort_table <- cohort_table %>%
 
 cohort_table <- addIndex(cohort_table)
 
-
-######### START TO GET LOST HERE #########
-
-
 ### Creating follow-up end ------
 # 730 days after the index date
 cohort_table <- addInTwoYearsAfter(cohort_table)
@@ -209,64 +205,7 @@ cohort_table <- addInDeath(cohort_table)
 # Add in FOLLOWUPEND
 cohort_table <- addInFollowUpEnd(cohort_table)
 
-# Add in immFracture
-cohort_table <- immFracture(cohort_table)
-
-cohort_table_back_up <- cohort_table
-
-reverseEntryTable <- list()
-
-while (nrow(cohort_table_back_up) > 0){
-  reverseEntryTable[[nrow(cohort_table_back_up)]] <- cohort_table_back_up %>% dplyr::filter(follow_up_time > 0)
-  cohort_table_back_up <- cohort_table_back_up %>% dplyr::filter(follow_up_time > 0)
-  cohort_table_back_up <- nextFractureClean(cohort_table_back_up)
-  cohort_table_back_up <- addIndex(cohort_table_back_up)
-  cohort_table_back_up <- addInTwoYearsAfter(cohort_table_back_up)
-  cohort_table_back_up <- addInObsEndDate(cohort_table_back_up)
-  cohort_table_back_up <- addInCancerPostIndex(cohort_table_back_up)
-  cohort_table_back_up <- addInBoneDiseasePostIndex(cohort_table_back_up)
-  cohort_table_back_up <- addInNextFracture(cohort_table_back_up)
-  cohort_table_back_up <- addInDeath(cohort_table_back_up)
-  cohort_table_back_up <- addInFollowUpEnd(cohort_table_back_up)
-  cohort_table_back_up <- cohort_table_back_up %>% ungroup()
-  cohort_table_back_up <- immFracture(cohort_table_back_up)
-}
-
-reverseEntryTable <- reverseEntryTable[!sapply(reverseEntryTable, is.null)]
-
-entryTable <- list()
-for (i in (1:length(reverseEntryTable))){
-  entryTable[[i]]<-reverseEntryTable[[length(reverseEntryTable)+1-i]]
-}
-
-stratifiedCohort <- list()
-for (i in (1:(length(entryTable)-1))){
-  stratifiedCohort[[i]] <- entryTable[[i]] %>% dplyr::anti_join(entryTable[[i+1]], by = "subject_id")
-}
-
-stratifiedCohort[[length(entryTable)]] <- entryTable[[length(entryTable)]]
-info(logger, "CREATING FOLLOW UP TIME IS DONE")
 
 
 
-## DO I NEED THIS?
 
-### imminent fracture cohort
-print(paste0("Creating imminent fracture cohort at ", Sys.time()))
-imminentFractureCohort <- list()
-for (i in (1:length(stratifiedCohort))){
-  imminentFractureCohort[[i]] <- stratifiedCohort[[i]] %>% 
-    dplyr::filter (imminentFracture==1) %>% 
-    dplyr::select(subject_id)
-}
-
-imminentFractureCohortTotal <-data.frame()
-for (i in 1:length(imminentFractureCohort)){
-  imminentFractureCohortTotal<-rbind(imminentFractureCohortTotal, imminentFractureCohort[[i]])
-}
-
-print(paste0("Creating no-imminent fracture cohort at ", Sys.time()))
-withoutImminentFractureCohortTotal <- entryTable[[1]] %>%
-  dplyr::anti_join(imminentFractureCohortTotal, by = "subject_id") %>%
-  dplyr::select(subject_id) %>%
-  dplyr::distinct()
