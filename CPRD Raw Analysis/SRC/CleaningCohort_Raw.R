@@ -4,7 +4,7 @@
 # Do file name: Cleaning Cohort; clean the data grouped by subject_id based on 
 # the remaining conditions in the table
 # Date: 13.01.2024
-# Last date edited: 13.01.2024
+# Last date edited: 15.01.2024
 # ****************************************************************************** #
 
 # Cleaning Cohort ----
@@ -54,6 +54,22 @@ dim(fracture_table_j)
 
 ## Remove fx Age <50 on index -----
 
+# as.numeric(format(index_date, "%Y")):
+#   This takes the year from the index_date column (e.g., the year 2023 from "2023-01-20").
+# 
+# - yob:
+#   Subtracts the year of birth (yob) from the year of index_date to get a rough estimate of the person's age.
+# 
+# if_else(format(index_date, "%m-%d") < "01-01", 1, 0):
+# Here we check if the patient's birthday has already occurred in the current year.
+# using January 1st specifically—it's just a placeholder to decide if the subtraction applies.
+# It checks if the birth month and day come before the reference date's (index_date) month and day. In this case:
+# If their birthday hasn't occurred yet in the year of the index_date, subtract 1 from the rough age to account for that.
+# If their birthday has already occurred, the rough age is correct, so no adjustment is needed.
+# # If the month and day of index_date are earlier than January 1st, it subtracts 1 from the age 
+# # (because the birthday hasn't occurred yet in that year).
+
+
 fracture_table_k <- fracture_table_j %>% 
   mutate(
     # Age using index_date
@@ -64,6 +80,16 @@ fracture_table_k <- fracture_table_j %>%
     age_lt_50_index = age_index < 50
   ) %>% 
   filter(age_lt_50_index == FALSE)
+
+# sense check if the compare the month and day of the reference date (index_date) with the month and day of their birthdate. 
+# If the birthdate hasn't occurred yet in the year, we adjust.
+# fracture_table_k.1 <- fracture_table_j %>% 
+#   mutate(
+#     age_index = as.numeric(format(index_date, "%Y")) - yob -
+#       if_else(format(index_date, "%m-%d") < format(as.Date(paste0(yob, "-01-01")), "%m-%d"), 1, 0)
+#   )
+
+
 
 # count of patients
 n_distinct(fracture_table_k$patid)
