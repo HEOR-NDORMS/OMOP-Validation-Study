@@ -228,3 +228,6 @@ AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>%
 # Applying Hierarchy (hip,vertebra,NHNS) to multiple records on the same day ----
 
 # Finalise attrition -----
+AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>% 
+  dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records))) %>% 
+  dplyr::select(-c("cohort_definition_id"))
