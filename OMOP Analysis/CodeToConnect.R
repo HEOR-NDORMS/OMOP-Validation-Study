@@ -1,7 +1,7 @@
 # ADD NECESSARY PACKAGES
 #install.packages("renv") # if not already installed, install renv from CRAN
-renv::activate() 
-renv::restore() # this should prompt you to install the various packages required for the study
+# renv::activate() 
+# renv::restore() # this should prompt you to install the various packages required for the study
 
 library(CDMConnector)
 library(DBI)
@@ -32,12 +32,12 @@ library(ggsurvfit)
 library(tidycmprsk)
 library(htmltools)
 library(matrixStats)
-library(hrbrthemes)
-library(htmlwidgets) # to save the interactive plots as html file
-library(plotly) # to create interactive plots
-library(viridis) # for colour pellete
-library(RColorBrewer) # for colour pellete
-library(patchwork) # to combine plots together
+# library(hrbrthemes)
+# library(htmlwidgets) # to save the interactive plots as html file
+# library(plotly) # to create interactive plots
+# library(viridis) # for colour pellete
+# library(RColorBrewer) # for colour pellete
+# library(patchwork) # to combine plots together
 
 # database metadata and connection details -----
 # The name/ acronym for the database
