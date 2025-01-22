@@ -4,46 +4,76 @@
 # Do file name: Cleaning Cohort; clean the data grouped by subject_id based on 
 # the remaining conditions in the table
 # Date: 13.01.2024
-# Last date edited: 15.01.2024
+# Last date edited: 21.01.2025
 # ****************************************************************************** #
 
 # Cleaning Cohort ----
 
-# Starting with trauma_fract_table_f ran from CleaningFractures_Raw.R script...
+# Starting with trauma_fract_table_g ran from CleaningFractures_Raw.R script...
+cohort_table <- fracture_table_g %>% 
+  select(-c(fracture_year, trauma_present, number_sites))
 
 ## Only female ----
-fracture_table_g <- trauma_fract_table_f %>% 
-  filter(gender == "F")
 
-# count of patients
-n_distinct(fracture_table_g$patid)
+cohort_table_a <- cohort_table %>%
+  group_by(patid) %>% 
+  filter(!is.na(gender), gender == "F") %>% 
+  ungroup()
 
-# count of fractures
-dim(fracture_table_g)
+AttritionReportCoh<- AttritionReportFrac_Raw[,1:3] %>% 
+  union_all(  
+    tibble(
+      number_records = cohort_table_a %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_a %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Excluding not female individuals"
+    )
+  ) 
 
-## Remove patients w/o having fractures ----
+## b) No fractures ----
 # Assuming missing values in condition_start_date variable indicates no fracture?
-fracture_table_h <- fracture_table_g %>% 
-  filter(!is.na(index_date)) %>% 
-  filter(!is.na(fa_index_dt))
+cohort_table_b <- cohort_table_a %>% 
+  group_by(patid) %>% 
+  filter(!is.na(fx_date)) %>% 
+  ungroup()
 
-# count of patients
-n_distinct(fracture_table_h$patid)
+AttritionReportCoh<- AttritionReportCoh %>% 
+  union_all(  
+    tibble(
+      number_records = cohort_table_b %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_b %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Excluding individuals without fracture records"
+    )
+  ) 
 
-# count of fractures
-dim(fracture_table_h)
+## Define index ----
+# This has been done by Antonella
 
-# (define index)
+## c) Excluding individuals who has index date same as obs period end date ----
+cohort_table_c <- cohort_table_b %>% 
+  group_by(patid) %>% 
+  filter(!(type == "index" & fx_date == aurum_min_accept_date)) %>% 
+  ungroup()
 
-## History of fx in the 730 prior to index -----
-# check if a date (fa_index_dt) falls within the 730 days before another date (index_date).
+AttritionReportCoh<- AttritionReportCoh %>% 
+  union_all(  
+    tibble(
+      number_records = cohort_table_c %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_c %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Excluding index fractures that happen on the last day of observation period"
+    )
+  )
+
+## d) At least 730 days prior obs -----
+# check if a fx_date where falls within the 730 days before another date (index_date).
 # fa_index_dt is greater than or equal to index_date - 730 (this means it happened in the last 730 days).
 # fa_index_dt is less than index_date (this makes sure it's before the index_date).
 # filter(fa_index_dt >= (index_date - 730) & fa_index_dt < index_date)
 
-fracture_table_j <- fracture_table_h %>% 
-  mutate(history_of_fx = fa_index_dt >= (index_date - 730) & fa_index_dt < index_date) %>%
-  filter(history_of_fx == FALSE)
+observations <- my_dm$`validation_observation` %>%  collect()
+
+cohort_table_d <- cohort_table_c %>% 
+  plyr::mutate(days_prior_obs = fx_date - aurum_min_accept_date, days_after_obs = aurum_max_accept_date - fx_date) %>%
+  dplyr::filter(days_prior_obs >= prior_observation, days_after_obs >= 0) %>%
 
 # count of patients
 n_distinct(fracture_table_j$patid)
