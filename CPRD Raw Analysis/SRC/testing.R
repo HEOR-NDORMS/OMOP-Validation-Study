@@ -46,7 +46,29 @@ final_data <- bind_rows(reshaped_data, additional_rows)
 final_data.1 <- final_data %>% 
   filter(index_flag != 0 | is.na(index_flag))
 
+# Remove fractures that are on the same date as the trauma ones
+# Process Data
+final_data.1_filtered <- final_data.1 %>%
+  group_by(patid, value) %>% 
+  mutate(trauma_present = any(Type == "0")) %>% 
+  filter(!(Type %in% c("fa", "index") & trauma_present)) %>%  # Remove fa and index if trauma exists on the same date
+  # mutate(fa_sites = n_distinct(site[Type == "fa"])) %>% 
+  # filter(!(Type == "fa" & fa_sites >= 3)) %>%  # Remove fa if 3 or more distinct sites exist on the same date
+  ungroup()
 
+final_data.1_filtered.1 <- final_data.1_filtered %>% 
+  group_by(patid, value) %>% 
+  mutate(number_sites = n_distinct(site)) %>% 
+  filter(number_sites == 3) %>% 
+  ungroup()
+  
+# Identify fractures that occur on three sites on the same date and mark them as trauma
+final_data.3 <- final_data.2 %>%
+  group_by(patid, value) %>%
+  mutate(trauma_flag = n_distinct(site) >= 3) %>%
+  ungroup() %>%
+  mutate(Type = ifelse(trauma_flag, "trauma", Type)) %>%
+  select(-trauma_flag)
 
 # Assuming your large dataset is loaded into a variable called `data`
 # For example, if you are reading from a CSV file:
@@ -145,3 +167,19 @@ final_data3 <- bind_rows(reshaped_data3, additional_rows3)
 
 final_data3.1 <- final_data3 %>% 
   filter(index_flag != 0 | is.na(index_flag))
+
+# Remove fractures that are on the same date as the trauma ones
+# Process Data
+final_data.3_filtered <- final_data3.1 %>%
+  group_by(patid, value) %>% 
+  mutate(trauma_present = any(site == 0)) %>% 
+  filter(!(Type %in% c("fa", "index") & trauma_present)) %>%  # Remove fa and index if trauma exists on the same date
+  # mutate(fa_sites = n_distinct(site[Type == "fa"])) %>% 
+  # filter(!(Type == "fa" & fa_sites >= 3)) %>%  # Remove fa if 3 or more distinct sites exist on the same date
+  ungroup()
+
+final_data.3_filtered.1 <- final_data.3_filtered %>% 
+  group_by(patid, value) %>% 
+  summarise(number_sites = n_distinct(site), .groups = "drop") %>% 
+  filter(number_sites == 3) %>% 
+  ungroup()
