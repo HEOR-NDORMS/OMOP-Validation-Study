@@ -49,6 +49,14 @@ library(tidyr)
 # Collect the table called “_validation” ----
 all_patients <- my_dm$`_validation` %>%  collect()
 
+# ids
+patids_df <- all_patients %>% 
+  select(patid) %>% 
+  mutate(patid = as.numeric(patid)) %>% 
+  distinct(patid, .keep_all = TRUE)
+
+rio::export(patids_df, here::here("CPRD Raw Analysis", "Results", "patids_raw.xlsx"))
+
 ### Start and end dates ----
 study_start_date <- as.Date("2010-04-01")
 study_end_date <- as.Date("2018-03-31")
@@ -349,4 +357,4 @@ AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>%
   dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records))) %>% 
   dplyr::select(-c("cohort_definition_id"))
 
-# rio::export(AttritionReportFrac_Raw, here::here("Results", "AttritionReportFrac_Raw.xlsx"))
+rio::export(AttritionReportFrac_Raw, here::here("CPRD Raw Analysis", "Results", "AttritionReportFrac_Raw.xlsx"))

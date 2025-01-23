@@ -73,59 +73,34 @@ observations <- my_dm$`validation_observation` %>%  collect()
 
 cohort_table_d <- cohort_table_c %>% 
   plyr::mutate(days_prior_obs = fx_date - aurum_min_accept_date, days_after_obs = aurum_max_accept_date - fx_date) %>%
-  dplyr::filter(days_prior_obs >= prior_observation, days_after_obs >= 0) %>%
+  dplyr::filter(days_prior_obs >= prior_observation, days_after_obs >= 0) 
 
-# count of patients
-n_distinct(fracture_table_j$patid)
-
-# count of fractures
-dim(fracture_table_j)
-
-
-## Remove fx Age <50 on index -----
-
-# as.numeric(format(index_date, "%Y")):
-#   This takes the year from the index_date column (e.g., the year 2023 from "2023-01-20").
-# 
-# - yob:
-#   Subtracts the year of birth (yob) from the year of index_date to get a rough estimate of the person's age.
-# 
-# if_else(format(index_date, "%m-%d") < "01-01", 1, 0):
-# Here we check if the patient's birthday has already occurred in the current year.
-# using January 1st specifically—it's just a placeholder to decide if the subtraction applies.
-# It checks if the birth month and day come before the reference date's (index_date) month and day. In this case:
-# If their birthday hasn't occurred yet in the year of the index_date, subtract 1 from the rough age to account for that.
-# If their birthday has already occurred, the rough age is correct, so no adjustment is needed.
-# # If the month and day of index_date are earlier than January 1st, it subtracts 1 from the age 
-# # (because the birthday hasn't occurred yet in that year).
+AttritionReportCoh<- AttritionReportCoh %>% 
+  union_all(  
+    tibble(
+      number_records = cohort_table_d %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_d %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Excluding records with insufficient prior observation and/or outside of observation period"
+    )
+  )
 
 
-fracture_table_k <- fracture_table_j %>% 
-  mutate(
-    # Age using index_date
-    age_index = as.numeric(format(index_date, "%Y")) - yob -
-      if_else(format(index_date, "%m-%d") < "01-01", 1, 0),
-    
-    # Check if age < 50 for both reference dates
-    age_lt_50_index = age_index < 50
-  ) %>% 
-  filter(age_lt_50_index == FALSE)
+## e) at least 50 -----
 
-# sense check if the compare the month and day of the reference date (index_date) with the month and day of their birthdate. 
-# If the birthdate hasn't occurred yet in the year, we adjust.
-# fracture_table_k.1 <- fracture_table_j %>% 
-#   mutate(
-#     age_index = as.numeric(format(index_date, "%Y")) - yob -
-#       if_else(format(index_date, "%m-%d") < format(as.Date(paste0(yob, "-01-01")), "%m-%d"), 1, 0)
-#   )
+cohort_table_e <- cohort_table_c %>% 
+  mutate(age_fracture = lubridate::year(fx_date) - yob) %>%
+  filter(age_fracture >= 50)
+
+AttritionReportCoh<- AttritionReportCoh %>% 
+  union_all(  
+    tibble(
+      number_records = cohort_table_e %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_e %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Excluding records of index fractures where the subject has not turned 50"
+    )
+  )
 
 
-
-# count of patients
-n_distinct(fracture_table_k$patid)
-
-# count of fractures
-dim(fracture_table_k)
 
 ## Remove fx Prior history of cancer ----
 cancer_df <- fa_df %>% 
