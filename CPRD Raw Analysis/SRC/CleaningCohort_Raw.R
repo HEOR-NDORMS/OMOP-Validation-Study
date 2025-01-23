@@ -7,13 +7,16 @@
 # Last date edited: 21.01.2025
 # ****************************************************************************** #
 
+# prior obs
+prior_observation <- 730
+
 # Cleaning Cohort ----
 
 # Starting with trauma_fract_table_g ran from CleaningFractures_Raw.R script...
 cohort_table <- fracture_table_g %>% 
   select(-c(fracture_year, trauma_present, number_sites))
 
-## Only female ----
+## a) Only female ----
 
 cohort_table_a <- cohort_table %>%
   group_by(patid) %>% 
@@ -69,98 +72,117 @@ AttritionReportCoh<- AttritionReportCoh %>%
 # fa_index_dt is less than index_date (this makes sure it's before the index_date).
 # filter(fa_index_dt >= (index_date - 730) & fa_index_dt < index_date)
 
-observations <- my_dm$`validation_observation` %>%  collect()
-
 cohort_table_d <- cohort_table_c %>% 
-  plyr::mutate(days_prior_obs = fx_date - aurum_min_accept_date, days_after_obs = aurum_max_accept_date - fx_date) %>%
-  dplyr::filter(days_prior_obs >= prior_observation, days_after_obs >= 0) %>%
+  mutate(days_prior_obs = fx_date - aurum_min_accept_date, days_after_obs = aurum_max_accept_date - fx_date) %>%
+  filter(days_prior_obs >= prior_observation, days_after_obs >= 0) 
 
-# count of patients
-n_distinct(fracture_table_j$patid)
-
-# count of fractures
-dim(fracture_table_j)
-
-
-## Remove fx Age <50 on index -----
-
-# as.numeric(format(index_date, "%Y")):
-#   This takes the year from the index_date column (e.g., the year 2023 from "2023-01-20").
-# 
-# - yob:
-#   Subtracts the year of birth (yob) from the year of index_date to get a rough estimate of the person's age.
-# 
-# if_else(format(index_date, "%m-%d") < "01-01", 1, 0):
-# Here we check if the patient's birthday has already occurred in the current year.
-# using January 1st specifically—it's just a placeholder to decide if the subtraction applies.
-# It checks if the birth month and day come before the reference date's (index_date) month and day. In this case:
-# If their birthday hasn't occurred yet in the year of the index_date, subtract 1 from the rough age to account for that.
-# If their birthday has already occurred, the rough age is correct, so no adjustment is needed.
-# # If the month and day of index_date are earlier than January 1st, it subtracts 1 from the age 
-# # (because the birthday hasn't occurred yet in that year).
+AttritionReportCoh<- AttritionReportCoh %>% 
+  union_all(  
+    tibble(
+      number_records = cohort_table_d %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_d %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Excluding records with insufficient prior observation and/or outside of observation period"
+    )
+  )
 
 
-fracture_table_k <- fracture_table_j %>% 
-  mutate(
-    # Age using index_date
-    age_index = as.numeric(format(index_date, "%Y")) - yob -
-      if_else(format(index_date, "%m-%d") < "01-01", 1, 0),
-    
-    # Check if age < 50 for both reference dates
-    age_lt_50_index = age_index < 50
-  ) %>% 
-  filter(age_lt_50_index == FALSE)
+## e) at least 50 -----
+cohort_table_e <- cohort_table_d %>% 
+  mutate(age_fracture = lubridate::year(fx_date) - yob) %>%
+  filter(age_fracture >= 50)
 
-# sense check if the compare the month and day of the reference date (index_date) with the month and day of their birthdate. 
-# If the birthdate hasn't occurred yet in the year, we adjust.
-# fracture_table_k.1 <- fracture_table_j %>% 
-#   mutate(
-#     age_index = as.numeric(format(index_date, "%Y")) - yob -
-#       if_else(format(index_date, "%m-%d") < format(as.Date(paste0(yob, "-01-01")), "%m-%d"), 1, 0)
-#   )
+AttritionReportCoh<- AttritionReportCoh %>% 
+  union_all(  
+    tibble(
+      number_records = cohort_table_e %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_e %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Excluding records of index fractures where the subject has not turned 50"
+    )
+  )
 
 
 
-# count of patients
-n_distinct(fracture_table_k$patid)
+## f) No records of cancer before or on the index date ----
 
-# count of fractures
-dim(fracture_table_k)
+# cancer columns
+cancer_df <- all_patients %>% 
+  select(patid, cancer_lpon_index_dt, cancer_fa_index_dt) 
 
-## Remove fx Prior history of cancer ----
-cancer_df <- fa_df %>% 
-  select(patid, cancer_fa_index, cancer_fa_index_dt) 
+# Pivot data to long format for `_index` columns
+long_cancer_df <- cancer_df %>%
+  pivot_longer(
+    cols = -patid, 
+    names_to = c("condition", "condition_date_type", "drop"), # "drop" captures `_index_dt`
+    names_pattern = "(cancer)_(lpon|fa)_(index_dt)"
+  ) %>%
+  select(-drop) %>%  # Remove the extra "drop" column
+  rename(condition_date = value)  # Rename to `condition_date`
 
 # merge with the fx df
-cancer_df.1 <- left_join(fracture_table_k, cancer_df, by = "patid")
+cohort_table_e.1 <- inner_join(cohort_table_e, long_cancer_df, by = "patid") 
 
-fracture_table_l <-  cancer_df.1 %>% 
-  filter(index_date < cancer_fa_index_dt | is.na(cancer_fa_index_dt)) %>% 
-  filter(fa_index_dt < cancer_fa_index_dt | is.na(cancer_fa_index_dt))
+# remove cancer before yob
+cohort_table_e.1 <- cohort_table_e.1 %>% 
+  group_by(patid) %>% 
+  mutate(cancer_year = lubridate::year(condition_date)) %>%
+  filter(cancer_year > yob | is.na(cancer_year)) %>% 
+  ungroup()
+
+cohort_table_f <-  cohort_table_e.1 %>% 
+  group_by(patid) %>% 
+  filter(fx_date <= condition_date | is.na(condition_date)) %>% 
+  ungroup() %>% 
+  select(!c(condition, condition_date, condition_date_type, cancer_year)) %>% 
+  distinct()
+
+AttritionReportCoh <- AttritionReportCoh %>% 
+  dplyr::union_all(  
+    tibble(
+      number_records = cohort_table_f %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_f %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Excluding records happened after cancer"
+    )
+  ) 
 
 
-# count of patients
-n_distinct(fracture_table_l$patid)
+## g) No records of metabolic bone disease ----
+metabolic_df <- all_patients %>% 
+  select(patid, paget_lpon_index_dt, paget_fa_index_dt) 
 
-# count of fractures
-dim(fracture_table_l)
-
-## Remove Prior history of metabolic diseases ----
-metabolic_df <- fa_df %>%
-  select(patid, paget_fa_index, paget_fa_index_dt)
+# Pivot data to long format for `_index` columns
+long_metabolic_df <- metabolic_df %>%
+  pivot_longer(
+    cols = -patid, 
+    names_to = c("condition", "condition_date_type", "drop"), # "drop" captures `_index_dt`
+    names_pattern = "(paget)_(lpon|fa)_(index_dt)"
+  ) %>%
+  select(-drop) %>%  # Remove the extra "drop" column
+  rename(condition_date = value)  # Rename to `condition_date`
 
 # merge with the fx df
-metabolic_df.1 <- left_join(fracture_table_l, metabolic_df, by = "patid")
+cohort_table_f.1 <- inner_join(cohort_table_f, long_metabolic_df, by = "patid") 
 
-fracture_table_m <- metabolic_df.1 %>% 
-  filter(index_date < paget_fa_index_dt | is.na(paget_fa_index_dt)) %>% 
-  filter(fa_index_dt < paget_fa_index_dt | is.na(paget_fa_index_dt))
 
-# count of patients
-n_distinct(fracture_table_m$patid)
+cohort_table_g <- cohort_table_f.1 %>%
+  group_by(patid) %>% 
+  filter(fx_date <= condition_date | is.na(condition_date)) %>%
+  ungroup() %>% 
+  select(!c(condition, condition_date, condition_date_type)) %>% 
+  distinct()
 
-# count of fractures
-dim(fracture_table_m)
+AttritionReportCoh <- AttritionReportCoh %>% 
+  dplyr::union_all(  
+    tibble(
+      number_records = cohort_table_g %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_g %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Excluding records happened after metabolic bone diseases"
+    )
+  ) 
 
+# Finalise attrition ----
+AttritionReportCoh <- AttritionReportCoh %>% 
+  dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
+
+# rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
 
