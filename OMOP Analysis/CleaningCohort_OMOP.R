@@ -10,7 +10,7 @@ cohort_table_a <- cohort_table %>%
   dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date, fracture_site)
 
 AttritionReportCoh<- AttritionReportFrac[,1:3] %>% 
-  union_all(  
+  dplyr::union_all(  
     tibble(
       number_records = cohort_table_a %>% dplyr::tally() %>% dplyr::pull(),
       number_subjects = cohort_table_a %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
@@ -26,7 +26,7 @@ cohort_table_b <- cohort_table_a %>%
   dplyr::ungroup()
                    
 AttritionReportCoh<- AttritionReportCoh %>% 
-  union_all(  
+  dplyr::union_all(  
     tibble(
       number_records = cohort_table_b %>% dplyr::tally() %>% dplyr::pull(),
       number_subjects = cohort_table_b %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
@@ -39,11 +39,10 @@ AttritionReportCoh<- AttritionReportCoh %>%
 cohort_table_b_index <- cohort_table_b %>%
   dplyr::group_by(subject_id) %>%
   dplyr::arrange(condition_start_date, .by_group = T) %>%
-  dplyr::mutate(gap = condition_start_date - lag(condition_start_date)) %>%
+  dplyr::mutate(gap = condition_start_date - dplyr::lag(condition_start_date)) %>%
   dplyr::filter(gap>730|is.na(gap)) %>%
   dplyr::ungroup() %>%
   dplyr::select(-gap)
-
 
 ### c) Excluding individuals who has index date same as obs period end date ----
 
@@ -51,7 +50,7 @@ cohort_table_c_index <- cohort_table_b_index %>%
   dplyr::anti_join(cdm[["observation_period"]], by = c("subject_id" = "person_id", "condition_start_date" = "observation_period_end_date"), copy = T)
 
 AttritionReportCoh<- AttritionReportCoh %>% 
-  union_all(  
+  dplyr::union_all(  
     tibble(
       number_records = cohort_table_c_index %>% dplyr::tally() %>% dplyr::pull(),
       number_subjects = cohort_table_c_index %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
@@ -68,7 +67,7 @@ cohort_table_d_index <-cohort_table_c_index %>%
   dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date, fracture_site)
 
 AttritionReportCoh<- AttritionReportCoh %>% 
-  union_all(  
+  dplyr::union_all(  
     tibble(
       number_records = cohort_table_d_index %>% dplyr::tally() %>% dplyr::pull(),
       number_subjects = cohort_table_d_index %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
@@ -85,7 +84,7 @@ cohort_table_e_index <- cohort_table_d_index %>%
   dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date, fracture_site)
 
 AttritionReportCoh<- AttritionReportCoh %>% 
-  union_all(  
+  dplyr::union_all(  
     tibble(
       number_records = cohort_table_e_index %>% dplyr::tally() %>% dplyr::pull(),
       number_subjects = cohort_table_e_index %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
@@ -117,7 +116,7 @@ cdm[["cancer"]] <- cdm[["cancer"]] %>%
 
 
 cohort_table_f_index <- 
-  cohort_table_e_index %>% anti_join(cohort_table_e_index %>% 
+  cohort_table_e_index %>% dplyr::anti_join(cohort_table_e_index %>% 
                                            dplyr::inner_join(cdm[["cancer"]] %>% dplyr::select(subject_id, cancer_date), 
                                                              by = "subject_id", copy = T, relationship = "many-to-many") %>%
                                            dplyr::filter(cancer_date<=condition_start_date) %>%
@@ -125,7 +124,7 @@ cohort_table_f_index <-
                                            dplyr::compute(), by = colnames(cohort_table_e_index)) 
 
 AttritionReportCoh<- AttritionReportCoh %>% 
-  union_all(  
+  dplyr::union_all(  
     tibble(
       number_records = cohort_table_f_index %>% dplyr::tally() %>% dplyr::pull(),
       number_subjects = cohort_table_f_index %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
@@ -147,7 +146,7 @@ cdm[["mbd"]] <- cdm[["denominator"]] %>%
   dplyr::rename(mbd_date =condition_start_date) 
 
 cohort_table_g_index <- 
-  cohort_table_f_index %>% anti_join(cohort_table_f_index %>% 
+  cohort_table_f_index %>% dplyr::anti_join(cohort_table_f_index %>% 
                                            dplyr::inner_join(cdm[["mbd"]] %>% dplyr::select(subject_id, mbd_date), by = "subject_id", copy = T, relationship = "many-to-many") %>%
                                            dplyr::filter(mbd_date<=condition_start_date) %>%
                                            dplyr::distinct() %>%
@@ -155,7 +154,7 @@ cohort_table_g_index <-
   dplyr::mutate(class = "index") # create a variable called class that is used later in the addIndex function
 
 AttritionReportCoh<- AttritionReportCoh %>% 
-  union_all(  
+  dplyr::union_all(  
     tibble(
       number_records = cohort_table_g_index %>% dplyr::tally() %>% dplyr::pull(),
       number_subjects = cohort_table_g_index %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
