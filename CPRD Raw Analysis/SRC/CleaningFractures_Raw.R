@@ -357,4 +357,4 @@ AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>%
   dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records))) %>% 
   dplyr::select(-c("cohort_definition_id"))
 
-rio::export(AttritionReportFrac_Raw, here::here("CPRD Raw Analysis", "Results", "AttritionReportFrac_Raw.xlsx"))
+# rio::export(AttritionReportFrac_Raw, here::here("CPRD Raw Analysis", "Results", "AttritionReportFrac_Raw.xlsx"))
