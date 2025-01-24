@@ -333,11 +333,14 @@ AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>%
 rm(index_fractures)
 
 # g) Applying Hierarchy (hip,vertebra,NHNV) to multiple records on the same day ----
-fracture_table_f$site <- factor(fracture_table_f$site, levels = sites)
+fracture_table_f <- fracture_table_f %>% 
+  mutate(site = factor(site, levels = sites))
+
 
 fracture_table_g <- fracture_table_f %>%
   group_by(patid, fx_date) %>%
-  arrange(site, .by_group = TRUE) %>% 
+  # dplyr::arrange(site, .by_group = TRUE) %>%
+  # mutate(row.number = row_number())
   filter(row_number()==1) %>%
   ungroup()
 
