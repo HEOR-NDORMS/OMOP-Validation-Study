@@ -150,7 +150,7 @@ AttritionReportFrac<-tibble(
 AttritionReportFrac<-tibble(
   cohort_definition_id = as.integer(1),
   number_records = fracture_table %>% dplyr::tally() %>% dplyr::pull(),
-  number_subjects = fracture_table %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
+  number_subjects = fracture_table %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
   reason = "Starting Population - Anyone With Fracture(s)"
 )
 
@@ -166,7 +166,7 @@ AttritionReportFrac<- AttritionReportFrac %>%
     tibble(
       cohort_definition_id = as.integer(1),
       number_records = fracture_table_a %>% dplyr::tally() %>% dplyr::pull(),
-      number_subjects = fracture_table_a %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = fracture_table_a %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
       reason = "Excluding fracture happening before the birth year"
     )
   ) 
@@ -180,7 +180,7 @@ AttritionReportFrac<- AttritionReportFrac %>%
     tibble(
       cohort_definition_id = as.integer(1),
       number_records = fracture_table_b %>% dplyr::tally() %>% dplyr::pull(),
-      number_subjects = fracture_table_b %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = fracture_table_b %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
       reason = "Excluding records that happen outside of study period"
     )
   )
@@ -195,7 +195,7 @@ AttritionReportFrac<- AttritionReportFrac %>%
     tibble(
       cohort_definition_id = as.integer(1),
       number_records = fracture_table_c %>% dplyr::tally() %>% dplyr::pull(),
-      number_subjects = fracture_table_c %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = fracture_table_c %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
       reason = "Excluding records that happen outside of observation period"
     )
   )
@@ -339,13 +339,13 @@ AttritionReportFrac<- AttritionReportFrac %>%
     tibble(
       cohort_definition_id = as.integer(1),
       number_records = fracture_table_g %>% dplyr::tally() %>% dplyr::pull(),
-      number_subjects = fracture_table_g %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = fracture_table_g %>% dplyr::distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
       reason = "Excluding records on the same day for the same person according to hierarchy (Hip, Spine, NHNS)"
     )
   )
 
 ### Finalise attrition -----
 AttritionReportFrac <- AttritionReportFrac %>% 
-  dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records))) %>% 
+  dplyr::mutate(subjects_excluded = -(number_subjects - dplyr::lag(number_subjects)), records_excluded = -(number_records - dplyr::lag(number_records))) %>% 
   dplyr::select(-c("cohort_definition_id"))
 
