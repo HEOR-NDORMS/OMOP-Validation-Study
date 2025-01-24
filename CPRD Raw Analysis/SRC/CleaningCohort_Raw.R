@@ -185,4 +185,3 @@ AttritionReportCoh <- AttritionReportCoh %>%
 
 # rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
-
