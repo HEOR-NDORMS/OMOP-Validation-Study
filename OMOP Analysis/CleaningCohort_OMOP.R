@@ -1,6 +1,6 @@
 cohort_table <- fracture_table_g
 
-## a) Not Female ----
+### a) Not Female ----
 
 cohort_table_a <- cohort_table %>% 
   dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>%
@@ -166,7 +166,7 @@ AttritionReportCoh<- AttritionReportCoh %>%
 
 ### Finalise attrition
 AttritionReportCoh <- AttritionReportCoh %>% 
-  dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
+  dplyr::mutate(subjects_excluded = -(number_subjects-dplyr::lag(number_subjects)), records_excluded = -(number_records - dplyr::lag(number_records)))
 
 write.xlsx(AttritionReport, file = here::here(sub_output_folder, "AttritionReport.xlsx"))
 
@@ -204,7 +204,9 @@ cohort_table <- addInDeath(cohort_table)
 # Add in FOLLOWUPEND
 cohort_table <- addInFollowUpEnd(cohort_table)
 
-
-
+patid_df_OMOP <- cohort_table_g_index %>% 
+  select(subject_id) %>% 
+  mutate(subject_id = as.numeric(subject_id))
+rio::export(patid_df_OMOP, here("OMOP Analysis", "patid_df_OMOP.xlsx"))
 
 
