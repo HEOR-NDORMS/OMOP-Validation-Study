@@ -49,6 +49,8 @@ library(tidyr)
 # Collect the table called “_validation” ----
 all_patients <- my_dm$`_validation` %>%  collect()
 
+
+
 # ids
 patids_df <- all_patients %>% 
   select(patid) %>% 
@@ -61,7 +63,7 @@ rio::export(patids_df, here::here("CPRD Raw Analysis", "Results", "patids_raw.xl
 study_start_date <- as.Date("2010-04-01")
 study_end_date <- as.Date("2018-03-31")
 
-# consulations <- my_dm$`validation_consultation` %>%  collect()
+consultations <- my_dm$`validation_consultation` %>%  collect()
 # 
 # 
 # drug_issue <- my_dm$validation_drugissue %>%  collect()
@@ -154,6 +156,8 @@ names(final_fracture_data)
 final_fracture_data.1 <- final_fracture_data %>% 
   distinct()
 # no rows removed, noice!
+
+# rio::export(final_fracture_data, here::here("CPRD Raw Analysis", "fracture_table_raw.xlsx"))
 
 rm(final_fracture_data.1)
 
