@@ -185,3 +185,35 @@ AttritionReportCoh <- AttritionReportCoh %>%
 
 # rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
+## Create unique dataset with both index and non index fractures
+
+# fracture_table_rq2 <- fracture_table
+cohort_table_g_ids <- cohort_table_g %>% dplyr::pull(patid)
+
+cohort_table <- cohort_table %>%
+  dplyr::left_join(cohort_table_g, by = colnames(cohort_table)) %>%
+  dplyr::filter(patid %in% cohort_table_g_ids)
+
+# cohort_table.1 <- addIndex(cohort_table)
+
+## Creating follow-up end ------
+### 730 days after the index date ----
+# cohort_table.2 <- addInTwoYearsAfter(cohort_table.1)
+
+# End of data collection (assuming each person has only one observation period)
+# cohort_table.3 <- addInObsEndDate(cohort_table.2)
+
+# # Adding first cancer date after the index date
+# cohort_table.4 <- addInCancerPostIndex(cohort_table.3)
+# 
+# # Adding first bone disease date after the index date
+# cohort_table <- addInBoneDiseasePostIndex(cohort_table)
+# 
+# # Add in first fracture date after the index dates
+# cohort_table <- addInNextFracture(cohort_table)
+# 
+# # Add in death date after the index date 
+# cohort_table <- addInDeath(cohort_table)
+
+# Add in FOLLOWUPEND ----
+cohort_table <- addInFollowUpEnd(cohort_table)
