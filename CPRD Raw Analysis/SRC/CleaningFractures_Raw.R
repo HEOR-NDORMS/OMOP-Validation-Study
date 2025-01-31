@@ -202,7 +202,8 @@ AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>%
 
 # c) Remove fracture outside of observation period ----
 fracture_table_c <- fracture_table_b %>% 
-  filter(fx_date >= aurum_min_accept_date & fx_date <= aurum_max_accept_date)
+  filter(fx_date <= aurum_max_accept_date)
+#fx_date >= aurum_min_accept_date & - I took this out because of what A. said "I would ignore the “aurum_min_accept_date” which is based only on regstartdate".
 
 AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>% 
   union_all(  
@@ -222,6 +223,11 @@ fracture_table_d <- fracture_table_c %>%
   filter(!(type %in% c("fa", "index") & trauma_present)) %>%  
   ungroup()
 
+# Now we also remove all trauma fractures as we don't need them anymore
+fracture_table_d<- fracture_table_d %>% 
+  filter(type != "trauma")
+
+  
 # only_index_d <- fracture_table_c %>%
 #   group_by(patid, fx_date) %>% 
 #   mutate(trauma_present = any(site == 0)) %>% 
@@ -275,7 +281,7 @@ AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>%
 
 # f) Washout ----
 # Define the fracture sites
-sites <- c("hip", "vert", "nhnv", "0")
+sites <- c("hip", "vert", "nhnv") # now sites are only these without trauma = 0
 
 # Initialise the backup table and the result container
 fracture_table_back_up <- fracture_table_e
