@@ -1,0 +1,10 @@
+INFO [2025-01-30 09:40:35] $x
+INFO [2025-01-30 09:40:35] list(OMOP = fracture_table_1, RAW = fracture_table_raw, Overlap = overlap_records)
+INFO [2025-01-30 09:40:35] 
+INFO [2025-01-30 09:40:35] $category.names
+INFO [2025-01-30 09:40:35] c("OMOP", "RAW", "Overlap")
+INFO [2025-01-30 09:40:35] 
+INFO [2025-01-30 09:40:35] $filename
+INFO [2025-01-30 09:40:35] NULL
+INFO [2025-01-30 09:40:35] 
+ERROR [2025-01-30 09:41:07] NAs in dataset
