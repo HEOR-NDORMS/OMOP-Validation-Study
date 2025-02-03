@@ -52,12 +52,12 @@ all_patients <- my_dm$`_validation` %>%  collect()
 
 
 # ids
-patids_df <- all_patients %>% 
-  select(patid) %>% 
-  mutate(patid = as.numeric(patid)) %>% 
-  distinct(patid, .keep_all = TRUE)
-
-rio::export(patids_df, here::here("CPRD Raw Analysis", "Results", "patids_raw.xlsx"))
+# patids_df <- all_patients %>% 
+#   select(patid) %>% 
+#   mutate(patid = as.numeric(patid)) %>% 
+#   distinct(patid, .keep_all = TRUE)
+# 
+# rio::export(patids_df, here::here("CPRD Raw Analysis", "Results", "patids_raw.xlsx"))
 
 ### Start and end dates ----
 study_start_date <- as.Date("2010-04-01")
@@ -203,7 +203,9 @@ AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>%
 # c) Remove fracture outside of observation period ----
 fracture_table_c <- fracture_table_b %>% 
   filter(fx_date <= aurum_max_accept_date)
-#fx_date >= aurum_min_accept_date & - I took this out because of what A. said "I would ignore the “aurum_min_accept_date” which is based only on regstartdate".
+#fx_date >= aurum_min_accept_date &
+# - I took this out because of what A. said 
+# "I would ignore the “aurum_min_accept_date” which is based only on regstartdate".
 
 AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>% 
   union_all(  
