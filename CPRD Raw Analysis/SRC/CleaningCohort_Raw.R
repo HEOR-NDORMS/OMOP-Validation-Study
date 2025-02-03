@@ -4,7 +4,7 @@
 # Do file name: Cleaning Cohort; clean the data grouped by subject_id based on 
 # the remaining conditions in the table
 # Date: 13.01.2024
-# Last date edited: 21.01.2025
+# Last date edited: 31.01.2025
 # ****************************************************************************** #
 
 # prior obs
@@ -116,7 +116,7 @@ long_cancer_df <- cancer_df %>%
     names_pattern = "(cancer)_(lpon|fa)_(index_dt)"
   ) %>%
   select(-drop) %>%  # Remove the extra "drop" column
-  rename(condition_date = value)  # Rename to `condition_date`
+  rename(cancer_date = value)  # Rename to `condition_date`
 
 # merge with the fx df
 cohort_table_e.1 <- inner_join(cohort_table_e, long_cancer_df, by = "patid") 
@@ -124,15 +124,15 @@ cohort_table_e.1 <- inner_join(cohort_table_e, long_cancer_df, by = "patid")
 # remove cancer before yob
 cohort_table_e.1 <- cohort_table_e.1 %>% 
   group_by(patid) %>% 
-  mutate(cancer_year = lubridate::year(condition_date)) %>%
+  mutate(cancer_year = lubridate::year(cancer_date)) %>%
   filter(cancer_year > yob | is.na(cancer_year)) %>% 
   ungroup()
 
 cohort_table_f <-  cohort_table_e.1 %>% 
   group_by(patid) %>% 
-  filter(fx_date <= condition_date | is.na(condition_date)) %>% 
+  filter(fx_date <= cancer_date | is.na(cancer_date)) %>% 
   ungroup() %>% 
-  select(!c(condition, condition_date, condition_date_type, cancer_year)) %>% 
+  select(!c(condition, condition_date_type, cancer_year)) %>% 
   distinct()
 
 AttritionReportCoh <- AttritionReportCoh %>% 
@@ -157,7 +157,7 @@ long_metabolic_df <- metabolic_df %>%
     names_pattern = "(paget)_(lpon|fa)_(index_dt)"
   ) %>%
   select(-drop) %>%  # Remove the extra "drop" column
-  rename(condition_date = value)  # Rename to `condition_date`
+  rename(paget_date = value)  # Rename to `condition_date`
 
 # merge with the fx df
 cohort_table_f.1 <- inner_join(cohort_table_f, long_metabolic_df, by = "patid") 
@@ -165,9 +165,9 @@ cohort_table_f.1 <- inner_join(cohort_table_f, long_metabolic_df, by = "patid")
 
 cohort_table_g <- cohort_table_f.1 %>%
   group_by(patid) %>% 
-  filter(fx_date <= condition_date | is.na(condition_date)) %>%
+  filter(fx_date <= paget_date | is.na(paget_date)) %>%
   ungroup() %>% 
-  select(!c(condition, condition_date, condition_date_type)) %>% 
+  select(!c(condition, condition_date_type)) %>% 
   distinct()
 
 AttritionReportCoh <- AttritionReportCoh %>% 
@@ -185,35 +185,81 @@ AttritionReportCoh <- AttritionReportCoh %>%
 
 # rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
-## Create unique dataset with both index and non index fractures
-
-# fracture_table_rq2 <- fracture_table
-cohort_table_g_ids <- cohort_table_g %>% dplyr::pull(patid)
-
-cohort_table <- cohort_table %>%
-  dplyr::left_join(cohort_table_g, by = colnames(cohort_table)) %>%
-  dplyr::filter(patid %in% cohort_table_g_ids)
-
-# cohort_table.1 <- addIndex(cohort_table)
-
 ## Creating follow-up end ------
 ### 730 days after the index date ----
-# cohort_table.2 <- addInTwoYearsAfter(cohort_table.1)
+# for a fracture table, compute the index date for each person
+addIndex <- function (fractureTable){
+  fractureTable %>% 
+    inner_join(fractureTable %>% 
+                        filter(type == "index") %>%
+                        group_by(patid) %>% 
+                        summarise(index_date = min(fx_date)) %>% 
+                        ungroup(),
+                      by = "patid"
+    )
+}
 
-# End of data collection (assuming each person has only one observation period)
-# cohort_table.3 <- addInObsEndDate(cohort_table.2)
+cohort_table_g.1 <- addIndex(cohort_table_g)
 
-# # Adding first cancer date after the index date
-# cohort_table.4 <- addInCancerPostIndex(cohort_table.3)
+# add an extra variable after_index which is two years after the index date
+# addInTwoYearsAfter <- function (fractureTable){
+#   fractureTable %>%
+#     mutate(after_index = index_date + 730)
+# }
+
+# the rule is: follow-up end date is the earliest date of censoring event or index+730. Meaning that if there are no censoring events the follow-up will end 730 days after index date.
+# cohort_table_g.2 <- cohort_table_g.1 %>%
+#   group_by(patid) %>% 
+#   mutate(after_index = if_else(type == "fa", fx_date, fx_date + 730)) %>%
+#   ungroup()
+
+
+cohort_table_g.2 <- cohort_table_g.1 %>%
+  group_by(patid) %>%
+  mutate(fracture_after_index = case_when(
+    type == "fa" ~ fx_date,
+    type == "index" & any(type == "fa") ~ NA_Date_,
+    type == "index" & !any(type == "fa") ~ fx_date + 730,
+    TRUE ~ NA_Date_
+  )) 
+# %>%
+#   fill(after_index, .direction = "downup")
+
+# add a column of next fracture after the index one
+# addInNextFracture <- function(fractureTable){
+#   fractureTable %>% 
+#     left_join(fractureTable %>% 
+#                        filter(fx_date > index_date) %>% 
+#                        group_by(patid) %>% 
+#                        summarise(fracture_after_index = min(fx_date, na.rm =  T)) %>% 
+#                        ungroup(),
+#                      by = "patid")
+# }
 # 
-# # Adding first bone disease date after the index date
-# cohort_table <- addInBoneDiseasePostIndex(cohort_table)
-# 
-# # Add in first fracture date after the index dates
-# cohort_table <- addInNextFracture(cohort_table)
-# 
-# # Add in death date after the index date 
-# cohort_table <- addInDeath(cohort_table)
+# cohort_table_g.3 <- addInNextFracture(cohort_table_g.2)
 
 # Add in FOLLOWUPEND ----
-cohort_table <- addInFollowUpEnd(cohort_table)
+# add in FOLLOWUPEND - only after the relevant columns are added
+addInFollowUpEnd <- function(fractureTable){
+  fractureTable %>% 
+    mutate(follow_up_end = pmin(.data$aurum_max_accept_date, .data$cancer_date, .data$paget_date, .data$fracture_after_index, .data$death_date, na.rm = TRUE)) %>%
+    mutate(follow_up_time = follow_up_end - index_date) %>%
+    mutate(censoring_event = case_when(
+      follow_up_end == .data$aurum_max_accept_date ~ "aurum_max_accept_date",
+      follow_up_end == .data$cancer_date ~ "cancer_date",
+      follow_up_end == .data$paget_date ~ "paget_date",
+      follow_up_end == .data$fracture_after_index ~ "fracture_after_index",
+      follow_up_end == .data$death_date ~ "death_date",
+      TRUE ~ NA_character_
+    ))
+}
+cohort_table_g.3 <- addInFollowUpEnd(cohort_table_g.2)
+
+
+# Ok, so.. A censoring event is defined as the earliest occurrence among the following: an imminent fracture after the index date (FA), death, cancer, metabolic disease, end of data collection, or two years from the index date. Each patient will have at least one censoring event.
+# The "follow-up end date" function identifies the earliest of these events, determining the end of follow-up. In some cases, multiple events may occur on the same day, for example, a diagnosis of cancer and MBD. However, in most cases, I expect each patient to have a single censoring event.
+# Regarding the patient you mentioned (index date: 24-07-2013):
+#   They experienced an NHNS fracture on 31-07-2013.
+# They were diagnosed with cancer on 23-05-2018.
+# This patient does not have two cancer diagnoses, only one. However, cancer is not the earliest censoring event. The NHNS fracture following the index date is the first censoring event, and this should be the event counted in Table 1 for this patient.
+
