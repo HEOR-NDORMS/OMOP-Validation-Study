@@ -9,6 +9,7 @@ addIndex <- function (fractureTable){
     )
 }
 
+
 # add an extra variable after_index which is two years after the index date
 addInTwoYearsAfter <- function (fractureTable){
   fractureTable %>%
@@ -16,17 +17,17 @@ addInTwoYearsAfter <- function (fractureTable){
 }
 
 # add in the end of observation period for each individual
-# addInObsEndDate <- function (fractureTable){
-#   fractureTable %>% 
-#     dplyr::left_join(observations %>% group_by(patid) %>% 
-#                        mutate(obsdate_end = max(obsdate)) %>%
-#                        select(patid, obsdate_end) %>% 
-#                        distinct(patid, obsdate_end) %>% 
-#                        ungroup(), by = "patid", 
-#                      relationship = "many-to-many", copy = T) %>%
-#     dplyr::select(patid, aurum_min_accept_date, aurum_max_accept_date, fx_date, 
-#                   site, type, index_date, after_index, obsdate_end)
-# }
+addInObsEndDate <- function (fractureTable){
+  fractureTable %>%
+    dplyr::left_join(observations %>% group_by(patid) %>%
+                       mutate(obsdate_end = max(obsdate)) %>%
+                       select(patid, obsdate_end) %>%
+                       distinct(patid, obsdate_end) %>%
+                       ungroup(), by = "patid",
+                     relationship = "many-to-many", copy = T) %>%
+    dplyr::select(patid, aurum_min_accept_date, aurum_max_accept_date, fx_date,
+                  site, type, index_date, after_index, obsdate_end)
+}
 
 # add in a column indicating the date of cancer after the index date
 addInCancerPostIndex <- function (fractureTable){
