@@ -106,34 +106,35 @@ AttritionReportCoh<- AttritionReportCoh %>%
 
 # cancer columns
 cancer_df <- all_patients %>% 
-  select(patid, cancer_lpon_index_dt, cancer_fa_index_dt) 
+  select(patid, cancer_fa_index_dt) 
 
 # Pivot data to long format for `_index` columns
-long_cancer_df <- cancer_df %>%
-  pivot_longer(
-    cols = -patid, 
-    names_to = c("condition", "condition_date_type", "drop"), # "drop" captures `_index_dt`
-    names_pattern = "(cancer)_(lpon|fa)_(index_dt)"
-  ) %>%
-  select(-drop) %>%  # Remove the extra "drop" column
-  rename(cancer_date = value)  # Rename to `condition_date`
+# long_cancer_df <- cancer_df %>%
+#   pivot_longer(
+#     cols = -patid,
+#     names_to = c("condition", "condition_date_type", "drop"), # "drop" captures `_index_dt`
+#     names_pattern = "(cancer)_(lpon|fa)_(index_dt)"
+#   ) %>%
+#   select(-drop) %>%  # Remove the extra "drop" column
+#   rename(cancer_date = value) %>%   # Rename to `condition_date`
+#   filter(condition_date_type != "lpon")
 
 # merge with the fx df
-cohort_table_e.1 <- inner_join(cohort_table_e, long_cancer_df, by = "patid") 
+cohort_table_e.1 <- left_join(cohort_table_e, cancer_df, by = "patid") 
 
 # remove cancer before yob
 cohort_table_e.1 <- cohort_table_e.1 %>% 
   group_by(patid) %>% 
-  mutate(cancer_year = lubridate::year(cancer_date)) %>%
+  mutate(cancer_year = lubridate::year(cancer_fa_index_dt)) %>%
   filter(cancer_year > yob | is.na(cancer_year)) %>% 
   ungroup()
 
+# remove subjects who had cancer before or on index date.
 cohort_table_f <-  cohort_table_e.1 %>% 
   group_by(patid) %>% 
-  filter(fx_date <= cancer_date | is.na(cancer_date)) %>% 
+  filter(cancer_fa_index_dt > fx_date | is.na(cancer_fa_index_dt)) %>% 
   ungroup() %>% 
-  select(!c(condition, condition_date_type, cancer_year)) %>% 
-  distinct()
+  select(!cancer_year)
 
 AttritionReportCoh <- AttritionReportCoh %>% 
   dplyr::union_all(  
@@ -147,28 +148,26 @@ AttritionReportCoh <- AttritionReportCoh %>%
 
 ## g) No records of metabolic bone disease ----
 metabolic_df <- all_patients %>% 
-  select(patid, paget_lpon_index_dt, paget_fa_index_dt) 
+  select(patid, paget_fa_index_dt) 
 
 # Pivot data to long format for `_index` columns
-long_metabolic_df <- metabolic_df %>%
-  pivot_longer(
-    cols = -patid, 
-    names_to = c("condition", "condition_date_type", "drop"), # "drop" captures `_index_dt`
-    names_pattern = "(paget)_(lpon|fa)_(index_dt)"
-  ) %>%
-  select(-drop) %>%  # Remove the extra "drop" column
-  rename(paget_date = value)  # Rename to `condition_date`
+# long_metabolic_df <- metabolic_df %>%
+#   pivot_longer(
+#     cols = -patid, 
+#     names_to = c("condition", "condition_date_type", "drop"), # "drop" captures `_index_dt`
+#     names_pattern = "(paget)_(lpon|fa)_(index_dt)"
+#   ) %>%
+#   select(-drop) %>%  # Remove the extra "drop" column
+#   rename(paget_date = value)  # Rename to `condition_date`
 
 # merge with the fx df
-cohort_table_f.1 <- inner_join(cohort_table_f, long_metabolic_df, by = "patid") 
+cohort_table_f.1 <- left_join(cohort_table_f, metabolic_df, by = "patid") 
 
-
+# remove subjects who had cancer before or on index date.
 cohort_table_g <- cohort_table_f.1 %>%
   group_by(patid) %>% 
-  filter(fx_date <= paget_date | is.na(paget_date)) %>%
-  ungroup() %>% 
-  select(!c(condition, condition_date_type)) %>% 
-  distinct()
+  filter(paget_fa_index_dt > fx_date | is.na(paget_fa_index_dt)) %>%
+  ungroup() 
 
 AttritionReportCoh <- AttritionReportCoh %>% 
   dplyr::union_all(  
@@ -200,6 +199,7 @@ addIndex <- function (fractureTable){
 }
 
 cohort_table_g.1 <- addIndex(cohort_table_g)
+
 
 # add an extra variable after_index which is two years after the index date
 # addInTwoYearsAfter <- function (fractureTable){
