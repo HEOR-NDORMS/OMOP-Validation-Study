@@ -78,7 +78,7 @@ addInNextFracture <- function(fractureTable){
                        dplyr::filter(fx_date> index_date) %>% 
                        dplyr::group_by(patid) %>% 
                        dplyr::summarise(fracture_after_index = min(fx_date, na.rm =  T)),
-                     by = "subject_id")
+                     by = "patid")
 }
 
 # add a column of death record date after the index date
