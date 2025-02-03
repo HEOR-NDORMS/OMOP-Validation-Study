@@ -22,9 +22,9 @@ study_end_date <- as.Date("2018-03-31")
 cdm <- IncidencePrevalence::generateDenominatorCohortSet(
   cdm,
   name = "denominator",
-  cohortDateRange = c(study_start_date, study_end_date),
-  sex = "Female",
-  ageGroup = list(c(50, 150)))
+  #cohortDateRange = c(study_start_date, study_end_date),# test to avoid imposing any limit to chort start/end date and age
+  sex = "Female")
+  #ageGroup = list(c(50, 150)))
 
 denom_count <-cdm[["denominator"]] %>% dplyr::tally() %>% dplyr::pull()
 
@@ -32,7 +32,6 @@ denom_count <-cdm[["denominator"]] %>% dplyr::tally() %>% dplyr::pull()
 
 ### Loading fracture codes ----
 # info(logger, "LOADING FRACTURE CODES")
-print(paste0("Loading fracture codes at ", Sys.time()))
 conditions_sheet1 <- read_excel(paste0(here(), "/OMOP Analysis/fracture_sites_conditions_codes.xlsx"), sheet = 1) 
 trauma <- read_excel(paste0(here(), "/OMOP Analysis/trauma_codes.xlsx")) 
 # not to self: the code is filtering the domain condition then selecting the id variable
@@ -91,16 +90,25 @@ nonspecific_fracture_id <- conditions_sheet1 %>%
   dplyr::pull()
 
 any_fracture_id <- conditions_sheet1 %>% 
-  dplyr::filter(!Site == "Exclude") %>% 
+  #dplyr::filter(!Site == "Exclude") %>% # just commenting out for now as a TESTTTTTT bc it was not in a Antonella raw
   dplyr::select(Id) %>% 
   dplyr::pull()
+
+
+# CREATE TABLE WITH ONLY FRACTURES FROM PRIMARY CARE AURUM - NOT HES #
+
+cdm[["condition_occurrence_primary"]] <- 
+  cdm[["condition_occurrence"]] %>% 
+  dplyr::filter(condition_type_concept_id == 32827) %>% 
+  dplyr::compute()
+
 
 ### Cohort with all records of fracture ---- 
 # info(logger, "COLLECTING ALL RECORDS OF FRACTURES FROM DENOMINATORS")
 print(paste0("Collecting all records of fractures from the denominators at ", Sys.time()))
-cdm[["fracture"]] <- cdm[["denominator"]] %>% 
-  dplyr::left_join(cdm[["condition_occurrence"]], by = c("subject_id" = "person_id")) %>%
-  dplyr::filter(condition_concept_id %in% any_fracture_id) %>%
+cdm[["fracture"]] <- cdm[["denominator"]] %>% ### REPLACE WITH ORIGINAL 
+  dplyr::left_join(cdm[["condition_occurrence_primary"]], by = c("subject_id" = "person_id")) %>% # WE ARE USING ONLY FRACTURES FROM PRIMARY CARE NOW CREATED ABOVE
+  dplyr::filter(condition_concept_id %in% any_fracture_id) %>% 
   dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date) %>%
   dplyr::mutate(cohort_start_date = as.Date(as.character(cohort_start_date))) %>%
   dplyr::mutate(cohort_end_date = as.Date(as.character(cohort_end_date))) %>%
@@ -140,22 +148,68 @@ cdm[["fracture"]] <- cdm[["denominator"]] %>%
 # The fracture table
 fracture_table <- cdm[["fracture"]] %>% dplyr::collect()
 
+
+### RECREATING SAME START POPULATION AS RAW ##
+
+# I am going to keep only subject_ids that are in the initial raw extraction from Antonella (From a population of 598,211 female individuals, 156,732 had at least one fx.
+# Of these, 31,217 had their 1st fx >= 01/04/2012 and <= 31/03/2018 when they were > 50 years old. This is the number of patients in the cohort I prepared.
+
+# At least 1 fracture - BEFORE RUNNING CHECK IF ALL ARE FRACTURES OR NOT
+fracture_table_start1 <- fracture_table %>%
+  dplyr::filter(!is.na(fracture_site)) 
+
+n_distinct(fracture_table_start1$subject_id)
+
+###
 AttritionReportFrac<-tibble(
   cohort_definition_id = as.integer(1),
-  number_records = fracture_table %>% dplyr::tally() %>% dplyr::pull(),
-  number_subjects = fracture_table %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
-  reason = "Starting Population - Anyone With Fracture(s)"
+  number_records = cdm[["denominator"]] %>% dplyr::tally() %>% dplyr::pull(),
+  number_subjects = cdm[["denominator"]] %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
+  reason = "Starting Population - Female individuals"
 )
 
-AttritionReportFrac<-tibble(
-  cohort_definition_id = as.integer(1),
-  number_records = fracture_table %>% dplyr::tally() %>% dplyr::pull(),
-  number_subjects = fracture_table %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
-  reason = "Starting Population - Anyone With Fracture(s)"
-)
+AttritionReportFrac<- AttritionReportFrac %>% 
+  union_all(  
+    tibble(
+      cohort_definition_id = as.integer(1),
+      number_records = fracture_table_start1 %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = fracture_table_start1 %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Anyone With Fracture(s)"
+))
+
+# First fracture >= 01/04/2012 and <= 31/03/2018 when they were > 50 years old
+fracture_table_start2 <- fracture_table_start1 %>%
+  dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = TRUE) %>%
+  dplyr::mutate(age_fracture = lubridate::year(condition_start_date) - year_of_birth) %>%  # Calculate age at fracture
+  dplyr::group_by(subject_id) %>%
+  dplyr::mutate(first_fracture_date = min(condition_start_date)) %>%  # Identify first fracture per patient
+  dplyr::ungroup() %>%
+  dplyr::filter(
+    first_fracture_date >= as.Date("2012-04-01") &  # First fracture must be after 01/04/2012
+      first_fracture_date <= as.Date("2018-03-31") &  # First fracture must be before 31/03/2018
+      (lubridate::year(first_fracture_date) - year_of_birth) > 50  # Age at first fracture must be > 50
+  ) %>%
+  dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date, fracture_site)  # Select relevant columns
+
+#n_distinct(fracture_table_start2$subject_id)
+
+###
+AttritionReportFrac<- AttritionReportFrac %>% 
+  union_all(  
+    tibble(
+      cohort_definition_id = as.integer(1),
+      number_records = fracture_table_start2 %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = fracture_table_start2 %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Had their 1st fx >= 01/04/2012 and <= 31/03/2018 when they were > 50 years old"
+    ))
+
+# check how many patients from raw are found here
+# raw_omop<- patids_raw %>%
+#   dplyr::anti_join(fracture_table_start2, by = "subject_id")
+
 
 ### a) Remove fractures before the birth year ----
-fracture_table_a <- fracture_table %>%
+fracture_table_a <- fracture_table_start2 %>%
   dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>%
   dplyr::mutate(fracture_year = as.numeric(format(condition_start_date, "%Y"))) %>%
   dplyr::filter(fracture_year > year_of_birth) %>%
@@ -188,8 +242,8 @@ AttritionReportFrac<- AttritionReportFrac %>%
 ### c) Remove fracture outside of observation period ----
 
 fracture_table_c <- fracture_table_b %>%
-  dplyr::filter(condition_start_date >= cohort_start_date & condition_start_date <= cohort_end_date)
-
+  dplyr::filter(condition_start_date <= cohort_end_date)
+# "condition_start_date >= cohort_start_date &" - I took this out because of what A. said "I would ignore the “aurum_min_accept_date” which is based only on regstartdate".
 AttritionReportFrac<- AttritionReportFrac %>% 
   union_all(  
     tibble(

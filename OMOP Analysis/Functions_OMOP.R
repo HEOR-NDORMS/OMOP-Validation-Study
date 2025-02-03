@@ -78,6 +78,40 @@ addInFollowUpEnd <- function(fractureTable){
     dplyr::mutate(follow_up_time = follow_up_end-index_date) 
 }
 
+
+## new FOLLOW UP END GL
+addInFollowUpEndGL <- function(fractureTable) {
+  fractureTable %>%
+    dplyr::mutate(
+      follow_up_end = pmin(
+        .data$after_index, 
+        .data$observation_period_end_date, 
+        .data$cancer_date, 
+        .data$mbd_date, 
+        .data$fracture_after_index, 
+        .data$death_date, 
+        na.rm = TRUE
+      )
+    ) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(
+      follow_up_reason = paste(
+        c(
+          if (!is.na(after_index) & follow_up_end == after_index) "after_index",
+          if (!is.na(observation_period_end_date) & follow_up_end == observation_period_end_date) "observation_period_end_date",
+          if (!is.na(cancer_date) & follow_up_end == cancer_date) "cancer_date",
+          if (!is.na(mbd_date) & follow_up_end == mbd_date) "mbd_date",
+          if (!is.na(fracture_after_index) & follow_up_end == fracture_after_index) "fracture_after_index",
+          if (!is.na(death_date) & follow_up_end == death_date) "death_date"
+        ),
+        collapse = ", "
+      ),
+      follow_up_time = follow_up_end - index_date
+    ) %>%
+    dplyr::ungroup()
+}
+
+
 # add in immFracture, a function that indicates which fracture is considered imminent in relation to the current index fracture
 immFracture <- function (fractureTable){
   fractureTable %>%
