@@ -3,7 +3,7 @@
 #	Author: Njoki Njuki	
 # Do file name: Table 1: description of the patients
 # Date: 31.01.2025
-# Last date edited: 31.01.2025
+# Last date edited: 04.02.2025
 # ****************************************************************************** #
 
 # Number of patients
@@ -31,6 +31,44 @@
 # Definitely impossible that they die and have fracture on the same day. Or at least if we have these cases then it’s not good.
 
 # Table 1 ----
+
+# Starting with cohort_table from CleaningCohort_Raw.R
+# let's clean some of the variables
+table_one_raw <- cohort_table %>% 
+  mutate(site = recode(site, hip = "Hip", vert = "Vertical", nhnv = "NHNV")) %>% 
+  mutate(follow_up_reason = case_when(
+    follow_up_reason %in% c("after_index, observation_period_end_date, death_date",
+                            "death_date",
+                            "observation_period_end_date, cancer_date, death_date",
+                            "observation_period_end_date, death_date") ~ "Death",
+    follow_up_reason == "after_index" ~ "Max of 730 days from index date",
+    follow_up_reason == "after_index, cancer_date" ~ "Max of 730 days from index date, Cancer",
+    follow_up_reason == "after_index, fracture_after_index" ~ "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
+    follow_up_reason == "after_index, mbd_date" ~ "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
+    follow_up_reason == "after_index, observation_period_end_date" ~ "Max of 730 days from index date, End of data collection period",
+    follow_up_reason == "cancer_date" ~ "Cancer",
+    follow_up_reason == "cancer_date, fracture_after_index" ~ "Cancer, Fracture ensuing incident (index) fracture",
+    follow_up_reason == "fracture_after_index" ~ "Fracture ensuing incident (index) fracture",
+    follow_up_reason == "mbd_date" ~ "Paget’s disease of the bone, or other metabolic bone diseases",
+    follow_up_reason == "observation_period_end_date" ~ "End of data collection period",
+    follow_up_reason == "observation_period_end_date, cancer_date" ~ "End of data collection period, Cancer",
+    follow_up_reason == "observation_period_end_date, fracture_after_index" ~ "End of data collection period, Fracture ensuing incident (index) fracture"))
+
+# Summary table ----
+# Using gtsummary::tbl_summary, we can summarise the table as follows
+(gt_summary_table <- table_one_raw %>% 
+   gtsummary::tbl_summary(
+     # select the variables of interest
+     include = c(age_fracture, site, follow_up_reason),
+     # rename the variable names
+     label = list(
+       age_fracture = "Age at fracture occurrence",
+       site = "Fracture site", 
+       follow_up_reason = "Censoring event"
+     ),
+     # indicate whether we want the missing values to be seen in the summary table
+     missing = "no"
+   ))
 
 # Starting with cohort_table_g_index.3
 
@@ -62,6 +100,7 @@ table_one_raw <- cohort_table_g_index.3 %>%
       )
     ))
 
+# Sense check ----
 ## Number of patients ----
 (number_of_patients <- n_distinct(table_one_raw$patid))
 
@@ -80,21 +119,13 @@ table_one_raw_pt <- table_one_raw %>%
 # hip (n%)
 # vertebra (n%)
 # NHNS (n%)
-(site_count_pts <- table_one_raw %>% 
+
+(site_count <- table_one_raw %>% 
    group_by(site) %>%
    summarise(count_of_pts = n_distinct(patid)) %>%
    mutate(percent = round(count_of_pts / sum(count_of_pts) * 100, 2),
           result = paste0(count_of_pts, "(", percent, "%", ")")) %>% 
    ungroup())
-
-(site_count_fx <- table_one_raw %>% 
-    group_by(site) %>%
-    summarise(count_of_pts = n(), .groups = "drop"))
-
-(site_count_pt <- table_one_raw_pt %>% 
-    distinct(patid, site) %>%            
-    group_by(site) %>%
-    summarise(count_of_pts = dplyr::n_distinct(patid), .groups = "drop"))
 
 ## Censoring events ----
 # fracture ensuing incident (index) fracture (n%)
@@ -104,10 +135,13 @@ table_one_raw_pt <- table_one_raw %>%
 # end of data collection period (n%)
 # maximum of 730 days from index date (n%)
 
-(censoring_events_count_pts <- table_one_raw %>% 
-   group_by(censoring_event) %>%
-   summarise(count_of_pts = n_distinct(patid), .groups = "drop"))
+(censoring_events_count <- table_one_raw %>% 
+   group_by(follow_up_reason) %>%
+   summarise(count_of_pts = n_distinct(patid), .groups = "drop") %>% 
+   mutate(percent = round(count_of_pts / sum(count_of_pts) * 100, 2),
+          result = paste0(count_of_pts, "(", percent, "%", ")")))
 
-(censoring_events_count_fx <- table_one_raw_pt %>% 
-    group_by(censoring_event) %>%
-    summarise(count_of_pts = n(), .groups = "drop"))
+# Export ----
+gt_summary_table_df <- as_tibble(gt_summary_table)
+
+# rio::export(gt_summary_table_df, here::here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx"))
