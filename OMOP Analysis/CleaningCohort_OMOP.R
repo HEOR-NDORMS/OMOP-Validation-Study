@@ -36,8 +36,25 @@ AttritionReportCoh<- AttritionReportCoh %>%
 
 ### Define index date ----
 
+# cohort_table_b_index <- cohort_table_b %>%
+#   dplyr::group_by(subject_id) %>%
+#   dplyr::arrange(condition_start_date, .by_group = T) %>%
+#   dplyr::mutate(gap = condition_start_date - lag(condition_start_date)) %>%
+#   dplyr::filter(gap>730|is.na(gap)) %>%
+#   dplyr::ungroup() %>%
+#   dplyr::select(-gap)
+
+# Defined Index as the first fracture (ever) -----
+
 cohort_table_b_index <- cohort_table_b %>%
-  dplyr::group_by(subject_id) %>%
+  dplyr::group_by(subject_id) %>% 
+  dplyr::slice_min(condition_start_date) %>%  # Keep only the earliest condition_start_date per subject
+  dplyr::ungroup()  
+
+                    
+### c) Excluding individuals who have index date same as obs period end date ----
+cohort_table_c_index <- cohort_table_b_index %>%  
+dplyr::group_by(subject_id) %>%
   dplyr::arrange(condition_start_date, .by_group = T) %>%
   dplyr::mutate(gap = condition_start_date - dplyr::lag(condition_start_date)) %>%
   dplyr::filter(gap>730|is.na(gap)) %>%
@@ -46,7 +63,7 @@ cohort_table_b_index <- cohort_table_b %>%
 
 ### c) Excluding individuals who has index date same as obs period end date ----
 
-cohort_table_c_index <- cohort_table_b_index %>%
+cohort_table_c_index <- cohort_table_c_index %>%
   dplyr::anti_join(cdm[["observation_period"]], by = c("subject_id" = "person_id", "condition_start_date" = "observation_period_end_date"), copy = T)
 
 AttritionReportCoh<- AttritionReportCoh %>% 
@@ -76,7 +93,7 @@ AttritionReportCoh<- AttritionReportCoh %>%
   ) 
 
 
-# e) at least 50 ----
+### e) at least 50 ----
 cohort_table_e_index <- cohort_table_d_index %>% 
   dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>%
   dplyr::mutate(age_fracture = lubridate::year(condition_start_date) - year_of_birth) %>%
@@ -132,7 +149,7 @@ AttritionReportCoh<- AttritionReportCoh %>%
     )
   ) 
 
-### g) No records of metabolic bone disease
+### g) No records of metabolic bone disease ----
 
 mbd <- read_excel(paste0(here(), "/OMOP Analysis/mbd_codes.xlsx"))
 mbd_codes <- mbd %>% dplyr::select(Id) %>% dplyr::pull()
@@ -163,15 +180,14 @@ AttritionReportCoh<- AttritionReportCoh %>%
   )  
 
 
-
 ### Finalise attrition
 AttritionReportCoh <- AttritionReportCoh %>% 
   dplyr::mutate(subjects_excluded = -(number_subjects-dplyr::lag(number_subjects)), records_excluded = -(number_records - dplyr::lag(number_records)))
 
-write.xlsx(AttritionReport, file = here::here(sub_output_folder, "AttritionReport.xlsx"))
+#write.xlsx(AttritionReportCoh, file = here::here(sub_output_folder, "AttritionReportCoh.xlsx"))
 
 
-## Create unique dataset with both index and non index fractures
+## Create unique dataset with both index and non index fractures -----
 
 # fracture_table_rq2 <- fracture_table
 cohort_table_g_index_ids <- cohort_table_g_index %>% dplyr::pull(subject_id)
@@ -202,11 +218,13 @@ cohort_table <- addInNextFracture(cohort_table)
 cohort_table <- addInDeath(cohort_table)
 
 # Add in FOLLOWUPEND
-cohort_table <- addInFollowUpEnd(cohort_table)
+#cohort_table <- addInFollowUpEnd(cohort_table)
 
-patid_df_OMOP <- cohort_table_g_index %>% 
-  select(subject_id) %>% 
-  mutate(subject_id = as.numeric(subject_id))
-rio::export(patid_df_OMOP, here("OMOP Analysis", "patid_df_OMOP.xlsx"))
+# Add in FOLLOWUPENDGL - with reason for FU (censoring)
+cohort_table <- addInFollowUpEndGL(cohort_table)
 
+# FINAL: Keep only one row per patient as we have fu end and info
 
+cohort_table <- cohort_table %>% 
+  dplyr:: filter(class=="index")
+#rio::export(AttritionReportCoh, here::here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))

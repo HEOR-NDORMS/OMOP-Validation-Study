@@ -170,20 +170,6 @@ cohort_table_g_index <- cohort_table_f_index.1 %>%
   filter(is.na(paget_lpon_index_dt)) %>%
   ungroup()
 
-AttritionReportCoh <- AttritionReportCoh %>% 
-  dplyr::union_all(  
-    tibble(
-      number_records = cohort_table_g_index %>% dplyr::tally() %>% dplyr::pull(),
-      number_subjects = cohort_table_g_index %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
-      reason = "Excluding records happened after metabolic bone diseases"
-    )
-  ) 
-
-# Finalise attrition ----
-AttritionReportCoh <- AttritionReportCoh %>% 
-  dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
-
-# rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
 ## Creating follow-up end ------
 ### 730 days after the index date ----
@@ -191,16 +177,24 @@ AttritionReportCoh <- AttritionReportCoh %>%
 addIndex <- function (fractureTable){
   fractureTable %>% 
     inner_join(fractureTable %>% 
-                        filter(type == "index") %>%
-                        group_by(patid) %>% 
-                        summarise(index_date = min(fx_date)) %>% 
-                        ungroup(),
-                      by = "patid"
+                 filter(type == "index") %>%
+                 group_by(patid) %>% 
+                 summarise(index_date = min(fx_date)) %>% 
+                 ungroup(),
+               by = "patid"
     )
 }
 
 cohort_table_g_index.1 <- addIndex(cohort_table_g_index)
 
+AttritionReportCoh <- AttritionReportCoh %>% 
+  dplyr::union_all(  
+    tibble(
+      number_records = cohort_table_g_index.1 %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_g_index.1 %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Defining index date (already done by A)"
+    )
+  ) 
 
 # add an extra variable after_index which is two years after the index date
 # addInTwoYearsAfter <- function (fractureTable){
@@ -224,21 +218,15 @@ cohort_table_g_index.2 <- cohort_table_g_index.1 %>%
     TRUE ~ NA_Date_
   )) %>% 
   ungroup()
-# %>%
-#   fill(after_index, .direction = "downup")
 
-# add a column of next fracture after the index one
-# addInNextFracture <- function(fractureTable){
-#   fractureTable %>% 
-#     left_join(fractureTable %>% 
-#                        filter(fx_date > index_date) %>% 
-#                        group_by(patid) %>% 
-#                        summarise(fracture_after_index = min(fx_date, na.rm =  T)) %>% 
-#                        ungroup(),
-#                      by = "patid")
-# }
-# 
-# cohort_table_g.3 <- addInNextFracture(cohort_table_g.2)
+AttritionReportCoh <- AttritionReportCoh %>% 
+  dplyr::union_all(  
+    tibble(
+      number_records = cohort_table_g_index.2 %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_g_index.2 %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Creating fracture that occurs after index date"
+    )
+  ) 
 
 # Add in FOLLOWUPEND ----
 # Ok, so.. A censoring event is defined as the earliest occurrence among the following: an imminent fracture after the index date (FA), death, cancer, metabolic disease, end of data collection, or two years from the index date. Each patient will have at least one censoring event.
@@ -260,8 +248,8 @@ addInFollowUpEnd <- function(fractureTable){
                                 .data$paget_lpon_index_dt, 
                                 .data$fracture_after_index,
                                 .data$death_date, na.rm = TRUE)) %>%
-   
-     # identify which column is the minimum date from
+    
+    # identify which column is the minimum date from
     mutate(censoring_event = case_when(
       follow_up_end == .data$aurum_max_accept_date ~ "aurum_max_accept_date",
       follow_up_end == .data$cancer_lpon_index_dt ~ "cancer_lpon_index_dt",
@@ -273,14 +261,29 @@ addInFollowUpEnd <- function(fractureTable){
     
     # calculate the follow up time
     mutate(follow_up_time = follow_up_end - index_date) %>%
-
+    
     # ensure conistency with patients with multiple entries
     mutate(min_follow_up_end = min(follow_up_end, na.rm = T),
            censoring_event = first(censoring_event[follow_up_end == min_follow_up_end]),
-           follow_up_end = min_follow_up_end) %>% 
+           follow_up_end_new = min_follow_up_end,
+           follow_up_time_new = follow_up_end_new - index_date) %>% 
     select(!c(min_follow_up_end)) %>% 
     ungroup()
 }
 
 cohort_table_g_index.3 <- addInFollowUpEnd(cohort_table_g_index.2)
 
+AttritionReportCoh <- AttritionReportCoh %>% 
+  dplyr::union_all(  
+    tibble(
+      number_records = cohort_table_g_index.3 %>% dplyr::tally() %>% dplyr::pull(),
+      number_subjects = cohort_table_g_index.3 %>% dplyr::distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+      reason = "Generating the follow-up end date"
+    )
+  ) 
+
+# Finalise attrition ----
+AttritionReportCoh <- AttritionReportCoh %>% 
+  dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
+
+# rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
