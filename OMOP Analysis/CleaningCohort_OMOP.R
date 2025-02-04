@@ -53,7 +53,8 @@ cohort_table_b_index <- cohort_table_b %>%
 
                     
 ### c) Excluding individuals who have index date same as obs period end date ----
-  dplyr::group_by(subject_id) %>%
+cohort_table_c_index <- cohort_table_b_index %>%  
+dplyr::group_by(subject_id) %>%
   dplyr::arrange(condition_start_date, .by_group = T) %>%
   dplyr::mutate(gap = condition_start_date - dplyr::lag(condition_start_date)) %>%
   dplyr::filter(gap>730|is.na(gap)) %>%
@@ -62,7 +63,7 @@ cohort_table_b_index <- cohort_table_b %>%
 
 ### c) Excluding individuals who has index date same as obs period end date ----
 
-cohort_table_c_index <- cohort_table_b_index %>%
+cohort_table_c_index <- cohort_table_c_index %>%
   dplyr::anti_join(cdm[["observation_period"]], by = c("subject_id" = "person_id", "condition_start_date" = "observation_period_end_date"), copy = T)
 
 AttritionReportCoh<- AttritionReportCoh %>% 
@@ -226,3 +227,4 @@ cohort_table <- addInFollowUpEndGL(cohort_table)
 
 cohort_table <- cohort_table %>% 
   dplyr:: filter(class=="index")
+#rio::export(AttritionReportCoh, here::here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
