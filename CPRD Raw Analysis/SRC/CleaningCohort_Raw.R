@@ -227,3 +227,7 @@ cohort_table <- addInFollowUpEndGL(cohort_table)
 
 cohort_table <- cohort_table %>% 
   dplyr:: filter(type=="index")
+
+cohort_table_raw_ids <- as.data.frame(cohort_table %>% dplyr::pull(patid))
+#rio::export(cohort_table_raw_ids, here::here("CPRD Raw Analysis", "Results", "cohort_table_raw_ids.csv"))
+#rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
