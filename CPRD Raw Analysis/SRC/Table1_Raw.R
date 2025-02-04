@@ -70,36 +70,6 @@ table_one_raw <- cohort_table %>%
      missing = "no"
    ))
 
-# Starting with cohort_table_g_index.3
-
-table_one_raw <- cohort_table_g_index.3 %>% 
-  mutate(site = recode(site, hip = "Hip", vert = "Vertical", nhnv = "NHNV"))
-
-(gt_table <- table_one_raw %>%
-    group_by(patid) %>%  # Ensure unique patients
-    summarise(
-      across(
-        c(age_fracture, site, fracture_after_index, follow_up_end,
-          cancer_lpon_index_dt, paget_lpon_index_dt, censoring_event,
-          follow_up_end_new, follow_up_time_new), 
-        ~ ifelse(all(is.na(.)), NA, first(na.omit(.)))  # Robust NA handling
-      ), 
-      .groups = "drop" # Correct placement
-    ) %>% 
-    gtsummary::tbl_summary(
-      include = c(age_fracture, site, fracture_after_index, follow_up_end,
-                  cancer_lpon_index_dt, paget_lpon_index_dt, censoring_event,
-                  follow_up_end_new, follow_up_time_new),
-      missing = "ifany",  # Includes missing values in the summary
-      statistic = list(
-        fracture_after_index ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
-        cancer_lpon_index_dt ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
-        paget_lpon_index_dt ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
-        follow_up_end_new ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
-        follow_up_end ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)"
-      )
-    ))
-
 # Sense check ----
 ## Number of patients ----
 (number_of_patients <- n_distinct(table_one_raw$patid))
