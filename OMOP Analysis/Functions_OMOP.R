@@ -71,12 +71,12 @@ addInDeath <- function(fractureTable){
     dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date, fracture_site, class, index_date, after_index, observation_period_end_date, cancer_date, mbd_date, fracture_after_index, death_date)
 }
 
-# add in FOLLOWUPEND - only after the relevant columns are added
-addInFollowUpEnd <- function(fractureTable){
-  fractureTable %>% 
-    dplyr::mutate(follow_up_end = pmin(.data$after_index, .data$observation_period_end_date, .data$cancer_date, .data$mbd_date, .data$fracture_after_index, .data$death_date, na.rm = T)) %>%
-    dplyr::mutate(follow_up_time = follow_up_end-index_date) 
-}
+# # add in FOLLOWUPEND - only after the relevant columns are added
+# addInFollowUpEnd <- function(fractureTable){
+#   fractureTable %>% 
+#     dplyr::mutate(follow_up_end = pmin(.data$after_index, .data$observation_period_end_date, .data$cancer_date, .data$mbd_date, .data$fracture_after_index, .data$death_date, na.rm = T)) %>%
+#     dplyr::mutate(follow_up_time = follow_up_end-index_date) 
+# }
 
 
 ## new FOLLOW UP END GL
