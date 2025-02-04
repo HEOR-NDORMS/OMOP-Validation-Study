@@ -16,6 +16,7 @@ addInTwoYearsAfter <- function (fractureTable){
     dplyr::mutate(after_index = index_date + 730)
 }
 
+
 # add in the end of observation period for each individual
 addInObsEndDate <- function (fractureTable){
   fractureTable %>%
@@ -91,11 +92,38 @@ addInDeath <- function(fractureTable){
 }
 
 # add in FOLLOWUPEND - only after the relevant columns are added
-addInFollowUpEnd <- function(fractureTable){
-  fractureTable %>% 
-    dplyr::mutate(follow_up_end = pmin(.data$after_index, .data$aurum_max_accept_date, .data$cancer_date, .data$paget_date, .data$fracture_after_index, .data$death_date, na.rm = T)) %>%
-    dplyr::mutate(follow_up_time = follow_up_end-index_date) 
+addInFollowUpEndGL <- function(fractureTable) {
+  fractureTable %>%
+    dplyr::mutate(
+      follow_up_end = pmin( # follow-up end is the minimum date of possible censoring events being:
+        .data$after_index, # 730 after index
+        .data$aurum_max_accept_date, # end of data collection
+        .data$cancer_fa_index_dt, # cancer
+        .data$paget_fa_index_dt, # pagets or mbd
+        .data$fracture_after_index, # fracture ensuing index
+        .data$death_date, # death
+        na.rm = TRUE
+      )
+    ) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(
+      follow_up_reason = paste(
+        c(
+          if (!is.na(after_index) & follow_up_end == after_index) "after_index",
+          if (!is.na(aurum_max_accept_date) & follow_up_end == aurum_max_accept_date) "observation_period_end_date",
+          if (!is.na(cancer_fa_index_dt) & follow_up_end == cancer_fa_index_dt) "cancer_date",
+          if (!is.na(paget_fa_index_dt) & follow_up_end == paget_fa_index_dt) "mbd_date",
+          if (!is.na(fracture_after_index) & follow_up_end == fracture_after_index) "fracture_after_index",
+          if (!is.na(death_date) & follow_up_end == death_date) "death_date"
+        ),
+        collapse = ", "
+      ),
+      follow_up_time = follow_up_end - index_date
+    ) %>%
+    dplyr::ungroup()
 }
+
+
 
 # add in immFracture, a function that indicates which fracture is considered imminent in relation to the current index fracture
 immFracture <- function (fractureTable){

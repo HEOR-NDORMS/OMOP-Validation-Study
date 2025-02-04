@@ -4,7 +4,7 @@
 # Do file name: Cleaning Cohort; clean the data grouped by subject_id based on 
 # the remaining conditions in the table
 # Date: 13.01.2024
-# Last date edited: 03.02.2025
+# Last date edited: 21.01.2025
 # ****************************************************************************** #
 
 # prior obs
@@ -12,7 +12,7 @@ prior_observation <- 730
 
 # Cleaning Cohort ----
 
-# Starting with fract_table_g ran from CleaningFractures_Raw.R script...
+# Starting with trauma_fract_table_g ran from CleaningFractures_Raw.R script...
 cohort_table <- fracture_table_g %>% 
   select(-c(fracture_year, trauma_present, number_sites))
 
@@ -49,12 +49,20 @@ AttritionReportCoh<- AttritionReportCoh %>%
   ) 
 
 ## Define index ----
-# This has been done by Antonella
+# Even though we had index defined by Antonella, since we have cleaned out some fractures (e.g., trauma and others), 
+# we now have to redefined index because some patients don't have the one originally assigned anymore.
+# For example if index was deleted because of being on the same date as trauma, then the fa fracture now becomes index.
+# So, following the same logic as in the omop code, we now work here with just a dataframe containing just index and then we join back with the other fractures 
+cohort_table_b_index <- cohort_table_b %>%
+  dplyr::group_by(patid) %>% 
+  dplyr::slice_min(fx_date) %>%  # Keep only the earliest fx_date per subject
+  dplyr::ungroup() 
 
-## c) Excluding individuals who has index date same as obs period end date ----
-cohort_table_c_index <- cohort_table_b %>% 
+
+### c) Excluding individuals who have index date same as obs period end date ----
+cohort_table_c_index <- cohort_table_b_index %>% 
   group_by(patid) %>% 
-  filter(!(type == "index" & fx_date == aurum_min_accept_date)) %>% 
+  filter(!(fx_date == aurum_min_accept_date)) %>% 
   ungroup()
 
 AttritionReportCoh<- AttritionReportCoh %>% 
@@ -66,7 +74,7 @@ AttritionReportCoh<- AttritionReportCoh %>%
     )
   )
 
-## d) At least 730 days prior obs -----
+### d) At least 730 days prior obs -----
 # check if a fx_date where falls within the 730 days before another date (index_date).
 # fa_index_dt is greater than or equal to index_date - 730 (this means it happened in the last 730 days).
 # fa_index_dt is less than index_date (this makes sure it's before the index_date).
@@ -86,7 +94,7 @@ AttritionReportCoh<- AttritionReportCoh %>%
   )
 
 
-## e) at least 50 -----
+### e) at least 50 -----
 cohort_table_e_index <- cohort_table_d_index %>% 
   mutate(age_fracture = lubridate::year(fx_date) - yob) %>%
   filter(age_fracture >= 50)
@@ -101,9 +109,8 @@ AttritionReportCoh<- AttritionReportCoh %>%
   )
 
 
+### f) No records of cancer before or on the index date ----
 
-## f) No records of cancer before or on the index date ----
-# remove subjects who had cancer before or on index date I'd use lpon because that is the "last prior or on (lpon)" cancer before index
 # cancer columns
 cancer_df <- all_patients %>% 
   select(patid, cancer_lpon_index_dt) 
@@ -120,18 +127,17 @@ cancer_df <- all_patients %>%
 #   filter(condition_date_type != "lpon")
 
 # merge with the fx df
-cohort_table_e_index.1 <- left_join(cohort_table_e_index, cancer_df, by = "patid") 
+cohort_table_e.1 <- left_join(cohort_table_e_index, cancer_df, by = "patid") 
 
 # remove cancer before yob
-cohort_table_e_index.1 <- cohort_table_e_index.1 %>% 
+cohort_table_e.1 <- cohort_table_e.1 %>% 
   group_by(patid) %>% 
   mutate(cancer_year = lubridate::year(cancer_lpon_index_dt)) %>%
   filter(cancer_year > yob | is.na(cancer_year)) %>% 
   ungroup()
 
-# remove subjects who had cancer before or on index date - lpon variable will be used.
-# 
-cohort_table_f_index <-  cohort_table_e_index.1 %>% 
+# remove subjects who had cancer before or on index date.
+cohort_table_f_index <-  cohort_table_e.1 %>% 
   group_by(patid) %>% 
   filter(is.na(cancer_lpon_index_dt)) %>% 
   ungroup() %>% 
@@ -146,8 +152,7 @@ AttritionReportCoh <- AttritionReportCoh %>%
     )
   ) 
 
-
-## g) No records of metabolic bone disease ----
+### g) No records of metabolic bone disease ----
 metabolic_df <- all_patients %>% 
   select(patid, paget_lpon_index_dt) 
 
@@ -162,13 +167,14 @@ metabolic_df <- all_patients %>%
 #   rename(paget_date = value)  # Rename to `condition_date`
 
 # merge with the fx df
-cohort_table_f_index.1 <- left_join(cohort_table_f_index, metabolic_df, by = "patid") 
+cohort_table_f.1 <- left_join(cohort_table_f_index, metabolic_df, by = "patid") 
 
-# remove subjects who had cancer before or on index date.
-cohort_table_g_index <- cohort_table_f_index.1 %>%
+# remove subjects who had mbd before or on index date.
+cohort_table_g_index <- cohort_table_f.1 %>%
   group_by(patid) %>% 
   filter(is.na(paget_lpon_index_dt)) %>%
-  ungroup()
+  ungroup() 
+
 
 AttritionReportCoh <- AttritionReportCoh %>% 
   dplyr::union_all(  
@@ -179,108 +185,45 @@ AttritionReportCoh <- AttritionReportCoh %>%
     )
   ) 
 
-# Finalise attrition ----
+### Finalise attrition ----
 AttritionReportCoh <- AttritionReportCoh %>% 
   dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
 
 # rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
-## Creating follow-up end ------
-### 730 days after the index date ----
-# for a fracture table, compute the index date for each person
-addIndex <- function (fractureTable){
-  fractureTable %>% 
-    inner_join(fractureTable %>% 
-                        filter(type == "index") %>%
-                        group_by(patid) %>% 
-                        summarise(index_date = min(fx_date)) %>% 
-                        ungroup(),
-                      by = "patid"
-    )
-}
+### Create unique dataset with both index and non index fractures ----
+cohort_table_g_index <-cohort_table_g_index%>% 
+  dplyr::mutate(class = "index") # create a variable to represent the new index (remember some that prviously where fa are now index)
 
-cohort_table_g_index.1 <- addIndex(cohort_table_g_index)
+# fracture_table_rq2 <- fracture_table
+cohort_table_g_ids <- cohort_table_g_index %>% dplyr::pull(patid) 
 
+cohort_table <- cohort_table %>%
+  dplyr::left_join(cohort_table_g_index, by = colnames(cohort_table)) %>% 
+  dplyr::filter(patid %in% cohort_table_g_ids) %>% 
+  dplyr::mutate(
+    class = ifelse(is.na(class) | class == "", type, class)
+  ) %>% 
+  dplyr::select(-type, -cancer_lpon_index_dt, -paget_lpon_index_dt) %>% 
+  dplyr::rename(type = class)
 
-# add an extra variable after_index which is two years after the index date
-# addInTwoYearsAfter <- function (fractureTable){
-#   fractureTable %>%
-#     mutate(after_index = index_date + 730)
-# }
+# bring back cancer and mbd after index to be used as censoring events
 
-# the rule is: follow-up end date is the earliest date of censoring event or index+730. Meaning that if there are no censoring events the follow-up will end 730 days after index date.
-# cohort_table_g.2 <- cohort_table_g.1 %>%
-#   group_by(patid) %>% 
-#   mutate(after_index = if_else(type == "fa", fx_date, fx_date + 730)) %>%
-#   ungroup()
+cohort_table <- cohort_table %>% 
+  dplyr::left_join(all_patients %>% dplyr::select(patid, cancer_fa_index_dt, paget_fa_index_dt), 
+                   by = "patid")
 
-
-cohort_table_g_index.2 <- cohort_table_g_index.1 %>%
-  group_by(patid) %>%
-  mutate(fracture_after_index = case_when(
-    type == "fa" ~ fx_date,
-    type == "index" & any(type == "fa") ~ NA_Date_,
-    type == "index" & !any(type == "fa") ~ fx_date + 730,
-    TRUE ~ NA_Date_
-  )) %>% 
-  ungroup()
-# %>%
-#   fill(after_index, .direction = "downup")
-
-# add a column of next fracture after the index one
-# addInNextFracture <- function(fractureTable){
-#   fractureTable %>% 
-#     left_join(fractureTable %>% 
-#                        filter(fx_date > index_date) %>% 
-#                        group_by(patid) %>% 
-#                        summarise(fracture_after_index = min(fx_date, na.rm =  T)) %>% 
-#                        ungroup(),
-#                      by = "patid")
-# }
-# 
-# cohort_table_g.3 <- addInNextFracture(cohort_table_g.2)
-
+### Creating follow-up end ------
+# Create index date 
+cohort_table <- addIndex(cohort_table)
+# 730 days after the index date ----
+cohort_table <- addInTwoYearsAfter(cohort_table)
+# Add in first fracture date after the index dates
+cohort_table <- addInNextFracture(cohort_table)
 # Add in FOLLOWUPEND ----
-# Ok, so.. A censoring event is defined as the earliest occurrence among the following: an imminent fracture after the index date (FA), death, cancer, metabolic disease, end of data collection, or two years from the index date. Each patient will have at least one censoring event.
-# The "follow-up end date" function identifies the earliest of these events, determining the end of follow-up. In some cases, multiple events may occur on the same day, for example, a diagnosis of cancer and MBD. However, in most cases, I expect each patient to have a single censoring event.
-# Regarding the patient you mentioned (index date: 24-07-2013):
-#   They experienced an NHNS fracture on 31-07-2013.
-# They were diagnosed with cancer on 23-05-2018.
-# This patient does not have two cancer diagnoses, only one. However, cancer is not the earliest censoring event. The NHNS fracture following the index date is the first censoring event, and this should be the event counted in Table 1 for this patient.
+cohort_table <- addInFollowUpEndGL(cohort_table)
 
-# add in FOLLOWUPEND - only after the relevant columns are added
-addInFollowUpEnd <- function(fractureTable){
-  fractureTable %>% 
-    group_by(patid) %>% 
-    dplyr::arrange(patid) %>% 
-    
-    # find the follow-up-end date which is the minimum of these dates
-    mutate(follow_up_end = pmin(.data$aurum_max_accept_date, 
-                                .data$cancer_lpon_index_dt,
-                                .data$paget_lpon_index_dt, 
-                                .data$fracture_after_index,
-                                .data$death_date, na.rm = TRUE)) %>%
-   
-     # identify which column is the minimum date from
-    mutate(censoring_event = case_when(
-      follow_up_end == .data$aurum_max_accept_date ~ "aurum_max_accept_date",
-      follow_up_end == .data$cancer_lpon_index_dt ~ "cancer_lpon_index_dt",
-      follow_up_end == .data$paget_lpon_index_dt ~ "paget_lpon_index_dt",
-      follow_up_end == .data$fracture_after_index ~ "fracture_after_index",
-      follow_up_end == .data$death_date ~ "death_date",
-      TRUE ~ NA_character_
-    )) %>% 
-    
-    # calculate the follow up time
-    mutate(follow_up_time = follow_up_end - index_date) %>%
+# FINAL: Keep only one row per patient as we have fu end and info
 
-    # ensure conistency with patients with multiple entries
-    mutate(min_follow_up_end = min(follow_up_end, na.rm = T),
-           censoring_event = first(censoring_event[follow_up_end == min_follow_up_end]),
-           follow_up_end = min_follow_up_end) %>% 
-    select(!c(min_follow_up_end)) %>% 
-    ungroup()
-}
-
-cohort_table_g_index.3 <- addInFollowUpEnd(cohort_table_g_index.2)
-
+cohort_table <- cohort_table %>% 
+  dplyr:: filter(type=="index")

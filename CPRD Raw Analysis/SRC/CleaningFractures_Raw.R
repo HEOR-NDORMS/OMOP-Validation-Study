@@ -167,7 +167,7 @@ AttritionReportFrac_Raw <- tibble(
   cohort_definition_id = as.integer(1),
   number_records = final_fracture_data %>% dplyr::tally() %>% dplyr::pull(),
   number_subjects = final_fracture_data %>% distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
-  reason = "Starting Population - Anyone With Fracture(s)"
+  reason = "Had their 1st fx >= 01/04/2012 and <= 31/03/2018 when they were > 50 years old"
 )
 
 # a) Remove fractures before the birth year ----
