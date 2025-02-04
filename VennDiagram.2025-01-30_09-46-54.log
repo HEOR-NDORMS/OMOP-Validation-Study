@@ -1,9 +1,0 @@
-INFO [2025-01-30 09:46:54] $x
-INFO [2025-01-30 09:46:54] list(OMOP = fracture_table_2, RAW = fracture_table_raw_2, Overlap = overlap_records_2)
-INFO [2025-01-30 09:46:54] 
-INFO [2025-01-30 09:46:54] $category.names
-INFO [2025-01-30 09:46:54] c("OMOP", "RAW", "Overlap")
-INFO [2025-01-30 09:46:54] 
-INFO [2025-01-30 09:46:54] $filename
-INFO [2025-01-30 09:46:54] NULL
-INFO [2025-01-30 09:46:54] 
