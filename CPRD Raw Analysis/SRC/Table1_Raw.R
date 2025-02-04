@@ -32,32 +32,33 @@
 
 # Table 1 ----
 
-# Starting with cohort_table_g.4
+# Starting with cohort_table_g_index.3
 
-table_one_raw <- cohort_table_g.4 
-# %>% 
-#   filter(type == "index")
+table_one_raw <- cohort_table_g_index.3 %>% 
+  mutate(site = recode(site, hip = "Hip", vert = "Vertical", nhnv = "NHNV"))
 
 (gt_table <- table_one_raw %>%
     group_by(patid) %>%  # Ensure unique patients
     summarise(
       across(
-        c(age_fracture, site, fracture_after_index, cancer_date, 
-          paget_date, follow_up_end, after_index), 
+        c(age_fracture, site, fracture_after_index, follow_up_end,
+          cancer_lpon_index_dt, paget_lpon_index_dt, censoring_event,
+          follow_up_end_new, follow_up_time_new), 
         ~ ifelse(all(is.na(.)), NA, first(na.omit(.)))  # Robust NA handling
       ), 
       .groups = "drop" # Correct placement
     ) %>% 
     gtsummary::tbl_summary(
-      include = c(age_fracture, site, fracture_after_index, cancer_date,
-                  paget_date, follow_up_end, after_index),
+      include = c(age_fracture, site, fracture_after_index, follow_up_end,
+                  cancer_lpon_index_dt, paget_lpon_index_dt, censoring_event,
+                  follow_up_end_new, follow_up_time_new),
       missing = "ifany",  # Includes missing values in the summary
       statistic = list(
         fracture_after_index ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
-        cancer_date ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
-        paget_date ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
-        follow_up_end ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
-        after_index ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)"
+        cancer_lpon_index_dt ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
+        paget_lpon_index_dt ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
+        follow_up_end_new ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)",
+        follow_up_end ~ "{N_nonmiss} ({p_nonmiss}%) / {N_miss} ({p_miss}%)"
       )
     ))
 
@@ -65,16 +66,48 @@ table_one_raw <- cohort_table_g.4
 (number_of_patients <- n_distinct(table_one_raw$patid))
 
 ## Age (median, IQR) ----
-
-(median_age <- median(table_one_raw$age_fracture));
+(median_age <- median(table_one_raw$age_fracture))
 (iqr_age <- IQR(table_one_raw$age_fracture))
-(results_age <- paste(median_age, "(", iqr_age, ")"))
+(results_age <- paste0(median_age, "(", iqr_age, ")"))
+
+table_one_raw_pt <- table_one_raw %>% 
+  distinct(patid, .keep_all = TRUE)
+
+(median_age_pt <- median(table_one_raw_pt$age_fracture))
+(iqr_age_pt <- IQR(table_one_raw_pt$age_fracture))
 
 ## Site of index fracture ----
 # hip (n%)
 # vertebra (n%)
 # NHNS (n%)
-(site_count <- table_one_raw %>% 
-   distinct(patid, site) %>%            # Remove duplicate patient-site combinations
+(site_count_pts <- table_one_raw %>% 
    group_by(site) %>%
-   summarise(count_of_pts = n(), .groups = "drop"))
+   summarise(count_of_pts = n_distinct(patid)) %>%
+   mutate(percent = round(count_of_pts / sum(count_of_pts) * 100, 2),
+          result = paste0(count_of_pts, "(", percent, "%", ")")) %>% 
+   ungroup())
+
+(site_count_fx <- table_one_raw %>% 
+    group_by(site) %>%
+    summarise(count_of_pts = n(), .groups = "drop"))
+
+(site_count_pt <- table_one_raw_pt %>% 
+    distinct(patid, site) %>%            
+    group_by(site) %>%
+    summarise(count_of_pts = dplyr::n_distinct(patid), .groups = "drop"))
+
+## Censoring events ----
+# fracture ensuing incident (index) fracture (n%)
+# cancer (except non-melanoma skin cancer) (n%)
+# Paget’s disease of the bone, or other metabolic bone diseases (n%)
+# death (n%)
+# end of data collection period (n%)
+# maximum of 730 days from index date (n%)
+
+(censoring_events_count_pts <- table_one_raw %>% 
+    group_by(censoring_event) %>%
+   summarise(count_of_pts = n_distinct(patid), .groups = "drop"))
+
+(censoring_events_count_fx <- table_one_raw_pt %>% 
+    group_by(censoring_event) %>%
+    summarise(count_of_pts = n(), .groups = "drop"))
