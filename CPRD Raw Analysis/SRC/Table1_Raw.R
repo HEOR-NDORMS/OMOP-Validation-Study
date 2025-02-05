@@ -35,7 +35,7 @@
 # Starting with cohort_table from CleaningCohort_Raw.R
 # let's clean some of the variables
 table_one_raw <- cohort_table %>% 
-  mutate(site = recode(site, hip = "Hip", vert = "Vertical", nhnv = "NHNV")) %>% 
+  mutate(site = recode(site, hip = "Hip", vert = "Vertebral", nhnv = "NHNV")) %>% 
   mutate(follow_up_reason = case_when(
     follow_up_reason %in% c("after_index, observation_period_end_date, death_date",
                             "death_date",
@@ -59,12 +59,13 @@ table_one_raw <- cohort_table %>%
 (gt_summary_table <- table_one_raw %>% 
    gtsummary::tbl_summary(
      # select the variables of interest
-     include = c(age_fracture, site, follow_up_reason),
+     include = c(age_fracture, site, follow_up_reason, follow_up_time),
      # rename the variable names
      label = list(
        age_fracture = "Age at fracture occurrence",
        site = "Fracture site", 
-       follow_up_reason = "Censoring event"
+       follow_up_reason = "Censoring event",
+       follow_up_time = "Follow up time"
      ),
      # indicate whether we want the missing values to be seen in the summary table
      missing = "no"
@@ -111,7 +112,16 @@ table_one_raw_pt <- table_one_raw %>%
    mutate(percent = round(count_of_pts / sum(count_of_pts) * 100, 2),
           result = paste0(count_of_pts, "(", percent, "%", ")")))
 
+## Follow-up time in days ----
+(median_followup_time <- median(table_one_raw$follow_up_time))
+(iqr_followup_time <- IQR(table_one_raw$follow_up_time))
+
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table)
 
-# rio::export(gt_summary_table_df, here::here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx"))
+rio::export(gt_summary_table_df, here::here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx"))
+
+# or HTML
+# Saving the summary table as an HTML file
+gtsummary::as_gt(gt_summary_table) %>%
+  gt::gtsave(here::here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html"))
