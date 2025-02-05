@@ -227,4 +227,4 @@ cohort_table <- addInFollowUpEndGL(cohort_table)
 
 cohort_table <- cohort_table %>% 
   dplyr:: filter(class=="index")
-#rio::export(AttritionReportCoh, here::here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
+# rio::export(AttritionReportCoh, here::here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
