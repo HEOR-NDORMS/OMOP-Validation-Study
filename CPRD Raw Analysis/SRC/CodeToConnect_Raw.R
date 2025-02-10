@@ -1,5 +1,5 @@
 # Set up the R environ
-# renv::activate()
+renv::activate()
 # usethis::edit_r_environ()
 
 # install.packages("DBI")
