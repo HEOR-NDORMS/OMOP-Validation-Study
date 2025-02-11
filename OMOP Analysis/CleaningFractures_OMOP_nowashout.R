@@ -90,7 +90,7 @@ nonspecific_fracture_id <- conditions_sheet1 %>%
   dplyr::pull()
 
 any_fracture_id <- conditions_sheet1 %>% 
-  #dplyr::filter(!Site == "Exclude") %>% # just commenting out for now as a TESTTTTTT bc it was not in a Antonella raw
+  dplyr::filter(!Site == "Exclude") %>% 
   dplyr::select(Id) %>% 
   dplyr::pull()
 
