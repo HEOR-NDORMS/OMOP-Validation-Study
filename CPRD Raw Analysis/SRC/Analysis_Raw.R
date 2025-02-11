@@ -64,12 +64,23 @@ visit_data_final_min.1 <- visit_data_final_min %>%
     TRUE ~ NA_character_
   )) %>% 
   left_join(provider_cost_inputs,
-            by = "specialty_source_value")  
+            by = "specialty_source_value")  %>% 
+# Identify if the visit is clinically relevant
+mutate(is_clinically_relevant = if_else(!is.na(specialty_source_value), 1, 0)) %>%
+  
+  # Determine user status per patient
+  group_by(patid) %>%
+  mutate(user_status = if_else(any(is_clinically_relevant == 1, na.rm = TRUE), "User", "Non-User")) %>%
+  ungroup()
 # Note: filtering for the clinically relevant specialty, we drop 504 patients, 
 # therefore we are left with 2462 patients whom we look at their visits and cost
   
 
 ## Visits - Primary care ----
+# NOTE:
+# users as those with at least one visit, regardless of who they had it with. 
+# So if one had a GP visit and another patient had one with cardiologist they are both considered users.
+# Non-user would be someone with a overall count = 0
 visits_results_raw <- analyse_visits(visit_data_final_min.1)
 
 # Get the output
