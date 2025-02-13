@@ -1,9 +1,9 @@
 # ****************************************************************************** #
 #	Project name: Validation Study			    	
 #	Author: Njoki Njuki	
-# Do file name: Primary care and Secondary care analysis	
+# Do file name: Primary care analysis	
 # Date: 10.02.2025
-# Last date edited: 10.02.2025
+# Last date edited: 13.02.2025
 # ****************************************************************************** #
 
 # Service users are defined as patients with records of healthcare encounters 
@@ -74,19 +74,57 @@ visit_data_final_min.1 <- visit_data_final_min %>%
   group_by(patid) %>%
   mutate(user_status = if_else(any(is_clinically_relevant == 1, na.rm = TRUE), "User", "Non-User")) %>%
   ungroup()
+
+visit_data_final_min.1 <- visit_data_final_min %>% 
+  rename("specialty_source_value" = "description") %>% 
+  mutate(specialty_source_value = case_when(
+    specialty_source_value %in% specialty_source_value_ids ~ specialty_source_value,
+    TRUE ~ "Not_clinically_relevant"
+  )) %>% 
+  left_join(provider_cost_inputs,
+            by = "specialty_source_value")  %>% 
+  # Identify if the visit is clinically relevant
+  mutate(is_clinically_relevant = if_else(
+    specialty_source_value == "Not_clinically_relevant", 0, 1)) %>%
+  # Determine user status per patient
+  group_by(patid) %>%
+  mutate(user_status = if_else(any(is_clinically_relevant == 1, na.rm = TRUE), "User", "Non-User")) %>%
+  ungroup()
+
+summary_visits <- visit_data_final_min.1 %>%
+  group_by(patid, index_date, specialty_source_value) %>% # we group by index date to ensure each visit is associated with an entry
+  summarise(visit_count = n()) %>%
+  ungroup()
+
+
+visit_data_final_min.2 <- left_join(visit_data_final_min.1, summary_visits,
+                                    by = c("patid", "index_date", "specialty_source_value")) %>% 
+  # Non users are patients with no contacts with the NHS (i.e., no visits at all) or 
+  # visits with staff that are not clinically relevant
+  # sense check this pt: 3275789521160
+  mutate(visit_count = if_else(!is.na(visit_count), visit_count, 0)) %>% 
+  mutate(unit_cost = if_else(!is.na(unit_cost), unit_cost, 0)) %>% 
+  mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
+  mutate(visits_per_year = visit_count / exposed_yrs)  %>%
+  # in R 0/0 results to NaN, so I converted this to 0
+  mutate(visits_per_year = replace_na(visits_per_year, 0)) %>% 
+  mutate(visit_cost = visit_count * unit_cost) %>% 
+  mutate(visits_costs_per_year = visit_cost / exposed_yrs) %>%
+  mutate(visits_costs_per_year = replace_na(visits_costs_per_year, 0)) %>%
+  rename("specialty" = "specialty_source_value")
  
 # count of users/non-users
-u_n_summary <- visit_data_final_min.1 %>%
+(u_n_summary <- visit_data_final_min.2 %>%
   group_by(user_status) %>%
   summarise(count_of_pts = n_distinct(patid)) %>%
-  ungroup()
+  ungroup())
 
 ## Visits - Primary care ----
 # NOTE:
 # users as those with at least one visit, regardless of who they had it with. 
 # So if one had a GP visit and another patient had one with cardiologist they are both considered users.
 # Non-user would be someone with a overall count = 0
-visits_results_raw <- analyse_visits(visit_data_final_min.1)
+visits_results_raw <- analyse_visits(visit_data_final_min.2)
 
 # Get the output
 user_only_summary <- visits_results_raw$user_only_summary
@@ -96,59 +134,26 @@ all_summary <- visits_results_raw$all_summary
 (tot_exposed_yrs_user_v <- visits_results_raw$tot_exposed_yrs_user)
 
 
-# Overall
-summary_visits <- visit_data_final_min.1 %>%
-  group_by(patid, index_date, specialty_source_value) %>% # we group by index date to ensure each visit is associated with an entry
-  summarise(visit_count = n()) %>%
-  ungroup()
+### Overall visits summaries ----
+(overall_mean_visits <- mean(visit_data_final_min.2$visit_count))
+(overall_median_visits <- median(visit_data_final_min.2$visit_count))
+(overall_summary_visits <- summary(visit_data_final_min.2$visit_count, na.rm = TRUE))
 
-# summary_visits_t <- visit_data_final_min.1 %>%
-#   group_by(patid) %>% # we group by index date to ensure each visit is associated with an entry
-#   summarise(visit_count = n()) %>%
-#   ungroup()
-
-# create a temporary df in order to get the overall summary stats for visits
-df_temp_visits <- visit_data_final_min.1 %>%
-  mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
-  left_join(summary_visits, by = c("patid", "specialty_source_value", "index_date")) %>% 
-  # Non users are patients with no contacts with the NHS (i.e., no visits at all) or visits with staff that are not clinically relevant
-  # sense check this pt: 3275789521160
-  mutate(visit_count = case_when(
-    user_status == "Non-User" ~ 0,
-    TRUE ~ visit_count
-  )) %>% 
-  mutate(visits_per_year = visit_count / exposed_yrs)  %>%
-  # in R 0/0 results to NaN, so I converted this to 0
-  mutate(visits_per_year = replace_na(visits_per_year, 0))
-
-
-(overall_mean_visits <- mean(df_temp_visits$visit_count))
-(overall_median_visits <- median(df_temp_visits$visit_count))
-(overall_summary_visits <- summary(df_temp_visits$visit_count, na.rm = TRUE))
-
-(overall_summary_visits_pa <- summary(df_temp_visits$visits_per_year))
-rm(df_temp_visits)
+(overall_summary_visits_pa <- summary(visit_data_final_min.2$visits_per_year))
 
 ## Cost - Primary care ----
 cost_results_raw <- analyse_visits_cost(visit_data_final_min.1)
 
 ### Get the output grouped by specialty ----
-user_only_cost_summary <- cost_results_raw$user_only_cost_summary
+user_only_cost_summary <- cost_results_raw$user_only_cost_summary 
 all_cost_summary <- cost_results_raw$all_cost_summary
 (tot_exposed_yrs_all_c <- cost_results_raw$tot_exposed_yrs_all)
 (tot_exposed_yrs_user_c <- cost_results_raw$tot_exposed_yrs_user)
 
 ### Overall cost summaries ----
-# create a temporary df in order to get the overall summary stats for visits
-df_temp_cost <- visit_data_final_min.1 %>%
-  left_join(summary_visits, by = c("patid", "specialty_source_value", "index_date")) %>% 
-  dplyr::mutate(visit_cost = visit_count * unit_cost) %>% 
-  dplyr::select(-unit_cost, -visit_count)
-
-
-(overall_mean_cost <- mean(df_temp_cost$visit_cost, na.rm = TRUE))
-(overall_median_cost <- median(df_temp_cost$visit_cost, na.rm = TRUE))
-(overall_summary_cost <- summary(df_temp_cost$visit_cost, na.rm = TRUE))
+(overall_mean_cost <- mean(visit_data_final_min.2$visit_cost, na.rm = TRUE))
+(overall_median_cost <- median(visit_data_final_min.2$visit_cost, na.rm = TRUE))
+(overall_summary_cost <- summary(visit_data_final_min.2$visit_cost, na.rm = TRUE))
 
 ## Cohort summary ----
 cohort_summary_raw <- cohort_summary(visit_data_final_min.1)
