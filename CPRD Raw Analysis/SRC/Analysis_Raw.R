@@ -27,7 +27,10 @@ validation_consultation <- my_dm$`validation_consultation` %>%  collect()
 visit_data  <- inner_join(cohort_table_raw, validation_consultation ,  
                                by = "patid") %>%
   # in order to count all the visits from index date until follow-up end date.
-  filter(consdate >= index_date & consdate <= follow_up_end)
+  filter(consdate >= index_date & consdate <= follow_up_end) 
+
+# NOTE: 13 patients are being dropped when we filter to have consultation date be
+# after or on index date and before or on follow-up end date.
 
 ## Merge with validation_staff ----
 visit_data_final <- left_join(visit_data, validation_staff,
@@ -65,16 +68,18 @@ visit_data_final_min.1 <- visit_data_final_min %>%
   )) %>% 
   left_join(provider_cost_inputs,
             by = "specialty_source_value")  %>% 
-# Identify if the visit is clinically relevant
-mutate(is_clinically_relevant = if_else(!is.na(specialty_source_value), 1, 0)) %>%
-  
+  # Identify if the visit is clinically relevant
+  mutate(is_clinically_relevant = if_else(!is.na(specialty_source_value), 1, 0)) %>%
   # Determine user status per patient
   group_by(patid) %>%
   mutate(user_status = if_else(any(is_clinically_relevant == 1, na.rm = TRUE), "User", "Non-User")) %>%
   ungroup()
-# Note: filtering for the clinically relevant specialty, we drop 504 patients, 
-# therefore we are left with 2462 patients whom we look at their visits and cost
-  
+ 
+# count of users/non-users
+u_n_summary <- visit_data_final_min.1 %>%
+  group_by(user_status) %>%
+  summarise(count_of_pts = n_distinct(patid)) %>%
+  ungroup()
 
 ## Visits - Primary care ----
 # NOTE:
@@ -104,16 +109,24 @@ summary_visits <- visit_data_final_min.1 %>%
 
 # create a temporary df in order to get the overall summary stats for visits
 df_temp_visits <- visit_data_final_min.1 %>%
-  dplyr::mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
+  mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
   left_join(summary_visits, by = c("patid", "specialty_source_value", "index_date")) %>% 
-  dplyr::mutate(visits_per_year = visit_count / exposed_yrs)
+  # Non users are patients with no contacts with the NHS (i.e., no visits at all) or visits with staff that are not clinically relevant
+  # sense check this pt: 3275789521160
+  mutate(visit_count = case_when(
+    user_status == "Non-User" ~ 0,
+    TRUE ~ visit_count
+  )) %>% 
+  mutate(visits_per_year = visit_count / exposed_yrs)  %>%
+  # in R 0/0 results to NaN, so I converted this to 0
+  mutate(visits_per_year = replace_na(visits_per_year, 0))
 
-    
+
 (overall_mean_visits <- mean(df_temp_visits$visit_count))
 (overall_median_visits <- median(df_temp_visits$visit_count))
 (overall_summary_visits <- summary(df_temp_visits$visit_count, na.rm = TRUE))
 
-(overall_summary_visits_pa <- mean(df_temp_visits$visits_per_year, na.rm = TRU))
+(overall_summary_visits_pa <- summary(df_temp_visits$visits_per_year))
 rm(df_temp_visits)
 
 ## Cost - Primary care ----

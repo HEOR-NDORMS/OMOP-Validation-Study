@@ -1,3 +1,5 @@
+library(tidyverse)
+library(tidylog)
 # for a fracture table, compute the index date for each person
 addIndex <- function (fractureTable){
   fractureTable %>% 
@@ -153,7 +155,8 @@ nextFractureClean <- function (fractureTable){
   return(pre)
 }
 
-
+# turn off the scientific numbers
+options(scipen = 999)
 # Analyse primary care visits
 
 analyse_visits <- function(visit_data) {
@@ -173,30 +176,38 @@ analyse_visits <- function(visit_data) {
     dplyr::left_join(visits_count_wide, by = c("patid", "index_date"), copy = T) 
   
   ### summary for user only (subjects/visit= NA, not counted)
-  included_cols <- colnames(visits_count_wide)[(colnames(visits_count_wide)%in% specialty_source_value_ids)]
   tot_exposed_yrs_all <- visits_count_wide %>%
-    dplyr::mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
-    dplyr::summarise(tot_exposed_yrs = sum(exposed_yrs)) %>% 
-    dplyr::pull(tot_exposed_yrs)
+    mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
+    summarise(tot_exposed_yrs = sum(exposed_yrs)) %>% 
+    pull(tot_exposed_yrs)
   
   tot_exposed_yrs_user <- visits_count_wide %>%
-    dplyr::mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>%
-    pivot_longer(all_of(included_cols), names_to = "specialty", values_to = "visits") %>%
-    dplyr::mutate(visits_per_year = visits / exposed_yrs) %>%
-    dplyr::filter(visits > 0) %>%
-    dplyr::group_by(patid, index_date) %>%
-    dplyr::filter(row_number()==1) %>%
-    dplyr::ungroup() %>%
-    dplyr::summarise(tot_exposed_yrs = sum(exposed_yrs)) %>%
-    dplyr::pull(tot_exposed_yrs)
+    pivot_longer(cols = 24:(ncol(.)), names_to = "specialty", values_to = "visits") %>% 
+    mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>%
+    mutate(visits = case_when(
+      user_status == "Non-User" ~ 0,
+      TRUE ~ visits
+    )) %>% 
+    filter(visits > 0) %>%
+    mutate(visits_per_year = visits / exposed_yrs) %>%
+    group_by(patid, index_date) %>%
+    filter(row_number()==1) %>%
+    ungroup() %>%
+    summarise(tot_exposed_yrs = sum(exposed_yrs)) %>%
+    pull(tot_exposed_yrs)
   # 
   user_only_summary <- visits_count_wide %>%
-    dplyr::mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
-    pivot_longer(all_of(included_cols), names_to = "specialty", values_to = "visits") %>% 
-    dplyr::mutate(visits_per_year = visits / exposed_yrs) %>%
-    dplyr::filter(visits > 0) %>%
-    dplyr::group_by(specialty) %>%
-    dplyr::summarise(
+    pivot_longer(cols = 24:(ncol(.)), names_to = "specialty", values_to = "visits") %>% 
+    filter(user_status == "User") %>% 
+    mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
+    mutate(visits = case_when(
+      user_status == "Non-User" ~ 0,
+      TRUE ~ visits
+    )) %>% 
+    filter(visits > 0) %>%
+    mutate(visits_per_year = visits / exposed_yrs) %>%
+    group_by(specialty) %>%
+    summarise(
       tot_visits = sum(visits),
       mean_visits_per_year = signif(tot_visits / tot_exposed_yrs_user, 4), # Manual calculation of mean
       sd_visits_per_year = signif(sd(visits_per_year, na.rm = TRUE), 4),
@@ -205,16 +216,21 @@ analyse_visits <- function(visit_data) {
       num_subjects_visited = n_distinct(patid),
       .groups = "drop"
     ) %>% 
-    dplyr::ungroup()
+    ungroup()
   
   ### summary for all subjects (subjects/visits = NA, treated as zero)
   all_summary <- visits_count_wide %>%
-    dplyr::mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
-    pivot_longer(all_of(included_cols), names_to = "specialty", values_to = "visits") %>% 
-    tidyr::complete(patid, specialty, fill = list(visits = 0)) %>% # filling missing visits with 0
-    dplyr::mutate(visits_per_year = visits / exposed_yrs) %>%
-    dplyr::group_by(specialty) %>%
-    dplyr::summarise(
+    pivot_longer(cols = 24:(ncol(.)), names_to = "specialty", values_to = "visits") %>% 
+    mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
+    complete(patid, specialty, fill = list(visits = 0)) %>% # filling missing visits with 0
+    mutate(visits = case_when(
+      user_status == "Non-User" ~ 0,
+      TRUE ~ visits
+    )) %>%
+    mutate(visits_per_year = visits / exposed_yrs) %>%
+    mutate(visits_per_year = replace_na(visits_per_year, 0)) %>% 
+    group_by(specialty) %>%
+    summarise(
       tot_visits = sum(visits),
       mean_visits_per_year = signif(tot_visits / tot_exposed_yrs_all, 4), # Manual calculation of mean
       sd_visits_per_year = signif(sd(visits_per_year, na.rm = TRUE), 4),
@@ -223,16 +239,25 @@ analyse_visits <- function(visit_data) {
       num_subjects_visited = n_distinct(patid),
       .groups = "drop"
     ) %>% 
-    dplyr::ungroup() 
+    ungroup() 
   
   # Calculating non-service users
-  visits_count_wide_test <- visits_count_wide[(colnames(visits_count_wide)%in% specialty_source_value_ids)]
-  visits_count_wide_test[is.na(visits_count_wide_test)] <- 0
-  visits_count_wide_test$row_sum <- rowSums(visits_count_wide_test)
-  non_service_users <- visits_count_wide_test %>% 
-    dplyr::filter(row_sum == 0) %>% 
-    dplyr::tally() %>%
-    dplyr::rename(nonservice=n)
+  # visits_count_wide_test <- visits_count_wide[(colnames(visits_count_wide)%in% specialty_source_value_ids)]
+  # visits_count_wide_test[is.na(visits_count_wide_test)] <- 0
+  # visits_count_wide_test$row_sum <- rowSums(visits_count_wide_test)
+  # non_service_users <- visits_count_wide_test %>% 
+  #   dplyr::filter(row_sum == 0) %>% 
+  #   dplyr::tally() %>%
+  #   dplyr::rename(nonservice=n)
+  non_service_users <- visits_count_wide %>%
+    pivot_longer(cols = 24:(ncol(.)), names_to = "specialty", values_to = "visits") %>% 
+    filter(user_status == "Non-User") %>% 
+    mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
+    complete(patid, specialty, fill = list(visits = 0)) %>% 
+    mutate(visits_per_year = visits / exposed_yrs) %>%
+    filter(visits == 0) %>%
+    summarise(n = n_distinct(patid)) %>% 
+    rename(nonservice=n)
   
   return(list(user_only_summary = user_only_summary, all_summary = all_summary, non_service_users=non_service_users, visits_count_wide=visits_count_wide, tot_exposed_yrs_all=tot_exposed_yrs_all, tot_exposed_yrs_user = tot_exposed_yrs_user))
 }
@@ -243,14 +268,14 @@ analyse_visits_cost <- function(visit_data) {
   
   ### Filtering visits based on the visit_data_final_min.1
   filtered_visits <- visit_data_final_min.1 %>%
-    dplyr::group_by(patid, index_date, specialty_source_value, unit_cost) %>% # we group by index date to ensure each visit is associated with an entry
-    dplyr::summarise(visit_count = n(), .groups = "drop") %>%
-    dplyr::ungroup() 
+    group_by(patid, index_date, specialty_source_value, unit_cost) %>% # we group by index date to ensure each visit is associated with an entry
+    summarise(visit_count = n(), .groups = "drop") %>%
+    ungroup() 
   
   ### Compute costs visits
   filtered_visits <- filtered_visits %>%  
-    dplyr::mutate(visit_cost = visit_count * unit_cost) %>% 
-    dplyr::select(-unit_cost, -visit_count) 
+    mutate(visit_cost = visit_count * unit_cost) %>% 
+    select(-unit_cost, -visit_count) 
   
   ### Pivot the data
   visits_cost_wide <- filtered_visits %>%
@@ -258,34 +283,33 @@ analyse_visits_cost <- function(visit_data) {
   
   ### Join the wide dataframe back to visit_data_final_min.1 and count tot num visits
   visits_cost_wide <- visit_data_final_min.1 %>% 
-    dplyr::left_join(visits_cost_wide, by = c("patid", "index_date"), copy = T)
+    left_join(visits_cost_wide, by = c("patid", "index_date"), copy = T)
   
   ### summary for user only (subjects/visit= NA, not counted)
-  included_cols <- colnames(visits_cost_wide)[(colnames(visits_cost_wide) %in% specialty_source_value_ids)]
-  
   tot_exposed_yrs_all <- visits_cost_wide %>%
-    dplyr::mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
-    dplyr::summarise(tot_exposed_yrs = sum(exposed_yrs)) %>% 
-    dplyr::pull(tot_exposed_yrs)
+    mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
+    summarise(tot_exposed_yrs = sum(exposed_yrs)) %>% 
+    pull(tot_exposed_yrs)
   
   tot_exposed_yrs_user <- visits_cost_wide %>%
-    dplyr::mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
-    pivot_longer(all_of(included_cols), names_to = "specialty", values_to = "visits") %>% 
-    dplyr::mutate(visits_per_year = visits / exposed_yrs)  %>%
-    dplyr::filter(visits > 0) %>% 
-    dplyr::group_by(patid, index_date) %>% 
-    dplyr::filter(row_number()==1) %>% 
-    dplyr::ungroup() %>% 
-    dplyr::summarise(tot_exposed_yrs = sum(exposed_yrs)) %>% 
-    dplyr::pull(tot_exposed_yrs)
+    pivot_longer(cols = 24:(ncol(.)), names_to = "specialty", values_to = "visits") %>% 
+    mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
+    mutate(visits_per_year = visits / exposed_yrs)  %>%
+    filter(visits > 0) %>% 
+    group_by(patid, index_date) %>% 
+    filter(row_number()==1) %>% 
+    ungroup() %>% 
+    summarise(tot_exposed_yrs = sum(exposed_yrs)) %>% 
+    pull(tot_exposed_yrs)
   
   user_only_cost_summary <- visits_cost_wide %>%
-    dplyr::mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
-    pivot_longer(all_of(included_cols), names_to = "specialty", values_to = "visits_costs") %>% 
-    dplyr::mutate(visits_costs_per_year = visits_costs / exposed_yrs) %>%
-    dplyr::filter(visits_costs > 0) %>%
-    dplyr::group_by(specialty) %>%
-    dplyr::summarise(
+    pivot_longer(cols = 24:(ncol(.)), names_to = "specialty", values_to = "visits") %>% 
+    filter(user_status == "User") %>% 
+    mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
+    mutate(visits_costs_per_year = visits_costs / exposed_yrs) %>%
+    filter(visits_costs > 0) %>%
+    group_by(specialty) %>%
+    summarise(
       tot_visits_costs = sum(visits_costs),
       mean_cost_visits_per_year = signif(tot_visits_costs / tot_exposed_yrs_user, 4), # Manual calculation of mean
       sd_cost_visits_per_year = signif(sd(visits_costs_per_year, na.rm = TRUE), 4),
