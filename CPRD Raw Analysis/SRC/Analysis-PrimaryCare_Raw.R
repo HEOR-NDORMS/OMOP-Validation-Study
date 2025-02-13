@@ -16,7 +16,7 @@
 
 cohort_table_raw <- table_one_raw
 
-# HRCU Analysis ----
+# HRCU & Cost Analysis ----
 ## Import the staff and consultation tables ----
 # this is to be used for the specialty
 validation_staff <- my_dm$`validation_staff` %>%  collect()
@@ -28,12 +28,23 @@ visit_data  <- inner_join(cohort_table_raw, validation_consultation ,
                                by = "patid") %>%
   # in order to count all the visits from index date until follow-up end date.
   filter(consdate >= index_date & consdate <= follow_up_end) 
-
+# left_join it back to the cohort data - so this 13 data will be non-users
 # NOTE: 13 patients are being dropped when we filter to have consultation date be
 # after or on index date and before or on follow-up end date.
 
+# merge back to cohort data
+visit_data.1 <- left_join(
+  cohort_table_raw, visit_data,
+  by = c("patid", "gender", "yob", "death", "death_date", 
+         "aurum_min_accept_date", "aurum_max_accept_date", "site",
+         "fx_date", "days_prior_obs", "days_after_obs", "age_fracture",
+         "type", "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
+         "after_index", "fracture_after_index", "follow_up_end", 
+         "follow_up_reason", "follow_up_time"))
+n_distinct(visit_data.1$patid) # sense check, same as the cohort data
+
 ## Merge with validation_staff ----
-visit_data_final <- left_join(visit_data, validation_staff,
+visit_data_final <- left_join(visit_data.1, validation_staff,
                            by = "staffid")
 
 ## Keep only distinct rows ----
@@ -60,20 +71,20 @@ provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.1.xlsx") %>%
 
 specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value)
 
-visit_data_final_min.1 <- visit_data_final_min %>% 
-  rename("specialty_source_value" = "description") %>% 
-  mutate(specialty_source_value = case_when(
-    specialty_source_value %in% specialty_source_value_ids ~ specialty_source_value,
-    TRUE ~ NA_character_
-  )) %>% 
-  left_join(provider_cost_inputs,
-            by = "specialty_source_value")  %>% 
-  # Identify if the visit is clinically relevant
-  mutate(is_clinically_relevant = if_else(!is.na(specialty_source_value), 1, 0)) %>%
-  # Determine user status per patient
-  group_by(patid) %>%
-  mutate(user_status = if_else(any(is_clinically_relevant == 1, na.rm = TRUE), "User", "Non-User")) %>%
-  ungroup()
+# visit_data_final_min.1 <- visit_data_final_min %>% 
+#   rename("specialty_source_value" = "description") %>% 
+#   mutate(specialty_source_value = case_when(
+#     specialty_source_value %in% specialty_source_value_ids ~ specialty_source_value,
+#     TRUE ~ NA_character_
+#   )) %>% 
+#   left_join(provider_cost_inputs,
+#             by = "specialty_source_value")  %>% 
+#   # Identify if the visit is clinically relevant
+#   mutate(is_clinically_relevant = if_else(!is.na(specialty_source_value), 1, 0)) %>%
+#   # Determine user status per patient
+#   group_by(patid) %>%
+#   mutate(user_status = if_else(any(is_clinically_relevant == 1, na.rm = TRUE), "User", "Non-User")) %>%
+#   ungroup()
 
 visit_data_final_min.1 <- visit_data_final_min %>% 
   rename("specialty_source_value" = "description") %>% 
@@ -91,6 +102,7 @@ visit_data_final_min.1 <- visit_data_final_min %>%
   mutate(user_status = if_else(any(is_clinically_relevant == 1, na.rm = TRUE), "User", "Non-User")) %>%
   ungroup()
 
+# create summary df of the visits
 summary_visits <- visit_data_final_min.1 %>%
   group_by(patid, index_date, specialty_source_value) %>% # we group by index date to ensure each visit is associated with an entry
   summarise(visit_count = n()) %>%
@@ -99,11 +111,17 @@ summary_visits <- visit_data_final_min.1 %>%
 
 visit_data_final_min.2 <- left_join(visit_data_final_min.1, summary_visits,
                                     by = c("patid", "index_date", "specialty_source_value")) %>% 
+  
+  # distinct(patid, specialty_source_value, visit_count, .keep_all = TRUE)
   # Non users are patients with no contacts with the NHS (i.e., no visits at all) or 
   # visits with staff that are not clinically relevant
   # sense check this pt: 3275789521160
-  mutate(visit_count = if_else(!is.na(visit_count), visit_count, 0)) %>% 
-  mutate(unit_cost = if_else(!is.na(unit_cost), unit_cost, 0)) %>% 
+  mutate(visit_count = if_else(
+    specialty_source_value == "Not_clinically_relevant", 
+    0, visit_count)) %>% 
+  mutate(unit_cost = if_else(
+    specialty_source_value == "Not_clinically_relevant", 
+    0, unit_cost)) %>% 
   mutate(exposed_yrs = as.numeric(follow_up_end - index_date)/ 365.25) %>% 
   mutate(visits_per_year = visit_count / exposed_yrs)  %>%
   # in R 0/0 results to NaN, so I converted this to 0
@@ -140,6 +158,20 @@ all_summary <- visits_results_raw$all_summary
 (overall_summary_visits <- summary(visit_data_final_min.2$visit_count, na.rm = TRUE))
 
 (overall_summary_visits_pa <- summary(visit_data_final_min.2$visits_per_year))
+overall_summary_visits_pa_df <- data.frame(Statistic = names(overall_summary_visits_pa), 
+                                           Value = as.numeric(overall_summary_visits_pa))
+# Export the output
+library(writexl)
+
+visits_list <- list(
+  overall_summary_visits_pa_df = overall_summary_visits_pa_df,
+  user_only_summary = user_only_summary,
+  all_summary = all_summary
+  
+)
+
+# Write to an Excel file
+# write_xlsx(visits_list, here::here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"))
 
 ## Cost - Primary care ----
 cost_results_raw <- analyse_visits_cost(visit_data_final_min.1)
@@ -155,5 +187,29 @@ all_cost_summary <- cost_results_raw$all_cost_summary
 (overall_median_cost <- median(visit_data_final_min.2$visit_cost, na.rm = TRUE))
 (overall_summary_cost <- summary(visit_data_final_min.2$visit_cost, na.rm = TRUE))
 
+(overall_summary_costs_pa <- summary(visit_data_final_min.2$visits_costs_per_year))
+overall_summary_costs_pa_df <- data.frame(Statistic = names(overall_summary_costs_pa), 
+                                           Value = as.numeric(overall_summary_costs_pa))
+
+costs_list <- list(
+  overall_summary_costs_pa_df = overall_summary_costs_pa_df,
+  user_only_cost_summary = user_only_cost_summary,
+  all_cost_summary = all_cost_summary
+  
+)
+
+# Write to an Excel file
+write_xlsx(costs_list, here::here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"))
+
 ## Cohort summary ----
 cohort_summary_raw <- cohort_summary(visit_data_final_min.1)
+
+visits_list <- list(
+  overall_summary_visits_pa_df = overall_summary_visits_pa_df,
+  user_only_summary = user_only_summary,
+  all_summary = all_summary
+  
+)
+
+# Write to an Excel file
+# write_xlsx(visits_list, here::here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"))
