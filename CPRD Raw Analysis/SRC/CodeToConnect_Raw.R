@@ -14,7 +14,7 @@
 # install.packages("usethis")
 # install.packages("duckdb")
 
-#load packages from library
+# load packages from library
 library(DBI)
 library(RPostgres)
 library(dbplyr)
