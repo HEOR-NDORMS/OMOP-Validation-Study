@@ -116,8 +116,8 @@ AttritionReportCoh<- AttritionReportCoh %>%
 cancer <- read_excel(paste0(here(), "/OMOP Analysis/cancer_codes.xlsx"))
 cancer_codes <- cancer %>% dplyr::select(Id) %>% dplyr::pull()
 
-cdm[["cancer"]] <- cdm[["denominator"]] %>% 
-  dplyr::left_join(cdm[["condition_occurrence"]], by = c("subject_id" = "person_id")) %>%
+cdm[["cancer"]] <- cdm[["denominator"]] %>% # remember to revert to condition_occurrence if you want to have both primary and secondary
+  dplyr::left_join(cdm[["condition_occurrence_primary"]], by = c("subject_id" = "person_id")) %>%
   dplyr::filter(condition_concept_id %in% cancer_codes) %>%
   dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date) %>%
   dplyr::mutate(cohort_start_date = as.Date(as.character(cohort_start_date))) %>%
@@ -154,8 +154,8 @@ AttritionReportCoh<- AttritionReportCoh %>%
 mbd <- read_excel(paste0(here(), "/OMOP Analysis/mbd_codes.xlsx"))
 mbd_codes <- mbd %>% dplyr::select(Id) %>% dplyr::pull()
 
-cdm[["mbd"]] <- cdm[["denominator"]] %>% 
-  dplyr::left_join(cdm[["condition_occurrence"]], by = c("subject_id" = "person_id")) %>%
+cdm[["mbd"]] <- cdm[["denominator"]] %>% # # remember to revert to condition_occurrence if you want to have both primary and secondary
+  dplyr::left_join(cdm[["condition_occurrence_primary"]], by = c("subject_id" = "person_id")) %>%
   dplyr::filter(condition_concept_id %in% mbd_codes) %>%
   dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date) %>%
   dplyr::mutate(cohort_start_date = as.Date(as.character(cohort_start_date))) %>%

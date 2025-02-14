@@ -254,8 +254,8 @@ AttritionReportFrac<- AttritionReportFrac %>%
   )
 
 ### d) Remove fractures on the same day as trauma codes or 3 distinct fracture sites on same day ----
-fracture_table_d <- fracture_table_c %>%
-  anti_join(cdm[["condition_occurrence"]] %>% dplyr::filter(condition_concept_id %in% trauma_condition), by = c("subject_id" = "person_id", "condition_start_date"), copy = T)
+fracture_table_d <- fracture_table_c %>% # remember to revert to condition_occurrence if you want to have both primary and secondary
+  anti_join(cdm[["condition_occurrence_primary"]] %>% dplyr::filter(condition_concept_id %in% trauma_condition), by = c("subject_id" = "person_id", "condition_start_date"), copy = T)
 
 fracture_table_d <- fracture_table_c %>% 
   dplyr::anti_join(cdm[["observation"]] %>% dplyr::filter(observation_concept_id %in% trauma_observation), by = c("subject_id" = "person_id", "condition_start_date" = "observation_date"), copy = T) 
