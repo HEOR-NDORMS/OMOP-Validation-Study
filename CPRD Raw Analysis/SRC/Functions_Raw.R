@@ -158,108 +158,101 @@ nextFractureClean <- function (fractureTable){
 # turn off the scientific numbers
 options(scipen = 999)
 
+# receive washout and trauma done (hence this will be commented out)
+# , to avoid negative follow-up time, we will have a flag for each site
+
 # Analyse primary care visits
 analyse_visits <- function(visit_data) {
-  
-  ### summary for user only (subjects/visit= NA, not counted)
-  tot_exposed_yrs_all <- visit_data_final_min.2 %>%
-    summarise(tot_exposed_yrs = sum(exposed_yrs)) %>% 
+  tot_exposed_yrs_all <- visit_data %>%
+    group_by(patid) %>%
+    summarise(exposed_yrs = first(exposed_yrs)) %>%
+    summarise(tot_exposed_yrs = sum(exposed_yrs, na.rm = TRUE)) %>%
+    ungroup() %>% 
     pull(tot_exposed_yrs)
   
-  tot_exposed_yrs_user <- visit_data_final_min.2 %>%
-    filter(visit_count > 0) %>%
-    group_by(patid, index_date) %>%
-    filter(row_number()==1) %>%
-    ungroup() %>%
-    summarise(tot_exposed_yrs = sum(exposed_yrs)) %>%
-    pull(tot_exposed_yrs)
-   
-  # summary for users
-  user_only_summary <- visit_data_final_min.2 %>%
+  tot_exposed_yrs_user <- visit_data %>%
     filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
-    group_by(patid, specialty) %>% 
-    summarise(
-      total_patient_visits = first(visit_count),  # Take only one count per patient
-      total_exposed_yrs = first(exposed_yrs),  # Preserve exposed years for later use
-      visits_per_year = total_patient_visits / total_exposed_yrs,  # Compute visits per year correctly
-      .groups = "drop"
-    ) %>%
-    group_by(specialty) %>%
-    summarise(
-      tot_visits = sum(total_patient_visits, na.rm = TRUE),
-      mean_visits_per_year = signif(sum(total_patient_visits, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4), # Correct mean calculation
-      sd_visits_per_year = signif(sd(visits_per_year, na.rm = TRUE), 4),
-      min_visits_per_year = signif(min(visits_per_year, na.rm = TRUE), 4),
-      max_visits_per_year = signif(max(visits_per_year, na.rm = TRUE), 4),
-      num_subjects_visited = n_distinct(patid),
-      .groups = "drop"
-    )
-  # summary for all subjects 
-  all_summary <- visit_data_final_min.2
-   group_by(patid, specialty) %>% 
-    summarise(
-      total_patient_visits = first(visit_count),  # Take only one count per patient
-      total_exposed_yrs = first(exposed_yrs),  # Preserve exposed years for later use
-      visits_per_year = total_patient_visits / total_exposed_yrs,  # Compute visits per year correctly
-      user_status = first(user_status),  # Retain user status
-      .groups = "drop"
-    ) %>%
-    group_by(specialty) %>%
-    summarise(
-      tot_visits = sum(total_patient_visits, na.rm = TRUE),
-      mean_visits_per_year = signif(sum(total_patient_visits, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4), # Correct mean calculation
-      sd_visits_per_year = signif(sd(visits_per_year, na.rm = TRUE), 4),
-      min_visits_per_year = signif(min(visits_per_year, na.rm = TRUE), 4),
-      max_visits_per_year = signif(max(visits_per_year, na.rm = TRUE), 4),
-      # Ensure each patient is counted once per specialty
-      num_subjects_visited = n_distinct(patid),
-      # Separate count for non-user patients in "Not_clinically_relevant"
-      num_non_users = sum(user_status == "Non-User"),
-      
-      .groups = "drop"
-    ) %>% 
-    mutate(num_subjects_visited = ifelse(
-      specialty == "Not_clinically_relevant", num_non_users, num_subjects_visited)) %>% 
-    select(!num_non_users)
+    group_by(patid, index_date) %>%
+    filter(row_number() == 1) %>%
+    ungroup() %>%
+    summarise(tot_exposed_yrs = sum(exposed_yrs), .groups = "drop") %>%
+    pull(tot_exposed_yrs)
   
-  # Calculating non-service users
-  non_service_users <- visit_data_final_min.2 %>%
-    filter(user_status == "Non-User") %>% 
-    filter(visit_count == 0) %>%
-    summarise(n = n_distinct(patid)) %>% 
-    rename(nonservice=n)
+  user_only_summary <- visit_data %>%
+    filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
+    group_by(patid, specialty) %>%
+    summarise(total_patient_visits = first(visit_count),
+              total_exposed_yrs = first(exposed_yrs),
+              visits_per_year = total_patient_visits / total_exposed_yrs,
+              .groups = "drop") %>%
+    group_by(specialty) %>%
+    summarise(tot_visits = sum(total_patient_visits, na.rm = TRUE),
+              mean_visits_per_year = signif(sum(total_patient_visits, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4),
+              sd_visits_per_year = signif(sd(visits_per_year, na.rm = TRUE), 4),
+              min_visits_per_year = signif(min(visits_per_year, na.rm = TRUE), 4),
+              max_visits_per_year = signif(max(visits_per_year, na.rm = TRUE), 4),
+              num_subjects_visited = n_distinct(patid),
+              .groups = "drop")
   
-  return(list(user_only_summary = user_only_summary, 
-              all_summary = all_summary, 
-              non_service_users=non_service_users, 
-              tot_exposed_yrs_all=tot_exposed_yrs_all, 
-              tot_exposed_yrs_user = tot_exposed_yrs_user))
+  all_summary <- visit_data %>%
+    group_by(patid, specialty) %>%
+    summarise(total_patient_visits = first(visit_count),
+              total_exposed_yrs = first(exposed_yrs),
+              visits_per_year = total_patient_visits / total_exposed_yrs,
+              user_status = first(user_status),
+              .groups = "drop") %>%
+    group_by(specialty) %>%
+    summarise(tot_visits = sum(total_patient_visits, na.rm = TRUE),
+              mean_visits_per_year = signif(sum(total_patient_visits, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4),
+              sd_visits_per_year = signif(sd(visits_per_year, na.rm = TRUE), 4),
+              min_visits_per_year = signif(min(visits_per_year, na.rm = TRUE), 4),
+              max_visits_per_year = signif(max(visits_per_year, na.rm = TRUE), 4),
+              num_subjects_visited = n_distinct(patid),
+              num_non_users = sum(user_status == "Non-User"),
+              .groups = "drop") %>%
+    mutate(num_subjects_visited = ifelse(specialty == "Not_clinically_relevant", num_non_users, num_subjects_visited)) %>%
+    select(-num_non_users)
+  
+  non_service_users <- visit_data %>%
+    filter(user_status == "Non-User", visit_count == 0) %>%
+    summarise(n = n_distinct(patid)) %>%
+    rename(nonservice = n)
+  
+  return(list(
+    user_only_summary = user_only_summary,
+    all_summary = all_summary,
+    non_service_users = non_service_users,
+    tot_exposed_yrs_all = tot_exposed_yrs_all,
+    tot_exposed_yrs_user = tot_exposed_yrs_user
+  ))
 }
 
 # Estimate costs primary care visits 
 analyse_visits_cost <- function(visit_data) {
   
-  ### summary for user only (subjects/visit= NA, not counted)
-  tot_exposed_yrs_all <- visit_data_final_min.2 %>%
-    summarise(tot_exposed_yrs = sum(exposed_yrs)) %>% 
+  tot_exposed_yrs_all <- visit_data %>%
+    group_by(patid) %>%
+    summarise(exposed_yrs = first(exposed_yrs)) %>%
+    summarise(tot_exposed_yrs = sum(exposed_yrs, na.rm = TRUE)) %>%
+    ungroup() %>% 
     pull(tot_exposed_yrs)
   
-  tot_exposed_yrs_user <- visit_data_final_min.2 %>%
-    filter(visit_count > 0) %>%
+  tot_exposed_yrs_user <- visit_data %>%
+    filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
     group_by(patid, index_date) %>%
-    filter(row_number()==1) %>%
+    filter(row_number() == 1) %>%
     ungroup() %>%
-    summarise(tot_exposed_yrs = sum(exposed_yrs)) %>%
+    summarise(tot_exposed_yrs = sum(exposed_yrs), .groups = "drop") %>%
     pull(tot_exposed_yrs)
   
-  user_only_cost_summary <- visit_data_final_min.2 %>%
+  user_only_cost_summary <- visit_data %>%
     filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
     filter(visit_cost > 0) %>%
     group_by(patid, specialty) %>% 
     summarise(
-      total_patient_cost = first(visit_cost),  # Take only one count per patient
-      total_exposed_yrs = first(exposed_yrs),  # Preserve exposed years for later use
-      visits_costs_per_year = total_patient_cost / total_exposed_yrs,  # Compute visits per year correctly
+      total_patient_cost = first(visit_cost),
+      total_exposed_yrs = first(exposed_yrs),
+      visits_costs_per_year = total_patient_cost / total_exposed_yrs,
       .groups = "drop"
     ) %>% 
     group_by(specialty) %>%
@@ -272,40 +265,35 @@ analyse_visits_cost <- function(visit_data) {
       num_subjects_visited = n_distinct(patid),
       .groups = "drop"
     ) %>% 
-    dplyr::ungroup()
+    ungroup()
   
-  ### summary for all subjects (subjects/visits = NA, treated as zero)
-  all_cost_summary <-  visit_data_final_min.2 %>%
+  all_cost_summary <-  visit_data %>%
     group_by(patid, specialty) %>% 
     summarise(
-      total_patient_cost = first(visit_cost),  # Take only one count per patient
-      total_exposed_yrs = first(exposed_yrs),  # Preserve exposed years for later use
-      visits_costs_per_year = total_patient_cost / total_exposed_yrs,  # Compute visits per year correctly
+      total_patient_cost = first(visit_cost),
+      total_exposed_yrs = first(exposed_yrs),
+      visits_costs_per_year = total_patient_cost / total_exposed_yrs,
       user_status = first(user_status),
       .groups = "drop"
     ) %>% 
     group_by(specialty) %>%
-    mutate(total_patient_cost = signif(total_patient_cost, digits = 2)) %>% 
     summarise(
-      tot_visits_costs = sum(total_patient_cost, na.rm = T),
-      mean_visits_per_year = signif(sum(total_patient_cost, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4), # Manual calculation of mean
+      tot_visits_costs = sum(total_patient_cost, na.rm = TRUE),
+      mean_visits_per_year = signif(sum(total_patient_cost, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4),
       sd_cost_visits_per_year = signif(sd(visits_costs_per_year, na.rm = TRUE), 4),
       min_cost_visits_per_year = signif(min(visits_costs_per_year, na.rm = TRUE), 4),
       max_cost_visits_per_year = signif(max(visits_costs_per_year, na.rm = TRUE), 4),
       num_subjects_visited = n_distinct(patid),
-      # Separate count for non-user patients in "Not_clinically_relevant"
       num_non_users = sum(user_status == "Non-User"),
-      
       .groups = "drop"
     ) %>% 
-    mutate(num_subjects_visited = ifelse(
-      specialty == "Not_clinically_relevant", num_non_users, num_subjects_visited)) %>% 
+    mutate(num_subjects_visited = ifelse(specialty == "Not_clinically_relevant", num_non_users, num_subjects_visited)) %>%
     select(!num_non_users)
   
   return(list(user_only_cost_summary = user_only_cost_summary, 
               all_cost_summary = all_cost_summary, 
-              tot_exposed_yrs_all=tot_exposed_yrs_all, 
-              tot_exposed_yrs_user=tot_exposed_yrs_user))
+              tot_exposed_yrs_all = tot_exposed_yrs_all, 
+              tot_exposed_yrs_user = tot_exposed_yrs_user))
 }
 
 
