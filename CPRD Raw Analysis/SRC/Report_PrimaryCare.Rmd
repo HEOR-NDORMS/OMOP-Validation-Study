@@ -13,3 +13,11 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+This RMarkdown reports the data cleaning which included cleaning the fractures and cohort.The conditions below were met:
+
+1. Had their 1st fx >= 01/04/2012 and <= 31/03/2018 when they were > 50 years old
+2. Excluding fracture happening before the birth year.
+3. Excluding records that happen outside of study period.
+4. Excluding records that happen outside of observation period.
+5. Excluding trauma fractures (same day as trauma codes or 3 distinct fracture sites on the same date.
+6. Excluding fractures on the same day as death or after death.
