@@ -1,0 +1,15 @@
+---
+title: "Validation Study"
+subtitle: "Primary Care Analysis"
+author: "HE Team"
+date: "`r format(Sys.Date(), '%A, %d %B %Y')`"
+output:
+  prettydoc::html_pretty:
+    theme: hpstr
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
