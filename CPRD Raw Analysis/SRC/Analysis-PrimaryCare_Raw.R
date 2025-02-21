@@ -135,13 +135,13 @@ user_only_summary_statistics_df <- visit_data %>%
 # mean(user_only_summary_statistics_df$tot_visits_per_yr)
 
 user_only_summary_statistics <- tibble(
-  mean_visit_per_year=(sum(user_only_summary_statistics_df$tot_visits)/sum(user_only_summary_statistics_df$tot_exposed_yrs)),
-  min_visit_per_year = min(user_only_summary_statistics_df$tot_visits_per_yr),
-  max_visit_per_year = max(user_only_summary_statistics_df$tot_visits_per_yr),
-  sd_visit_per_year = signif(sd(user_only_summary_statistics_df$tot_visits_per_yr), 4),
-  median_visit_per_year = signif(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.5)), 4),
-  lower_q_visits_per_year = signif(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.25)), 4),
-  upper_q_visits_per_year = signif(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.75)), 4)
+  mean_visit_per_year= round(sum(user_only_summary_statistics_df$tot_visits)/sum(user_only_summary_statistics_df$tot_exposed_yrs), 2),
+  min_visit_per_year = round(min(user_only_summary_statistics_df$tot_visits_per_yr), 2),
+  max_visit_per_year = round(max(user_only_summary_statistics_df$tot_visits_per_yr), 2),
+  sd_visit_per_year = round(sd(user_only_summary_statistics_df$tot_visits_per_yr), 2),
+  median_visit_per_year = round(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.5)), 2),
+  lower_q_visits_per_year = round(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.25)), 2),
+  upper_q_visits_per_year = round(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.75)), 2)
 )
 
 
@@ -161,13 +161,13 @@ all_summary_statistics_df <- visit_data %>%
   mutate(tot_visits_per_yr = replace_na(tot_visits_per_yr, 0))
 
 all_summary_statistics <- tibble(
-  mean_visit_per_year=(sum(all_summary_statistics_df$tot_visits)/sum(all_summary_statistics_df$tot_exposed_yrs)),
-  min_visit_per_year = min(all_summary_statistics_df$tot_visits_per_yr),
-  max_visit_per_year = max(all_summary_statistics_df$tot_visits_per_yr),
-  sd_visit_per_year = signif(sd(all_summary_statistics_df$tot_visits_per_yr),4),
-  median_visit_per_year = signif(quantile(all_summary_statistics_df$tot_visits_per_yr, probs = (.5)), 4),
-  lower_q_visits_per_year = signif(quantile(all_summary_statistics_df$tot_visits_per_yr, probs = (.25)), 4),
-  upper_q_visits_per_year = signif(quantile(all_summary_statistics_df$tot_visits_per_yr, probs = (.75)), 4)
+  mean_visit_per_year = round(sum(all_summary_statistics_df$tot_visits)/sum(all_summary_statistics_df$tot_exposed_yrs), 2),
+  min_visit_per_year = round(min(all_summary_statistics_df$tot_visits_per_yr), 2),
+  max_visit_per_year = round(max(all_summary_statistics_df$tot_visits_per_yr), 2),
+  sd_visit_per_year = round(sd(all_summary_statistics_df$tot_visits_per_yr),2),
+  median_visit_per_year = round(quantile(all_summary_statistics_df$tot_visits_per_yr, probs = (.5)), 2),
+  lower_q_visits_per_year = round(quantile(all_summary_statistics_df$tot_visits_per_yr, probs = (.25)), 2),
+  upper_q_visits_per_year = round(quantile(all_summary_statistics_df$tot_visits_per_yr, probs = (.75)), 2)
 )
 
 # Export the output
@@ -214,13 +214,13 @@ user_cost_summary_statistics_df <- visit_data %>%
      .groups = "drop")
  
 user_cost_summary_statistics <- tibble(
-   mean_visit_per_year=(sum(user_cost_summary_statistics_df$tot_costs)/sum(user_cost_summary_statistics_df$tot_exposed_yrs)),
-   min_visit_per_year = min(user_cost_summary_statistics_df$tot_costs_per_yr),
-   max_visit_per_year = max(user_cost_summary_statistics_df$tot_costs_per_yr),
-   sd_visit_per_year = signif(sd(user_cost_summary_statistics_df$tot_costs_per_yr), 4),
-   median_visit_per_year = signif(quantile(user_cost_summary_statistics_df$tot_costs_per_yr, probs = (.5)), 4),
-   lower_q_visits_per_year = signif(quantile(user_cost_summary_statistics_df$tot_costs_per_yr, probs = (.25)), 4),
-   upper_q_visits_per_year = signif(quantile(user_cost_summary_statistics_df$tot_costs_per_yr, probs = (.75)), 4)
+   mean_visit_cost_per_year = round(sum(user_cost_summary_statistics_df$tot_costs)/sum(user_cost_summary_statistics_df$tot_exposed_yrs), 2),
+   min_visit_cost_per_year = round(min(user_cost_summary_statistics_df$tot_costs_per_yr), 2),
+   max_visit_cost_per_year = round(max(user_cost_summary_statistics_df$tot_costs_per_yr), 2),
+   sd_visit_cost_per_year = round(sd(user_cost_summary_statistics_df$tot_costs_per_yr), 2),
+   median_visit_cost_per_year = round(quantile(user_cost_summary_statistics_df$tot_costs_per_yr, probs = (.5)), 2),
+   lower_q_visits_cost_per_year = round(quantile(user_cost_summary_statistics_df$tot_costs_per_yr, probs = (.25)), 2),
+   upper_q_visits_cost_per_year = round(quantile(user_cost_summary_statistics_df$tot_costs_per_yr, probs = (.75)), 2)
  )
  
  
@@ -241,14 +241,14 @@ all_cost_summary_statistics_df <-  visit_data %>%
      .groups = "drop") %>% 
    mutate(tot_costs_per_yr = replace_na(tot_costs_per_yr, 0))
  
- all_cost_summary_statistics <- tibble(
-   mean_visit_per_year=(sum(all_cost_summary_statistics_df$tot_costs)/sum(all_cost_summary_statistics_df$tot_exposed_yrs)),
-   min_visit_per_year = min(all_cost_summary_statistics_df$tot_costs_per_yr),
-   max_visit_per_year = max(all_cost_summary_statistics_df$tot_costs_per_yr),
-   sd_visit_per_year = signif(sd(all_cost_summary_statistics_df$tot_costs_per_yr), 4),
-   median_visit_per_year = signif(quantile(all_cost_summary_statistics_df$tot_costs_per_yr, probs = (.5)), 4),
-   lower_q_visits_per_year = signif(quantile(all_cost_summary_statistics_df$tot_costs_per_yr, probs = (.25)), 4),
-   upper_q_visits_per_year = signif(quantile(all_cost_summary_statistics_df$tot_costs_per_yr, probs = (.75)), 4)
+all_cost_summary_statistics <- tibble(
+   mean_visit_cost_per_year = round(sum(all_cost_summary_statistics_df$tot_costs)/sum(all_cost_summary_statistics_df$tot_exposed_yrs), 2),
+   min_visit_cost_per_year = round(min(all_cost_summary_statistics_df$tot_costs_per_yr), 2),
+   max_visit_cost_per_year = round(max(all_cost_summary_statistics_df$tot_costs_per_yr), 2),
+   sd_visit_cost_per_year = round(sd(all_cost_summary_statistics_df$tot_costs_per_yr), 2),
+   median_visit_cost_per_year = round(quantile(all_cost_summary_statistics_df$tot_costs_per_yr, probs = (.5)), 2),
+   lower_q_visits_cost_per_year = round(quantile(all_cost_summary_statistics_df$tot_costs_per_yr, probs = (.25)), 2),
+   upper_q_visits_cost_per_year = round(quantile(all_cost_summary_statistics_df$tot_costs_per_yr, probs = (.75)), 2)
  )
  
 costs_list <- list(
@@ -260,10 +260,10 @@ costs_list <- list(
 )
 
 # Write to an Excel file
-write_xlsx(costs_list, here::here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"))
+# write_xlsx(costs_list, here::here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"))
 
 ## Cohort summary ----
-cohort_summary_raw <- cohort_summary(visit_data_final_min.1)
+cohort_summary_raw <- cohort_summary(visit_data)
 
 # Write to an Excel file
-# write_xlsx(cohort_summary_raw, here::here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
+# export(cohort_summary_raw, here::here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
