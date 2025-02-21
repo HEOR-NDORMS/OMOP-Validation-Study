@@ -186,11 +186,11 @@ analyse_visits <- function(visit_data) {
               visits_per_year = total_patient_visits / total_exposed_yrs,
               .groups = "drop") %>%
     group_by(specialty) %>%
-    summarise(tot_visits = sum(total_patient_visits, na.rm = TRUE),
-              mean_visits_per_year = signif(sum(total_patient_visits, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4),
-              sd_visits_per_year = signif(sd(visits_per_year, na.rm = TRUE), 4),
-              min_visits_per_year = signif(min(visits_per_year, na.rm = TRUE), 4),
-              max_visits_per_year = signif(max(visits_per_year, na.rm = TRUE), 4),
+    summarise(tot_visits = round(sum(total_patient_visits, na.rm = TRUE), 2),
+              mean_visits_per_year = round(sum(total_patient_visits, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 2),
+              sd_visits_per_year = round(sd(visits_per_year, na.rm = TRUE), 2),
+              min_visits_per_year = round(min(visits_per_year, na.rm = TRUE), 2),
+              max_visits_per_year = round(max(visits_per_year, na.rm = TRUE), 2),
               num_subjects_visited = n_distinct(patid),
               .groups = "drop")
   
@@ -202,11 +202,11 @@ analyse_visits <- function(visit_data) {
               user_status = first(user_status),
               .groups = "drop") %>%
     group_by(specialty) %>%
-    summarise(tot_visits = sum(total_patient_visits, na.rm = TRUE),
-              mean_visits_per_year = signif(sum(total_patient_visits, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4),
-              sd_visits_per_year = signif(sd(visits_per_year, na.rm = TRUE), 4),
-              min_visits_per_year = signif(min(visits_per_year, na.rm = TRUE), 4),
-              max_visits_per_year = signif(max(visits_per_year, na.rm = TRUE), 4),
+    summarise(tot_visits = round(sum(total_patient_visits, na.rm = TRUE), 2),
+              mean_visits_per_year = round(sum(total_patient_visits, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 2),
+              sd_visits_per_year = round(sd(visits_per_year, na.rm = TRUE), 2),
+              min_visits_per_year = round(min(visits_per_year, na.rm = TRUE), 2),
+              max_visits_per_year = round(max(visits_per_year, na.rm = TRUE), 2),
               num_subjects_visited = n_distinct(patid),
               num_non_users = sum(user_status == "Non-User"),
               .groups = "drop") %>%
@@ -257,11 +257,11 @@ analyse_visits_cost <- function(visit_data) {
     ) %>% 
     group_by(specialty) %>%
     summarise(
-      tot_visits_costs = sum(total_patient_cost),
-      mean_visits_per_year = signif(sum(total_patient_cost, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4),
-      sd_cost_visits_per_year = signif(sd(visits_costs_per_year, na.rm = TRUE), 4),
-      min_cost_visits_per_year = signif(min(visits_costs_per_year, na.rm = TRUE), 4),
-      max_cost_visits_per_year = signif(max(visits_costs_per_year, na.rm = TRUE), 4),
+      tot_visits_costs = round(sum(total_patient_cost), 2),
+      mean_visits_per_year = round(sum(total_patient_cost, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 2),
+      sd_cost_visits_per_year = round(sd(visits_costs_per_year, na.rm = TRUE), 2),
+      min_cost_visits_per_year = round(min(visits_costs_per_year, na.rm = TRUE), 2),
+      max_cost_visits_per_year = round(max(visits_costs_per_year, na.rm = TRUE), 2),
       num_subjects_visited = n_distinct(patid),
       .groups = "drop"
     ) %>% 
@@ -278,11 +278,11 @@ analyse_visits_cost <- function(visit_data) {
     ) %>% 
     group_by(specialty) %>%
     summarise(
-      tot_visits_costs = sum(total_patient_cost, na.rm = TRUE),
-      mean_visits_per_year = signif(sum(total_patient_cost, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 4),
-      sd_cost_visits_per_year = signif(sd(visits_costs_per_year, na.rm = TRUE), 4),
-      min_cost_visits_per_year = signif(min(visits_costs_per_year, na.rm = TRUE), 4),
-      max_cost_visits_per_year = signif(max(visits_costs_per_year, na.rm = TRUE), 4),
+      tot_visits_costs = round(sum(total_patient_cost, na.rm = TRUE), 2),
+      mean_visits_per_year = round(sum(total_patient_cost, na.rm = TRUE) / sum(total_exposed_yrs, na.rm = TRUE), 2),
+      sd_cost_visits_per_year = round(sd(visits_costs_per_year, na.rm = TRUE), 2),
+      min_cost_visits_per_year = round(min(visits_costs_per_year, na.rm = TRUE), 2),
+      max_cost_visits_per_year = round(max(visits_costs_per_year, na.rm = TRUE), 2),
       num_subjects_visited = n_distinct(patid),
       num_non_users = sum(user_status == "Non-User"),
       .groups = "drop"
@@ -299,13 +299,20 @@ analyse_visits_cost <- function(visit_data) {
 
 # Cohort summary
 cohort_summary <- function(data) {
-    summary <- tibble(
-    num_distinct_women = n_distinct(data$patid),
-    num_non_service_users = non_service_users,
-    perc_non_service_users = signif((non_service_users / num_distinct_women * 100), 4),
-    num_service_users = num_distinct_women - num_non_service_users,
-    perc_service_users = 100-perc_non_service_users,
-    )
+ 
+  num_distinct_women <- as.numeric(n_distinct(data$patid))
+  num_non_service_users <- as.numeric(non_service_users)  
+  perc_non_service_users <- round((num_non_service_users / num_distinct_women * 100), 2)
+  num_service_users <- num_distinct_women - num_non_service_users
+  perc_service_users <- round(100 - perc_non_service_users, 2)
+  
+  summary <- tibble::tibble(
+    num_distinct_women = num_distinct_women,
+    num_non_service_users = num_non_service_users,
+    perc_non_service_users = perc_non_service_users,
+    num_service_users = num_service_users,
+    perc_service_users = perc_service_users
+  )
   
   return(summary)
 }
