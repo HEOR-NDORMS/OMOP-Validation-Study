@@ -1,0 +1,49 @@
+/* Title */
+h1.title {
+    font-size: 18px !important; /* Adjust title size */
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 5px;
+    color: #2C3E50; /* Dark blue-gray */
+}
+
+/* Subtitle */
+h4.subtitle {
+    font-size: 14px !important; /* Adjust subtitle size */
+    font-weight: normal;
+    text-align: center;
+    font-style: italic;
+    color: #16A085; /* Teal */
+}
+
+/* Author */
+.author {
+    font-size: 12px !important; /* Adjust author size */
+    text-align: center;
+    font-weight: normal;
+    color: #8E44AD; /* Purple */
+}
+
+/* Date */
+.date {
+    font-size: 12px !important; /* Adjust date size */
+    text-align: center;
+    color: #E67E22; /* Orange */
+}
+
+/* Body Text */
+body {
+    font-size: 10px !important; /* Adjust body text size */
+    font-family: "Times New Roman", serif; /* Professional look */
+    line-height: 1.5;
+    color: #333; /* Dark gray */
+}
+
+/* Optional: Customize links */
+a {
+    color: #2980B9; /* Blue */
+}
+
+a:hover {
+    color: #C0392B; /* Dark red */
+}
