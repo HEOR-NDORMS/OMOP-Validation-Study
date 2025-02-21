@@ -1,19 +1,24 @@
 ---
-title: "Validation Study"
-subtitle: "Primary Care Analysis"
+title: "Validation study"
+subtitle: "Primary Care and Secondary Care Analyses"
 author: "HE Team"
 date: "`r format(Sys.Date(), '%A, %d %B %Y')`"
 output:
   prettydoc::html_pretty:
     theme: hpstr
     highlight: github
+css: custom_style.css
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
 ```
 
-This RMarkdown reports the data cleaning which included cleaning the fractures and cohort.The conditions below were met:
+This RMarkdown reports the data preparation and analysis. 
+
+## Data Preparations
+
+The data preparation included cleaning the fractures and cohort.The conditions below were met:
 
 1. Had their 1st fx >= 01/04/2012 and <= 31/03/2018 when they were > 50 years old
 2. Excluding fracture happening before the birth year.
@@ -21,3 +26,331 @@ This RMarkdown reports the data cleaning which included cleaning the fractures a
 4. Excluding records that happen outside of observation period.
 5. Excluding trauma fractures (same day as trauma codes or 3 distinct fracture sites on the same date.
 6. Excluding fractures on the same day as death or after death.
+7. Clean out using washout period
+8. Excluding records on the same day for the same person according to hierarchy (Hip, Spine, NHNS)
+9. Excluding not female individuals
+10. Excluding individuals without fracture records
+11. Excluding index fractures that happen on the last day of observation period
+12. Excluding records with insufficient prior observation and/or outside of observation period
+13. Excluding records of index fractures where the subject has not turned 50
+14. Excluding records happened after cancer
+15. Excluding records happened after metabolic bone diseases
+
+```{r echo=FALSE}
+library(here)
+library(rio)
+library(tidyverse)
+library(gtsummary)
+library(gt)
+library(rvest)
+library(DT)
+```
+
+
+```{r}
+attrition_report <- import(here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
+
+
+attrition_report %>%
+  gt() %>%
+  tab_header(
+    title = md("**Attrition Report for Cleaning Fractures and Cohort**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left"
+    ) |> 
+  opt_stylize(style = 2) 
+```
+
+## Table 1
+
+```{r}
+table1_data <- read_html(here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html")) %>% 
+  html_node("table") %>%
+  html_table()
+
+table1_data %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Table 1(CPRD Source Data)**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left"
+    ) |> 
+  opt_stylize(style = 2)
+
+```
+
+
+# Results
+
+## Primary Care
+
+Cohort summary
+
+```{r}
+cohort_summary_raw_rp <- import(here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
+
+cohort_summary_raw_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Cohort Summary Statistics**")
+    # subtitle = md("*Subjects Who Visited a Clinically Relevant Consultant*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left"
+    ) |> 
+  opt_stylize(style = 2) %>% 
+  cols_label(
+    num_distinct_women = "Number of Subjects",
+    num_non_service_users = "Number of Non-services Users",
+    perc_non_service_users = "Propotion of Non-services Users",
+    num_service_users = "Number of Services Users",
+    perc_service_users = "Propotion of Non-services Users"
+  )
+```
+
+
+### Visits
+
+User only summary statistics
+
+```{r}
+user_only_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary_statistics")
+
+user_only_summary_statistics_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**User Only Summary Statistics**"),
+    subtitle = md("*Subjects Who Visited a Clinically Relevant Consultant*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left"
+    ) |> 
+  opt_stylize(style = 2) %>% 
+  cols_label(
+    mean_visit_per_year = "Mean Visits Per Year",
+    min_visit_per_year = "Minimum Visits Per Year",
+    max_visit_per_year = "Maximum Visits Per Year",
+    sd_visit_per_year = "SD Visits Per Year",
+    median_visit_per_year = "Median Visits Per Year",
+    lower_q_visits_per_year = "Lower Quartile Visits Per Year",
+    upper_q_visits_per_year = "Upper Quartile Visits Per Year"
+  )
+```
+
+All patients
+
+```{r}
+all_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary_statistics")
+
+all_summary_statistics_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**All Patients Summary Statistics**"),
+    subtitle = md("*Subjects Who Visited Both Clinically Relevant and Non-Relevant Consultants*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left"
+    ) |> 
+  opt_stylize(style = 2) %>% 
+  cols_label(
+    mean_visit_per_year = "Mean Visits Per Year",
+    min_visit_per_year = "Minimum Visits Per Year",
+    max_visit_per_year = "Maximum Visits Per Year",
+    sd_visit_per_year = "SD Visits Per Year",
+    median_visit_per_year = "Median Visits Per Year",
+    lower_q_visits_per_year = "Lower Quartile Visits Per Year",
+    upper_q_visits_per_year = "Upper Quartile Visits Per Year"
+  )
+```
+
+
+Summary statistics of visits by specialty
+
+```{r}
+user_only_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary")
+```
+
+
+```{r}
+colnames(user_only_summary_rp) <- c("Specialty", "Total visits", "Mean visits per year", "SD visits per year", "Minimum visits per year", "Maximum visits per year", "Number of subjects")
+
+datatable(user_only_summary_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        )
+    )
+)
+```
+
+```{r}
+all_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary")
+```
+
+
+```{r}
+colnames(all_summary_rp) <- c("Specialty", "Total Visits", "Mean Visits Per Year", "SD Visits Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
+
+datatable(all_summary_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        )
+    )
+)
+```
+
+
+### Costs
+
+User only summary statistics
+
+```{r}
+user_cost_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_cost_summary_statistics")
+
+user_cost_summary_statistics_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**User Only Cost Summary Statistics**"),
+    subtitle = md("*Subjects Who Visited a Clinically Relevant Consultant*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left"
+    ) |> 
+  opt_stylize(style = 2) %>% 
+  cols_label(
+    mean_visit_cost_per_year = "Mean Visit Costs per Year",
+    min_visit_cost_per_year = "Minimum Visit Costs per Year",
+    max_visit_cost_per_year = "Maximum Visit Costs per Year",
+    sd_visit_cost_per_year = "SD Visit Costs per Year",
+    median_visit_cost_per_year = "Median Visit Costs per Year",
+    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
+    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+  )
+```
+
+All patients costs
+
+```{r}
+all_cost_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary_statistics")
+
+all_cost_summary_statistics_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**All Patients Costs Summary Statistics**"),
+    subtitle = md("*Subjects Who Visited Both Clinically Relevant and Non-Relevant Consultants*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left"
+    ) |> 
+  opt_stylize(style = 2) %>% 
+  cols_label(
+    mean_visit_cost_per_year = "Mean Visit Costs per Year",
+    min_visit_cost_per_year = "Minimum Visit Costs per Year",
+    max_visit_cost_per_year = "Maximum Visit Costs per Year",
+    sd_visit_cost_per_year = "SD Visit Costs per Year",
+    median_visit_cost_per_year = "Median Visit Costs per Year",
+    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
+    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+  )
+```
+
+
+Summary statistics of visits cost by specialty
+
+```{r}
+user_only_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_only_cost_summary")
+```
+
+
+```{r}
+colnames(user_only_cost_summary_rp) <- c("Specialty", "Total Visit Costs", "Mean Visit Costs Per Year", "SD Visit Costs Per Year", "Minimum Visit Costs Per Year", "Maximum Visit Costs Per Year", "Number of Subjects")
+
+datatable(user_only_cost_summary_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        )
+    )
+)
+```
+
+```{r}
+all_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary")
+```
+
+
+```{r}
+colnames(all_cost_summary_rp) <- c("Specialty", "Total Visit Costs", "Mean Visits Per Year", "SD Visit Costs Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
+
+datatable(all_cost_summary_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        )
+    )
+)
+```
