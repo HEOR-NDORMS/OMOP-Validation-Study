@@ -3,7 +3,7 @@
 #	Author: Njoki Njuki	
 # Do file name: Primary care analysis	
 # Date: 10.02.2025
-# Last date edited: 20.02.2025
+# Last date edited: 24.02.2025
 # ****************************************************************************** #
 
 # Service users are defined as patients with records of healthcare encounters 
@@ -52,21 +52,17 @@ visit_data <- left_join(visit_data, validation_staff, by = "staffid") %>%
             fx_date, cancer_fa_index_dt, paget_fa_index_dt)) %>% 
   rename("fracture_site" = "site")
 
+# Provider unit costs
 # the costs are to be updated
 provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.1.xlsx") %>% 
   janitor::clean_names() %>% 
   # include those with 1 which are clinically relevant
   filter(include == 1)
- 
-# count of users/non-users
-(u_n_summary <- visit_data_final_min.2 %>%
-  group_by(user_status) %>%
-  summarise(count_of_pts = n_distinct(patid)) %>%
-  ungroup())
 
 # Remove the visits that are not clinically relevant
 specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value)
 
+# Create the user_status variable
 visit_data <- visit_data %>% 
   rename("specialty_source_value" = "description") %>% 
   mutate(specialty_source_value = case_when(
@@ -79,11 +75,19 @@ visit_data <- visit_data %>%
   mutate(user_status = if_else(any(is_clinically_relevant == 1, na.rm = TRUE), "User", "Non-User")) %>%
   ungroup()
 
+# Count of users/non-users
+(u_n_summary <- visit_data %>%
+  group_by(user_status) %>%
+  summarise(count_of_pts = n_distinct(patid)) %>%
+  ungroup())
+
+
 # Create summary visits
 summary_visits <- visit_data %>%
   group_by(patid, index_date, specialty_source_value) %>%
   summarise(visit_count = n(), .groups = "drop")
 
+# Merge bcak to the visits_data
 visit_data <- left_join(visit_data, summary_visits,
                         by = c("patid", "index_date", "specialty_source_value")) %>%
   group_by(patid) %>% 
@@ -116,6 +120,7 @@ all_summary <- visits_results_raw$all_summary
 
 
 ### Overall visits summaries ----
+# User-only summary statistics
 user_only_summary_statistics_df <- visit_data %>%
   filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
   group_by(patid, specialty) %>%
@@ -144,7 +149,7 @@ user_only_summary_statistics <- tibble(
   upper_q_visits_per_year = round(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.75)), 2)
 )
 
-
+# All summary statistics
 all_summary_statistics_df <- visit_data %>%
   group_by(patid, specialty) %>%
   summarise(total_patient_visits = first(visit_count),
@@ -267,3 +272,177 @@ cohort_summary_raw <- cohort_summary(visit_data)
 
 # Write to an Excel file
 # export(cohort_summary_raw, here::here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
+
+
+## Plots ----
+### Visits ----
+#### Users only ----
+# calculate the percentage of subjects for each total visit count
+plots_users_visits_data <- user_only_summary_statistics_df %>%
+  group_by(tot_visits) %>%
+  summarise(Subject_Count = n(), .groups = 'drop') %>%
+  mutate(Percent_Subjects = Subject_Count / sum(Subject_Count) * 100)
+
+# Plot visits count per pt
+# In case you can't make the plot throwing this error "unable to start device PNG"
+# In R Studio, navigate to Tools, Global, Graphics (top middle), set Backend to AGG*, Apply, Ok
+(users_visits_plot <- plots_users_visits_data %>% 
+    ggplot(aes(x = tot_visits, y = Percent_Subjects)) +
+    geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
+    labs(x = "Total Number of Visits", y = "% of Subjects (Users Only)",
+         caption = "Validation Study\nSource of Data: CPRD Raw\nHE Team") +
+    hrbrthemes::theme_ipsum() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+      axis.title = element_text(hjust = 0.5, size = 12),
+      panel.spacing = unit(0.1, "lines")
+    ))
+
+# Create an interactive plot
+# In case you can't make the plot throwing this error "unable to start device PNG"
+# Run, options(bitmapType="cairo")
+(users_visits_plotly <- plotly::ggplotly(users_visits_plot))
+
+# Save the plots
+# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Plot_Users_Total_Visits-Raw.PNG"),
+#        plot = users_visits_plot, width = 8, height = 6, bg = "white")
+# 
+# htmlwidgets::saveWidget(plotly::as_widget(users_visits_plotly), 
+#                         here::here("CPRD Raw Analysis", "Results", "Plots", "Plotly_Users_Total_Visits-Raw.HTML"))
+
+#### All patients ----
+# calculate the percentage of subjects for each total visit count
+plots_all_visits_data <- all_summary_statistics_df %>%
+  group_by(tot_visits) %>%
+  summarise(Subject_Count = n(), .groups = 'drop') %>%
+  mutate(Percent_Subjects = Subject_Count / sum(Subject_Count) * 100)
+
+# Plot visits count per pt
+(all_visits_plot <- plots_all_visits_data %>% 
+    ggplot(aes(x = tot_visits, y = Percent_Subjects)) +
+    geom_bar(stat = "identity", fill="#00868B", alpha=0.9) +
+    labs(x = "Total Number of Visits", y = "% of Subjects (All)",
+         caption = "Validation Study\nSource of Data: CPRD Raw\nHE Team") +
+    hrbrthemes::theme_ipsum() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+      axis.title = element_text(hjust = 0.5, size = 12),
+      panel.spacing = unit(0.1, "lines")
+    ))
+
+# Create an interactive plot
+(all_visits_plotly <- plotly::ggplotly(all_visits_plot))
+
+# Save the plots
+# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Plot_All_Total_Visits-Raw.PNG"),
+#        plot = users_visits_plot, width = 8, height = 6, bg = "white")
+# 
+# htmlwidgets::saveWidget(plotly::as_widget(users_visits_plotly), 
+#                         here::here("CPRD Raw Analysis", "Results", "Plots", "Plotly_All_Total_Visits-Raw.HTML"))
+
+# Combine plots
+library(patchwork)
+(visits_plots <- all_visits_plot + users_visits_plot)
+# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Plots_Total_Visits-Raw.PNG"),
+#        plot = visits_plots, width = 8, height = 6, bg = "white")
+
+## By specialty
+# grouping by specialty to see which specialties had the majority of visits
+users_specialty_visits_top10_weighted <- visit_data %>%
+  filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
+  group_by(patid, specialty) %>%
+  summarise(total_patient_visits = first(visit_count),
+            total_exposed_yrs = first(exposed_yrs),
+            visits_per_year = total_patient_visits / total_exposed_yrs,
+            .groups = "drop") %>%
+  group_by(specialty) %>%
+  summarise(tot_visits = round(sum(visits_per_year, na.rm = TRUE), 2)) %>%
+  dplyr::arrange(desc(tot_visits)) %>% 
+  dplyr::slice(1:10)
+
+users_specialty_visits_top10 <- visit_data %>%
+  filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
+  group_by(patid, specialty) %>%
+  summarise(total_patient_visits = first(visit_count),
+            .groups = "drop") %>%
+  group_by(specialty) %>%
+  summarise(tot_visits = round(sum(total_patient_visits, na.rm = TRUE), 2)) %>%
+  dplyr::arrange(desc(tot_visits)) %>% 
+  dplyr::slice(1:10)
+
+# filter the data with the top10 visited specialties
+levels(as.factor(users_specialty_visits_top10_weighted$specialty))
+levels(as.factor(users_specialty_visits_top10$specialty))
+
+# top 10 visited by users
+users_specialty_visits_top10_weighted.1 <- visit_data %>% 
+  filter(specialty %in% users_specialty_visits_top10_weighted$specialty) %>%
+  filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
+  group_by(patid, specialty) %>%
+  summarise(total_patient_visits = first(visit_count),
+            .groups = "drop") 
+#   group_by(specialty) %>%
+#   summarise(tot_visits = round(sum(total_patient_visits, na.rm = TRUE), 2))
+
+# boxplot (not sure if this plotting the correct thing)
+(bx_plot1 <- ggplot(data = users_specialty_visits_top10.1,
+                    aes(x = reorder(specialty, total_patient_visits),
+                        y = total_patient_visits, fill = specialty)) +
+   geom_boxplot(outlier.shape = NA) +
+   coord_flip() +
+   scale_y_continuous(limits = c(1, 50)) +
+   stat_summary(fun = "mean", geom = "point", shape = 2, size = 1.2, color = "red") +
+   viridis::scale_fill_viridis(discrete = T, alpha = 0.7, option = "C") +
+   labs(title = "Top10 specialties visited by Users", 
+        subtitle = "Only service users & absence of outliers (Restricting to 50 visits)",
+        x = "Specialties", y = "Number of visits") +
+   theme_minimal() +
+   theme(
+     legend.position="none",
+     plot.title = element_text(size=16, hjust = 0.5),
+     axis.text.x = element_text(angle = 45)
+   ) 
+)
+
+# save the object
+# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Users_Distribution_of_Visits_Top10_Specialties-Raw.PNG"),
+#        plot = bx_plot1, width = 8, height = 6, bg = "white")
+
+
+# top 10 visited by users - weighted
+users_specialty_visits_top10_weighted.1 <- visit_data %>% 
+  filter(specialty %in% users_specialty_visits_top10$specialty) %>%
+  filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
+  group_by(patid, specialty) %>%
+  summarise(total_patient_visits = first(visit_count),
+            total_exposed_yrs = first(exposed_yrs),
+            visits_per_year = total_patient_visits / total_exposed_yrs,
+            tot_visits = round(sum(visits_per_year, na.rm = TRUE), 2),
+            .groups = "drop") 
+# boxplot
+(bx_plot2 <- ggplot(data = users_specialty_visits_top10_weighted.1,
+                    aes(x = reorder(specialty, tot_visits),
+                        y = tot_visits, fill = specialty)) +
+    geom_boxplot(outlier.shape = NA) +
+    coord_flip() +
+    scale_y_continuous(limits = c(1, 50)) +
+    stat_summary(fun = "mean", geom = "point", shape = 2, size = 1.2, color = "red") +
+    viridis::scale_fill_viridis(discrete = T, alpha = 0.7, option = "C") +
+    labs(title = "Top10 specialties visited by Users (Weighted)", 
+         subtitle = "Only service users & absence of outliers (Restricting to 50 visits)",
+         x = "Specialties", y = "Number of visits Per Year") +
+    theme_minimal() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=16, hjust = 0.5),
+      axis.text.x = element_text(angle = 45)
+    ) 
+)
+
+# save the object
+# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Users_Distribution_of_Visits_Top10_Specialties_Weighted-Raw.PNG"),
+#        plot = bx_plot2, width = 8, height = 6, bg = "white")
+### Cost ----
+(users_costs_plot <- user_cost_summary_statistics_df %>%
+    ggplot(aes(x = tot_costs)) +
+    geom_histogram(fill="#A52A2A", alpha=0.9, bins = 100, colour = "black"))
