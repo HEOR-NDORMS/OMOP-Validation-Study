@@ -35,7 +35,7 @@
 # Starting with cohort_table from CleaningCohort_Raw.R
 # let's clean some of the variables
 table_one_raw <- cohort_table %>% 
-  mutate(site = recode(site, hip = "Hip", vert = "Vertebral", nhnv = "NHNV")) %>% 
+  mutate(site = recode(site, hip = "Hip", vert = "Vertebra", nhnv = "NHNV")) %>% 
   mutate(follow_up_reason = case_when(
     follow_up_reason %in% c("after_index, observation_period_end_date, death_date",
                             "death_date",
@@ -69,7 +69,14 @@ table_one_raw <- cohort_table %>%
      ),
      # indicate whether we want the missing values to be seen in the summary table
      missing = "no"
-   ))
+   ) %>%
+   modify_header(label = "**Variable**") 
+ # %>% 
+ #   gtsummary::modify_header(stat_0 = "Median (Q1, Q3); n(%)") %>%  
+ #   gtsummary::modify
+ #   remove_footnote_header(stat_0)
+)
+
 
 # Sense check ----
 ## Number of patients ----
