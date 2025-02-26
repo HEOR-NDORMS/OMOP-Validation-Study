@@ -3,15 +3,12 @@ title: "Validating primary and hospital care resource use and costs based on OMO
 subtitle: "Primary Care and Secondary Care Analyses"
 author: "HE Team"
 date: "`r format(Sys.Date(), '%A, %d %B %Y')`"
-output:
-  rmdformats::downcute:
-    self_contained: true
-    default_style: "light"
-    downcute_theme: "default"
-    toc_depth: 3
-css: custom_style.css
+output: 
+ html_document:
+  toc: true
+  toc_float: true
+  toc_depth: 3
 ---
-
 
 ```{r setup, include=FALSE}
 ## Global options
