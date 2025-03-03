@@ -1,7 +1,6 @@
 ---
 title: "Validating primary and hospital care resource use and costs based on OMOP-mapped CPRD data against corresponding source data: the case of postmenopausal fragility fractures in the UK"
-subtitle: "Primary Care and Secondary Care Analyses"
-author: "HE Team"
+author: "Njoki Njuki, Gianluca Fabiano"
 date: "`r format(Sys.Date(), '%A, %d %B %Y')`"
 output: 
  html_document:
@@ -15,39 +14,17 @@ output:
 knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
 ```
 
-# Introduction 
+# Objectives 
 
-This RMarkdown reports the data preparation and analysis. It reports:
+To assess the validity of primary and hospital care resource use and costs estimated based on OMOP-mapped CPRD data against its corresponding source data using a cohort of women with postmenopausal fragility fractures in the UK.
 
-1. The estimate the use of primary care resources by the cohort of interest in terms of number of visits to relevant healthcare professional per person per year using the source dataset.
-2. To estimate the cost of primary care in total and by relevant healthcare professional per person per year using the mapped dataset and compare results to the same analysis using the source dataset.
+The cohort of interest is made of women aged >50 years with an incident fragility fracture in any site except the face, skull or digits and no history of fracture in the two years prior. The outcomes of interest are *primary* and *secondary healthcare resource utilisation* and *direct costs* associated to first incident fracture measured during the 730 days post index date or until a censoring event occurs and expressed as values per person/year. A detailed analysis plan for this study is available here.
 
-The scripts used in the data preparation and analysis have been adapted from the UCB Project.
+This RMarkdown reports the data preparation and results for the analysis conducted on the *source CPRD-HES* dataset. 
 
-# Data Preparations
+# Data Preparation
 
-We first clean the fractures, the project focused on the first fracture, by doing the following: 
-
-1. Had their 1st $fx >= 01/04/2012$ and $<= 31/03/2018$ when they were $> 50$ years old
-2. Excluding fracture happening before the birth year.
-3. Excluding records that happen outside of study period.
-4. Excluding records that happen outside of observation period.
-5. Excluding trauma fractures (same day as trauma codes or 3 distinct fracture sites on the same date.
-6. Excluding fractures on the same day as death or after death.
-7. Clean out using washout period
-8. Excluding records on the same day for the same person according to hierarchy (Hip, Spine, NHNS).
-
-After cleaning the fractures, we then defined the cohort of interest.
-
-9. Excluding not female individuals.
-10. Excluding individuals without fracture records.
-11. Excluding index fractures that happen on the last day of observation period.
-12. Excluding records with insufficient prior observation and/or outside of observation period.
-13. Excluding records of index fractures where the subject has not turned 50.
-14. Excluding records happened after cancer.
-15. Excluding records happened after metabolic bone diseases.
-
-The attrition table is as shown below.
+The attrition table below shows the steps we followed to clean and prepare the data for the analysis.
 
 ```{r echo=FALSE}
 library(here)
@@ -69,26 +46,25 @@ attrition_report <- import(here("CPRD Raw Analysis", "Results", "AttritionReport
 attrition_report %>%
   gt() %>%
   tab_header(
-    title = md("**Attrition Report for Cleaning Fractures and Cohort**")
+    title = md("**Attrition table**")
   ) %>%
-  opt_all_caps() %>% 
+  #opt_all_caps() %>% 
     tab_options(
       # table.width = px(600),
-      heading.title.font.weight = "bold",
+      #heading.title.font.weight = "bold",
       heading.align = "left",
-      table.font.names = "Times New Roman",
+      #table.font.names = "Times New Roman",
       table.font.size = px(14)
     ) |> 
-  opt_stylize(style = 2) 
+  opt_stylize(style = 3) 
 ```
 
-# Results
+# Results 
 
 ## Table 1
 
 NOTE: N to be fixed, I have reached out to the author of the `gtsummary` package.
 
-The cohort defined had 25, 138 women who had their first fracture with an median at fracture occurrence at 71 years. Majority of women had the Non-Hip Non-Vertebra fracture (81\%), with the least women having had the vertebra fracture (5.2\%). 
 
 ```{r}
 table1_data <- read_html(here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html")) %>% 
@@ -98,20 +74,21 @@ table1_data <- read_html(here("CPRD Raw Analysis", "Results", "gt_summary_table_
 table1_data %>% 
   gt() %>%
   tab_header(
-    title = md("**Table 1(CPRD Source Data)**")
+    title = md("**Patient characteristics**")
   ) %>%
   opt_all_caps() %>% 
     tab_options(
       # table.width = px(600),
-      heading.title.font.weight = "bold",
+      #heading.title.font.weight = "bold",
       heading.align = "left",
-      table.font.names = "Times New Roman"
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
     ) |> 
-  opt_stylize(style = 2)
+  opt_stylize(style = 3)
 
 ```
 
-Out of the 25138 women, 24, 621(97.94\%) were service users. Service users were defined as women who attended clinically relevant consultation, see appendix for more information. While, 517 (2.06\%) were non-service users.  
+
 
 ```{r}
 cohort_summary_raw_rp <- import(here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
@@ -125,53 +102,25 @@ cohort_summary_raw_rp %>%
   opt_all_caps() %>% 
     tab_options(
       # table.width = px(600),
-      heading.title.font.weight = "bold",
+      #heading.title.font.weight = "bold",
       heading.align = "left",
-      table.font.names = "Times New Roman"
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
     ) |> 
-  opt_stylize(style = 2) %>% 
+  opt_stylize(style = 3) %>% 
   cols_label(
     num_distinct_women = "Number of Subjects",
     num_non_service_users = "Number of Non-services Users",
-    perc_non_service_users = "Propotion of Non-services Users",
+    perc_non_service_users = "Proportion of Non-services Users (%)",
     num_service_users = "Number of Services Users",
-    perc_service_users = "Propotion of Services Users"
+    perc_service_users = "Proportion of Services Users (%)"
   )
 ```
 
 
-## Visits
+## Primary care {.tabset}
 
-The overall mean visits per year for service users was 16.13, while for all women irrespective of the service was 15.98.
-
-```{r}
-user_only_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary_statistics")
-
-user_only_summary_statistics_rp %>% 
-  gt() %>%
-  tab_header(
-    title = md("**User Only Summary Statistics**"),
-    subtitle = md("*Subjects Who Visited a Clinically Relevant Consultant*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      # table.width = px(600),
-      heading.title.font.weight = "bold",
-      heading.align = "left",
-      table.font.names = "Times New Roman"
-    ) |> 
-  opt_stylize(style = 2) %>% 
-  cols_label(
-    mean_visit_per_year = "Mean Visits Per Year",
-    min_visit_per_year = "Minimum Visits Per Year",
-    max_visit_per_year = "Maximum Visits Per Year",
-    sd_visit_per_year = "SD Visits Per Year",
-    median_visit_per_year = "Median Visits Per Year",
-    lower_q_visits_per_year = "Lower Quartile Visits Per Year",
-    upper_q_visits_per_year = "Upper Quartile Visits Per Year"
-  )
-```
-
+### Healthcare resource utilisation (HCRU)
 
 ```{r}
 all_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary_statistics")
@@ -179,43 +128,82 @@ all_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output
 all_summary_statistics_rp %>% 
   gt() %>%
   tab_header(
-    title = md("**All Patients Summary Statistics**"),
-    subtitle = md("*Subjects Who Visited Both Clinically Relevant and Non-Relevant Consultants*")
+    title = md("**All Patients - Visits per patient per year**"),
+    subtitle = md("*Users and non-users*")
   ) %>%
   opt_all_caps() %>% 
     tab_options(
-      # table.width = px(600),
-      heading.title.font.weight = "bold",
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
       heading.align = "left",
-      table.font.names = "Times New Roman"
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
     ) |> 
-  opt_stylize(style = 2) %>% 
+  opt_stylize(style = 3) %>% 
   cols_label(
-    mean_visit_per_year = "Mean Visits Per Year",
-    min_visit_per_year = "Minimum Visits Per Year",
-    max_visit_per_year = "Maximum Visits Per Year",
-    sd_visit_per_year = "SD Visits Per Year",
-    median_visit_per_year = "Median Visits Per Year",
-    lower_q_visits_per_year = "Lower Quartile Visits Per Year",
-    upper_q_visits_per_year = "Upper Quartile Visits Per Year"
+    mean_visit_per_year = "Mean",
+    min_visit_per_year = "Minimum",
+    max_visit_per_year = "Maximum",
+    sd_visit_per_year = "SD",
+    median_visit_per_year = "Median",
+    lower_q_visits_per_year = "Lower Quartile",
+    upper_q_visits_per_year = "Upper Quartile"
   )
 ```
 
-The figure below show the distribution of the visits per year for the women in our study. As shown in the plot majority of women as service users had visits between 1 and 100.
+```{r}
+user_only_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary_statistics")
+
+user_only_summary_statistics_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Service users - Visits per patient per year**"),
+    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    mean_visit_per_year = "Mean",
+    min_visit_per_year = "Minimum",
+    max_visit_per_year = "Maximum",
+    sd_visit_per_year = "SD ",
+    median_visit_per_year = "Median ",
+    lower_q_visits_per_year = "Lower Quartile",
+    upper_q_visits_per_year = "Upper Quartile"
+  )
+```
+
+### HCRU Figures
+
+Figure 1: Total number of primary care consultations
 
 ```{r fig.height=6, fig.width=6}
-Plots_Total_Visits_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Plots_Total_Visits-Raw.PNG"))
+Plots_Total_Visits_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_visits.PNG"))
 grid.raster(Plots_Total_Visits_Raw)
 ```
 
-The top 10 visited specialties by service users is shown in the boxplot below.
+Figure 2: Mean number of primary care consultations by provider specialty
 
 ```{r fig.height=6, fig.width=6}
-Users_Distribution_of_Visits_Top10_Specialties_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Users_Distribution_of_Visits_Top10_Specialties-Raw.PNG"))
-grid.raster(Users_Distribution_of_Visits_Top10_Specialties_Raw)
+Mean_visits_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
+grid.raster(Mean_visits_per_specialty_unweighted_raw)
 ```
 
-## Costs
+Figure 3: Exposure-weighted mean number of primary care consultations by provider specialty
+
+```{r fig.height=6, fig.width=6}
+Mean_visits_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
+grid.raster(Mean_visits_per_specialty_weighted_raw)
+```
+
+### Costs
 
 User only summary statistics
 
@@ -277,6 +265,9 @@ all_cost_summary_statistics_rp %>%
   )
 ```
 
+### Cost Figures
+```{r}
+```
 
 # Appendix
 
