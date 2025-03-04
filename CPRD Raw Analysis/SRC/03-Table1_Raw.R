@@ -54,18 +54,95 @@ table_one_raw <- cohort_table %>%
     follow_up_reason == "observation_period_end_date, cancer_date" ~ "End of data collection period, Cancer",
     follow_up_reason == "observation_period_end_date, fracture_after_index" ~ "End of data collection period, Fracture ensuing incident (index) fracture"))
 
+
+## Import the staff and consultation tables
+# this is to be used for the specialty
+validation_staff <- my_dm$`validation_staff` %>% collect()
+validation_consultation <- my_dm$`validation_consultation` %>% collect()
+
+## Merge with validation_consultation ----
+# Filter from index date to follow up end date
+table_one_raw_visit_data <- inner_join(table_one_raw, validation_consultation,
+                         by = "patid"
+) %>%
+  # in order to count all the visits from index date until follow-up end date.
+  filter(consdate >= index_date & consdate <= follow_up_end)
+# left_join it back to the cohort data - so this 13 data will be non-users
+# NOTE: 13 patients are being dropped when we filter to have consultation date be
+# after or on index date and before or on follow-up end date.
+
+# Merge cohort data
+# merge back to cohort data
+table_one_raw_visit_data <- left_join(
+  cohort_table_raw, table_one_raw_visit_data,
+  by = c(
+    "patid", "gender", "yob", "death", "death_date",
+    "aurum_min_accept_date", "aurum_max_accept_date", "site",
+    "fx_date", "days_prior_obs", "days_after_obs", "age_fracture",
+    "type", "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
+    "after_index", "fracture_after_index", "follow_up_end",
+    "follow_up_reason", "follow_up_time"
+  )
+)
+
+## Merge with validation_staff
+table_one_raw_visit_data <- left_join(table_one_raw_visit_data, validation_staff, by = "staffid") %>%
+  ## Keep only distinct rows
+  distinct(consdate, patid, description, .keep_all = TRUE)
+
+# Provider unit costs
+# the costs are to be updated
+# file changed to include the specialty source values that have been grouped 
+# into 3: GP, Nurse, Nurse
+provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.3_summarised.xlsx") %>%
+  janitor::clean_names() %>%
+  # include those with 1 which are clinically relevant
+  filter(include == 1) %>%
+  select(!notes)
+
+# Remove the visits that are not clinically relevant
+specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value)
+
+# Create the user_status variable
+table_one_raw_visit_data <- table_one_raw_visit_data %>%
+  rename("specialty_source_value" = "description") %>%
+  mutate(specialty_source_value = case_when(
+    specialty_source_value %in% specialty_source_value_ids ~ specialty_source_value,
+    TRUE ~ "Not Clinically Relevant"
+  )) %>%
+  left_join(provider_cost_inputs, by = "specialty_source_value") %>%
+  mutate(is_clinically_relevant = if_else(
+    specialty_source_value == "Not Clinically Relevant", 0, 1)) %>%
+  mutate(specialty_source_value_summarised = ifelse(
+    is.na(specialty_source_value_summarised), 
+    "Not Clinically Relevant",
+    specialty_source_value_summarised)) %>%
+  group_by(patid) %>%
+  mutate(user_status = if_else(
+    any(is_clinically_relevant == 1, na.rm = TRUE), 
+    "User", "Non-User")) %>%
+  mutate(not_users_status = case_when(
+    user_status == "Non-User" & is.na(consdate) ~ "No Visits",
+    user_status == "Non-User" ~ "Visits with Non-clinically Relevant Staff"
+  )) %>% 
+  ungroup() %>% 
+  distinct(patid, user_status, .keep_all = TRUE)
+
 # Summary table ----
 # Using gtsummary::tbl_summary, we can summarise the table as follows
-(gt_summary_table <- table_one_raw %>% 
+(gt_summary_table <- table_one_raw_visit_data %>% 
    gtsummary::tbl_summary(
      # select the variables of interest
-     include = c(age_fracture, site, follow_up_reason, follow_up_time),
+     include = c(age_fracture, site, follow_up_reason, 
+                 follow_up_time, user_status, not_users_status),
      # rename the variable names
      label = list(
        age_fracture = "Age at fracture occurrence",
        site = "Fracture site", 
        follow_up_reason = "Censoring event",
-       follow_up_time = "Follow up time"
+       follow_up_time = "Follow up time",
+       user_status = "User status",
+       not_users_status = "Non-visits status"
      ),
      # indicate whether we want the missing values to be seen in the summary table
      missing = "no"
@@ -79,7 +156,7 @@ table_one_raw <- cohort_table %>%
  #   gtsummary::modify_header(stat_0 = "Median (Q1, Q3); n(%)") %>%  
  #   gtsummary::modify
  #   gtsummary::remove_footnote_header(stat_0)
-)
+
 
 
 # Sense check ----
@@ -128,7 +205,10 @@ table_one_raw_pt <- table_one_raw %>%
 (iqr_followup_time <- IQR(table_one_raw$follow_up_time))
 
 # Export ----
-gt_summary_table_df <- as_tibble(gt_summary_table)
+gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
+  rename("Variable" = "**Variable**",
+         "N = 25,138" = "**N = 25,138**") %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 rio::export(gt_summary_table_df, here::here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx"))
 

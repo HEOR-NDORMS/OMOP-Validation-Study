@@ -63,32 +63,61 @@ attrition_report %>%
 
 ## Table 1
 
-NOTE: N to be fixed, I have reached out to the author of the `gtsummary` package.
-
-
 ```{r}
-table1_data <- read_html(here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html")) %>% 
-  html_node("table") %>%
-  html_table()
+# Import data
+# table1_data <- read_html(here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html")) %>% 
+#   html_node("table") %>%
+#   html_table()
 
+# Import data
+table1_data <- rio::import(here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
+
+# Define parent variables and subcategories
+parent_vars <- c("Fracture site", "Censoring event",
+                 "User status", "Non-visits status")  
+
+subcategories <- c("Hip", "Vertebra", "NHNV", 
+                   "Cancer", "Cancer, Fracture ensuing incident (index) fracture",
+                   "Death", "End of data collection period",
+                   "End of data collection period, Cancer",
+                   "End of data collection period, Fracture ensuing incident (index) fracture",
+                   "Fracture ensuing incident (index) fracture",
+                   "Max of 730 days from index date",
+                   "Max of 730 days from index date, Cancer",
+                   "Max of 730 days from index date, End of data collection period",
+                   "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
+                   "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
+                   "Paget’s disease of the bone, or other metabolic bone diseases",
+                   "Non-User", "User",
+                   "No Visits", "Visits with Non-clinically Relevant Staff")
+
+# Add indentation dynamically
+table1_data <- table1_data %>%
+  mutate(Variable = case_when(
+    Variable %in% subcategories ~ paste0("&nbsp;&nbsp;&nbsp;", Variable), # Indent subcategories using HTML space
+    TRUE ~ Variable
+  ))
+
+# Create gt table with a footnote
 table1_data %>% 
   gt() %>%
   tab_header(
-    title = md("**Patient characteristics**")
+    title = md("**Patient Characteristics**")
   ) %>%
   opt_all_caps() %>% 
-    tab_options(
-      # table.width = px(600),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3)
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  fmt_markdown(columns = "Variable") %>%  # Apply markdown formatting for indentation
+  opt_stylize(style = 3) %>%
+  tab_footnote(
+    footnote = "Median (Q1, Q3); n (%)",
+    locations = cells_title(groups = "title")  # Places footnote under the title
+  )
 
 ```
-
-
 
 ```{r}
 cohort_summary_raw_rp <- import(here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
@@ -203,7 +232,29 @@ Mean_visits_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Res
 grid.raster(Mean_visits_per_specialty_weighted_raw)
 ```
 
-### Costs
+### Cost Figures
+
+Figure 4: Total number of primary care consultation costs
+
+```{r fig.height=6, fig.width=6}
+Plots_Total_Costs_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_costs.PNG"))
+grid.raster(Plots_Total_Costs_Raw)
+```
+
+Figure 5: Mean number of primary care consultation costs by provider specialty
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
+grid.raster(Mean_costs_per_specialty_unweighted_raw)
+```
+
+Figure 6: Exposure-weighted mean number of primary care consultations costs by provider specialty
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
+grid.raster(Mean_costs_per_specialty_weighted_raw)
+```
+
 
 User only summary statistics
 
@@ -265,9 +316,6 @@ all_cost_summary_statistics_rp %>%
   )
 ```
 
-### Cost Figures
-```{r}
-```
 
 # Appendix
 
