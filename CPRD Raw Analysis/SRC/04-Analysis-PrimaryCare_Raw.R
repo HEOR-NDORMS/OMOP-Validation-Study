@@ -3,7 +3,7 @@
 #	Author: Njoki Njuki	
 # Do file name: Primary care analysis	
 # Date: 10.02.2025
-# Last date edited: 24.02.2025
+# Last date edited: 28.02.2025
 # ****************************************************************************** #
 
 # Service users are defined as patients with records of healthcare encounters 
@@ -81,7 +81,6 @@ visit_data <- visit_data %>%
 # Create a new df so that we can create visits based on these reduced specialty
 visit_data_reduced <- visit_data
 
-
 # Count of users/non-users
 (u_n_summary <- visit_data %>%
   group_by(user_status) %>%
@@ -99,7 +98,7 @@ visit_data <- left_join(visit_data, summary_visits,
   group_by(patid) %>% 
   mutate(visit_count = if_else(specialty_source_value == "Not Clinically Relevant", 0, visit_count),
          unit_cost = if_else(specialty_source_value == "Not Clinically Relevant", 0, unit_cost),
-         exposed_yrs = as.numeric(follow_up_end - index_date) / 365.25,
+         exposed_yrs = as.numeric(follow_up_end - index_date) / 360.25,
          visits_per_year = visit_count / exposed_yrs,
          visits_per_year = replace_na(visits_per_year, 0),
          visit_cost = visit_count * unit_cost,
@@ -120,7 +119,7 @@ visit_data_reduced <- left_join(visit_data_reduced, summary_visits_reduced,
   group_by(patid) %>% 
   mutate(visit_count = if_else(specialty_source_value_summarised == "Not Clinically Relevant", 0, visit_count),
          unit_cost = if_else(specialty_source_value_summarised == "Not Clinically Relevant", 0, unit_cost),
-         exposed_yrs = as.numeric(follow_up_end - index_date) / 365.25,
+         exposed_yrs = as.numeric(follow_up_end - index_date) / 360.25,
          visits_per_year = visit_count / exposed_yrs,
          visits_per_year = replace_na(visits_per_year, 0),
          visit_cost = visit_count * unit_cost,
@@ -217,6 +216,7 @@ user_only_summary_statistics_reduced <- tibble(
   lower_q_visits_per_year = round(quantile(user_only_summary_statistics_df_reduced$tot_visits_per_yr, probs = (.25)), 2),
   upper_q_visits_per_year = round(quantile(user_only_summary_statistics_df_reduced$tot_visits_per_yr, probs = (.75)), 2)
 )
+
 
 # All summary statistics
 all_summary_statistics_df <- visit_data %>%
@@ -446,73 +446,199 @@ cohort_summary_raw <- cohort_summary(visit_data)
 ### Visits ----
 #### Users only ----
 # calculate the percentage of subjects for each total visit count
-plots_users_visits_data <- user_only_summary_statistics_df %>%
-  group_by(tot_visits) %>%
-  summarise(Subject_Count = n(), .groups = 'drop') %>%
-  mutate(Percent_Subjects = Subject_Count / sum(Subject_Count) * 100)
+# plots_users_visits_data <- user_only_summary_statistics_df %>%
+#   group_by(tot_visits) %>%
+#   summarise(Subject_Count = n(), .groups = 'drop') %>%
+#   mutate(Percent_Subjects = Subject_Count / sum(Subject_Count) * 100)
 
 # Plot visits count per pt
 # In case you can't make the plot throwing this error "unable to start device PNG"
 # In R Studio, navigate to Tools, Global, Graphics (top middle), set Backend to AGG*, Apply, Ok
-(users_visits_plot <- plots_users_visits_data %>% 
-    ggplot(aes(x = tot_visits, y = Percent_Subjects)) +
-    geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
-    labs(x = "Total Number of Visits", y = "% of Subjects (Users Only)",
-         caption = "Validation Study\nSource of Data: CPRD Raw\nHE Team") +
-    hrbrthemes::theme_ipsum() +
+# (users_visits_plot <- plots_users_visits_data %>% 
+#     ggplot(aes(x = tot_visits, y = Percent_Subjects)) +
+#     geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
+#     labs(x = "Total Number of Visits", y = "% of Subjects over the total users (Users Only)",
+#          caption = "Validation Study\nSource of Data: CPRD Raw\nHE Team") +
+#     hrbrthemes::theme_ipsum() +
+#     theme(
+#       plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+#       axis.title = element_text(hjust = 0.5, size = 12),
+#       panel.spacing = unit(0.1, "lines")
+#     ))
+
+
+# creating a plot of mean visits vs months after index
+# on overall in the first month, the mean visits and so on
+# x- axis the time from index_date, use the index_date, then use index_date + 1, 
+# index_date+2mnths,...index_date+24months
+# mean of the visits within a month for the patients with these visits grouped by specialties
+# plots_users_mean_visits_data <- visit_data_reduced %>% 
+#   filter(user_status == "User", specialty_reduced != "Not Clinically Relevant") %>% 
+#  
+#   
+#    mutate(month_after_index = lubridate::month(after_index)) %>% # not to be used
+#   group_by(patid, month_after_index, specialty_reduced) %>% 
+#   summarise(visits = n(), .groups = "drop")
+  
+plots_users_mean_visits_data <- visit_data_reduced %>% 
+  # filter for users only and having the specialty as not clinically relevant
+  filter(user_status == "User", specialty_reduced != "Not Clinically Relevant") %>%
+  # create the interval between the consdate and index_date
+  mutate(interval_after_index = interval(index_date, consdate)) %>%
+  # Compute months difference and cap at 24
+  #  1. interval(index_date, visit_date)
+  # interval(index_date, visit_date) creates a time interval between index_date and visit_date.
+  # This interval represents the difference between the two dates.
+  # 2. %/% months(1)
+  # The %/% operator is integer division (floor division).
+  # months(1) represents a time period of exactly one calendar month.
+  # interval(index_date, visit_date) %/% months(1) calculates how many full months have passed between index_date and visit_date.
+  # 3. +1 Adjustment
+  # Without +1, if visit_date is in the same month as index_date, the result is 0 (since no full months have passed).
+  # Adding +1 ensures that the first partial or full month after index_date is counted as 1, not 0
+  mutate(month_after_index = pmin(interval_after_index %/% months(1) + 1, 24)) %>%  
+  group_by(patid, month_after_index, specialty_reduced) %>%
+  summarise(visit_count = n(), .groups = "drop") %>%  # Count visits per subject per month
+  group_by(month_after_index, specialty_reduced) %>%
+  summarise(mean_visit_count = sum(visit_count)/sum(n_distinct(patid)),
+            .groups = "drop")  # Calculate mean visit count per month per specialty
+
+# Sense check
+mean(plots_users_mean_visits_data_test2$visit_count[plots_users_mean_visits_data_test2$month_after_index == 1 & plots_users_mean_visits_data_test2$specialty_reduced == "General Practitioner"])
+mean(plots_users_mean_visits_data_test2$visit_count[plots_users_mean_visits_data_test2$month_after_index == 1 & plots_users_mean_visits_data_test2$specialty_reduced == "Nurse"])
+# mean(plots_users_mean_visits_data_test2$visit_count[plots_users_mean_visits_data_test2$month_after_index == 1 & plots_users_mean_visits_data_test2$specialty_reduced == "Other"])
+
+(plots_users_mean_visits <- plots_users_mean_visits_data %>% 
+    ggplot(aes(x = month_after_index,
+               y = mean_visit_count, 
+               fill = specialty_reduced)) +
+    geom_bar(position = "stack") +
+    labs(y = "Mean Visits", 
+         x = "Month After Index") +
+    scale_fill_manual(name = "Specialty", 
+                      values = c("General Practitioner" = "#009ACD", 
+                                 "Nurse" = "#1874CD",
+                                 "Other" = "#27408B")) +
+    theme_minimal(base_size = 11) +
     theme(
-      plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
-      axis.title = element_text(hjust = 0.5, size = 12),
+      plot.title = element_text(face = "bold", 
+                                hjust = 0.5, 
+                                size = 12),
+      axis.title = element_text(hjust = 0.5, 
+                                size = 10),
       panel.spacing = unit(0.1, "lines")
     ))
 
-visit_data_temp <- visit_data %>% 
-  group_by(patid, specialty) %>% 
-  summarise(visit_count = first(visit_count), .groups = 'drop')
-
-df_temp <- visit_data %>% 
-  select(patid, follow_up_reason, follow_up_time) %>% 
-  distinct()
-
-visit_data_temp <- left_join(visit_data_temp, df_temp, by = "patid")
-
-ggplot(visit_data_temp, aes(x = follow_up_time, y = visit_count)) +
-  geom_line()
+(plots_users_mean_visits <- plots_users_mean_visits_data %>% 
+    ggplot(aes(x = month_after_index,
+               y = mean_visit_count, 
+               fill = specialty_reduced)) +
+    geom_bar(position = "stack") +
+    labs(y = "Mean Visits", 
+         x = "Month After Index") +
+    scale_fill_manual(name = "Specialty", 
+                      values = c("General Practitioner" = "#009ACD", 
+                                 "Nurse" = "#1874CD",
+                                 "Other" = "#27408B")) +
+    theme_minimal(base_size = 11) +
+    theme(
+      plot.title = element_text(face = "bold", 
+                                hjust = 0.5, 
+                                size = 12),
+      axis.title = element_text(hjust = 0.5, 
+                                size = 10),
+      panel.spacing = unit(0.1, "lines")
+    ))
 
 # Create an interactive plot
 # In case you can't make the plot throwing this error "unable to start device PNG"
 # Run, options(bitmapType="cairo")
-(users_visits_plotly <- plotly::ggplotly(users_visits_plot))
+(users_mean_visits_plotly <- plotly::ggplotly(plots_users_mean_visits))
 
 # Save the plots
-# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Plot_Users_Total_Visits-Raw.PNG"),
-#        plot = users_visits_plot, width = 8, height = 6, bg = "white")
-# 
-# htmlwidgets::saveWidget(plotly::as_widget(users_visits_plotly), 
-#                         here::here("CPRD Raw Analysis", "Results", "Plots", "Plotly_Users_Total_Visits-Raw.HTML"))
+# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Plot_Users_Mean_Visits-Raw.PNG"),
+#        plot = plots_users_mean_visits, width = 8, height = 6, bg = "white")
+
+# htmlwidgets::saveWidget(plotly::as_widget(users_mean_visits_plotly),
+#                         here::here("CPRD Raw Analysis", "Results", "Plots", "Plotly_Users_Mean_Visits-Raw.HTML"))
 
 #### All patients ----
 # calculate the percentage of subjects for each total visit count
-plots_all_visits_data <- all_summary_statistics_df %>%
-  group_by(tot_visits) %>%
-  summarise(Subject_Count = n(), .groups = 'drop') %>%
-  mutate(Percent_Subjects = Subject_Count / sum(Subject_Count) * 100)
+# plots_all_visits_data <- all_summary_statistics_df %>%
+#   group_by(tot_visits) %>%
+#   summarise(Subject_Count = n(), .groups = 'drop') %>%
+#   mutate(Percent_Subjects = Subject_Count / sum(Subject_Count) * 100)
+# 
+# # Plot visits count per pt
+# (all_visits_plot <- plots_all_visits_data %>% 
+#     ggplot(aes(x = tot_visits, y = Percent_Subjects)) +
+#     geom_bar(stat = "identity", fill="#00868B", alpha=0.9) +
+#     labs(x = "Total Number of Visits", y = "% of Subjects (All)",
+#          caption = "Validation Study\nSource of Data: CPRD Raw\nHE Team") +
+#     hrbrthemes::theme_ipsum() +
+#     theme(
+#       plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+#       axis.title = element_text(hjust = 0.5, size = 12),
+#       panel.spacing = unit(0.1, "lines")
+#     ))
 
-# Plot visits count per pt
-(all_visits_plot <- plots_all_visits_data %>% 
-    ggplot(aes(x = tot_visits, y = Percent_Subjects)) +
-    geom_bar(stat = "identity", fill="#00868B", alpha=0.9) +
-    labs(x = "Total Number of Visits", y = "% of Subjects (All)",
-         caption = "Validation Study\nSource of Data: CPRD Raw\nHE Team") +
-    hrbrthemes::theme_ipsum() +
+plots_all_mean_visits_data <- visit_data_reduced %>% 
+  # create the interval between the consdate and index_date
+  mutate(interval_after_index = interval(index_date, consdate)) %>%
+  # Compute months difference and cap at 24
+  mutate(month_after_index = pmin(interval_after_index %/% months(1) + 1, 24)) %>%
+  mutate(month_after_index = ifelse(is.na(interval_after_index), 0, month_after_index)) %>% 
+  # filter(is.na(month_after_index))
+  group_by(patid, month_after_index, specialty_reduced) %>%
+  summarise(visit_count = n(), .groups = "drop") %>%  # Count visits per subject per month
+  mutate(visit_count = if_else(specialty_reduced == "Not Clinically Relevant", 0, visit_count)) %>% 
+  group_by(month_after_index, specialty_reduced) %>%
+  summarise(mean_visit_count = sum(visit_count)/sum(n_distinct(patid)),
+            .groups = "drop")  # Calculate mean visit count per month per specialty
+
+
+(plots_all_mean_visits <- plots_all_mean_visits_data %>% 
+    ggplot(aes(x = month_after_index,
+               y = mean_visit_count, 
+               fill = specialty_reduced)) +
+    geom_col(position = "stack") +
+    labs(y = "Mean Visits", 
+         x = "Month After Index") +
+    scale_fill_manual(name = "Specialty", 
+                      values = c("General Practitioner" = "#009ACD", 
+                                 "Nurse" = "#1874CD",
+                                 "Other" = "#27408B",
+                                 "Not Clinically Relevant" = "lightcyan3"),
+                      labels = c("Not Clinically Relevant" = "Non-user")) +
+    theme_minimal(base_size = 11) +
     theme(
-      plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
-      axis.title = element_text(hjust = 0.5, size = 12),
+      plot.title = element_text(face = "bold", 
+                                hjust = 0.5, 
+                                size = 12),
+      axis.title = element_text(hjust = 0.5, 
+                                size = 10),
       panel.spacing = unit(0.1, "lines")
     ))
 
+(plots_all_mean_visits.1 <- plots_all_mean_visits_data %>%
+  ggplot(aes(x = month_after_index, y = mean_visit_count, color = specialty_reduced)) +
+  geom_line(size = 1) + 
+  geom_point(size = 3) +  
+  labs(y = "Mean Visits", x = "Month After Index") +
+  scale_color_manual(
+    name = "Specialty", 
+    values = c("General Practitioner" = "#009ACD", 
+               "Nurse" = "#1874CD",
+               "Other" = "#27408B",
+               "Not Clinically Relevant" = "lightcyan3"),
+    labels = c("Not Clinically Relevant" = "Non-user")
+  ) +
+  theme_minimal())
+
+
+
 # Create an interactive plot
-(all_visits_plotly <- plotly::ggplotly(all_visits_plot))
+(plotly_all_mean_visits <- plotly::ggplotly(plots_all_mean_visits))
 
 # Save the plots
 # ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Plot_All_Total_Visits-Raw.PNG"),
@@ -529,61 +655,61 @@ library(patchwork)
 
 ## By specialty
 # grouping by specialty to see which specialties had the majority of visits
-users_specialty_visits_top10_weighted <- visit_data %>%
-  filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
-  group_by(patid, specialty) %>%
-  summarise(total_patient_visits = first(visit_count),
-            total_exposed_yrs = first(exposed_yrs),
-            visits_per_year = total_patient_visits / total_exposed_yrs,
-            .groups = "drop") %>%
-  group_by(specialty) %>%
-  summarise(tot_visits = round(sum(visits_per_year, na.rm = TRUE), 2)) %>%
-  dplyr::arrange(desc(tot_visits)) %>% 
-  dplyr::slice(1:10)
-
-users_specialty_visits_top10 <- visit_data %>%
-  filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
-  group_by(patid, specialty) %>%
-  summarise(total_patient_visits = first(visit_count),
-            .groups = "drop") %>%
-  group_by(specialty) %>%
-  summarise(tot_visits = round(sum(total_patient_visits, na.rm = TRUE), 2)) %>%
-  dplyr::arrange(desc(tot_visits)) %>% 
-  dplyr::slice(1:10)
+# users_specialty_visits_top10_weighted <- visit_data %>%
+#   filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
+#   group_by(patid, specialty) %>%
+#   summarise(total_patient_visits = first(visit_count),
+#             total_exposed_yrs = first(exposed_yrs),
+#             visits_per_year = total_patient_visits / total_exposed_yrs,
+#             .groups = "drop") %>%
+#   group_by(specialty) %>%
+#   summarise(tot_visits = round(sum(visits_per_year, na.rm = TRUE), 2)) %>%
+#   dplyr::arrange(desc(tot_visits)) %>% 
+#   dplyr::slice(1:10)
+# 
+# users_specialty_visits_top10 <- visit_data %>%
+#   filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
+#   group_by(patid, specialty) %>%
+#   summarise(total_patient_visits = first(visit_count),
+#             .groups = "drop") %>%
+#   group_by(specialty) %>%
+#   summarise(tot_visits = round(sum(total_patient_visits, na.rm = TRUE), 2)) %>%
+#   dplyr::arrange(desc(tot_visits)) %>% 
+#   dplyr::slice(1:10)
 
 # filter the data with the top10 visited specialties
-levels(as.factor(users_specialty_visits_top10_weighted$specialty))
-levels(as.factor(users_specialty_visits_top10$specialty))
+# levels(as.factor(users_specialty_visits_top10_weighted$specialty))
+# levels(as.factor(users_specialty_visits_top10$specialty))
 
-# top 10 visited by users
-users_specialty_visits_top10_weighted.1 <- visit_data %>% 
-  filter(specialty %in% users_specialty_visits_top10_weighted$specialty) %>%
-  filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
-  group_by(patid, specialty) %>%
-  summarise(total_patient_visits = first(visit_count),
-            .groups = "drop") 
-#   group_by(specialty) %>%
-#   summarise(tot_visits = round(sum(total_patient_visits, na.rm = TRUE), 2))
-
-# boxplot (not sure if this plotting the correct thing)
-(bx_plot1 <- ggplot(data = users_specialty_visits_top10.1,
-                    aes(x = reorder(specialty, total_patient_visits),
-                        y = total_patient_visits, fill = specialty)) +
-   geom_boxplot(outlier.shape = NA) +
-   coord_flip() +
-   scale_y_continuous(limits = c(1, 50)) +
-   stat_summary(fun = "mean", geom = "point", shape = 2, size = 1.2, color = "red") +
-   viridis::scale_fill_viridis(discrete = T, alpha = 0.7, option = "C") +
-   labs(title = "Top10 specialties visited by Users", 
-        subtitle = "Only service users & absence of outliers (Restricting to 50 visits)",
-        x = "Specialties", y = "Number of visits") +
-   theme_minimal() +
-   theme(
-     legend.position="none",
-     plot.title = element_text(size=16, hjust = 0.5),
-     axis.text.x = element_text(angle = 45)
-   ) 
-)
+# # top 10 visited by users
+# users_specialty_visits_top10_weighted.1 <- visit_data %>% 
+#   filter(specialty %in% users_specialty_visits_top10_weighted$specialty) %>%
+#   filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
+#   group_by(patid, specialty) %>%
+#   summarise(total_patient_visits = first(visit_count),
+#             .groups = "drop") 
+# #   group_by(specialty) %>%
+# #   summarise(tot_visits = round(sum(total_patient_visits, na.rm = TRUE), 2))
+# 
+# # boxplot (not sure if this plotting the correct thing)
+# (bx_plot1 <- ggplot(data = users_specialty_visits_top10.1,
+#                     aes(x = reorder(specialty, total_patient_visits),
+#                         y = total_patient_visits, fill = specialty)) +
+#    geom_boxplot(outlier.shape = NA) +
+#    coord_flip() +
+#    scale_y_continuous(limits = c(1, 50)) +
+#    stat_summary(fun = "mean", geom = "point", shape = 2, size = 1.2, color = "red") +
+#    viridis::scale_fill_viridis(discrete = T, alpha = 0.7, option = "C") +
+#    labs(title = "Top10 specialties visited by Users", 
+#         subtitle = "Only service users & absence of outliers (Restricting to 50 visits)",
+#         x = "Specialties", y = "Number of visits") +
+#    theme_minimal() +
+#    theme(
+#      legend.position="none",
+#      plot.title = element_text(size=16, hjust = 0.5),
+#      axis.text.x = element_text(angle = 45)
+#    ) 
+# )
 
 # save the object
 # ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Users_Distribution_of_Visits_Top10_Specialties-Raw.PNG"),
@@ -591,39 +717,91 @@ users_specialty_visits_top10_weighted.1 <- visit_data %>%
 
 
 # top 10 visited by users - weighted
-users_specialty_visits_top10_weighted.1 <- visit_data %>% 
-  filter(specialty %in% users_specialty_visits_top10$specialty) %>%
-  filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
-  group_by(patid, specialty) %>%
-  summarise(total_patient_visits = first(visit_count),
-            total_exposed_yrs = first(exposed_yrs),
-            visits_per_year = total_patient_visits / total_exposed_yrs,
-            tot_visits = round(sum(visits_per_year, na.rm = TRUE), 2),
-            .groups = "drop") 
-# boxplot
-(bx_plot2 <- ggplot(data = users_specialty_visits_top10_weighted.1,
-                    aes(x = reorder(specialty, tot_visits),
-                        y = tot_visits, fill = specialty)) +
-    geom_boxplot(outlier.shape = NA) +
-    coord_flip() +
-    scale_y_continuous(limits = c(1, 50)) +
-    stat_summary(fun = "mean", geom = "point", shape = 2, size = 1.2, color = "red") +
-    viridis::scale_fill_viridis(discrete = T, alpha = 0.7, option = "C") +
-    labs(title = "Top10 specialties visited by Users (Weighted)", 
-         subtitle = "Only service users & absence of outliers (Restricting to 50 visits)",
-         x = "Specialties", y = "Number of visits Per Year") +
-    theme_minimal() +
-    theme(
-      legend.position="none",
-      plot.title = element_text(size=16, hjust = 0.5),
-      axis.text.x = element_text(angle = 45)
-    ) 
-)
+# users_specialty_visits_top10_weighted.1 <- visit_data %>% 
+#   filter(specialty %in% users_specialty_visits_top10$specialty) %>%
+#   filter(user_status == "User", specialty != "Not_clinically_relevant") %>%
+#   group_by(patid, specialty) %>%
+#   summarise(total_patient_visits = first(visit_count),
+#             total_exposed_yrs = first(exposed_yrs),
+#             visits_per_year = total_patient_visits / total_exposed_yrs,
+#             tot_visits = round(sum(visits_per_year, na.rm = TRUE), 2),
+#             .groups = "drop") 
+# # boxplot
+# (bx_plot2 <- ggplot(data = users_specialty_visits_top10_weighted.1,
+#                     aes(x = reorder(specialty, tot_visits),
+#                         y = tot_visits, fill = specialty)) +
+#     geom_boxplot(outlier.shape = NA) +
+#     coord_flip() +
+#     scale_y_continuous(limits = c(1, 50)) +
+#     stat_summary(fun = "mean", geom = "point", shape = 2, size = 1.2, color = "red") +
+#     viridis::scale_fill_viridis(discrete = T, alpha = 0.7, option = "C") +
+#     labs(title = "Top10 specialties visited by Users (Weighted)", 
+#          subtitle = "Only service users & absence of outliers (Restricting to 50 visits)",
+#          x = "Specialties", y = "Number of visits Per Year") +
+#     theme_minimal() +
+#     theme(
+#       legend.position="none",
+#       plot.title = element_text(size=16, hjust = 0.5),
+#       axis.text.x = element_text(angle = 45)
+#     ) 
+# )
 
 # save the object
 # ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Users_Distribution_of_Visits_Top10_Specialties_Weighted-Raw.PNG"),
 #        plot = bx_plot2, width = 8, height = 6, bg = "white")
 ### Cost ----
-(users_costs_plot <- user_cost_summary_statistics_df %>%
-    ggplot(aes(x = tot_costs)) +
-    geom_histogram(fill="#A52A2A", alpha=0.9, bins = 100, colour = "black"))
+#### Users ----
+# (users_costs_plot <- user_cost_summary_statistics_df %>%
+#     ggplot(aes(x = tot_costs)) +
+#     geom_histogram(fill="#A52A2A", alpha=0.9, bins = 100, colour = "black"))
+
+plots_users_mean_costs_data <- visit_data_reduced %>% 
+  # filter for users only and having the specialty as not clinically relevant
+  filter(user_status == "User", specialty_reduced != "Not Clinically Relevant") %>%
+  # create the interval between the consdate and index_date
+  mutate(interval_after_index = interval(index_date, consdate)) %>%
+  # Compute months difference and cap at 24
+  #  1. interval(index_date, visit_date)
+  # interval(index_date, visit_date) creates a time interval between index_date and visit_date.
+  # This interval represents the difference between the two dates.
+  # 2. %/% months(1)
+  # The %/% operator is integer division (floor division).
+  # months(1) represents a time period of exactly one calendar month.
+  # interval(index_date, visit_date) %/% months(1) calculates how many full months have passed between index_date and visit_date.
+  # 3. +1 Adjustment
+  # Without +1, if visit_date is in the same month as index_date, the result is 0 (since no full months have passed).
+  # Adding +1 ensures that the first partial or full month after index_date is counted as 1, not 0
+mutate(month_after_index = pmin(interval_after_index %/% months(1) + 1, 24)) %>%  
+  group_by(patid, month_after_index, specialty_reduced) %>%
+  summarise(visits_costs = visit_cost, .groups = "drop") %>%  # Count visits per subject per month
+  group_by(month_after_index, specialty_reduced) %>%
+  summarise(mean_visit_count = sum(visits_costs)/sum(n_distinct(patid)),
+            .groups = "drop")  # Calculate mean visit count per month per specialty
+
+# Sense check
+# mean(plots_users_mean_visits_data_test2$visit_costs[plots_users_mean_visits_data_test2$month_after_index == 1 & plots_users_mean_visits_data_test2$specialty_reduced == "General Practitioner"])
+sum(plots_users_mean_costs_data$visits_costs[plots_users_mean_costs_data$month_after_index == 1 & plots_users_mean_costs_data$specialty_reduced == "General Practitioner"])/sum(n_distinct(plots_users_mean_costs_data$patid)[plots_users_mean_costs_data$month_after_index == 1 & plots_users_mean_costs_data$specialty_reduced == "General Practitioner"])
+# mean(plots_users_mean_visits_data_test2$visit_count[plots_users_mean_visits_data_test2$month_after_index == 1 & plots_users_mean_visits_data_test2$specialty_reduced == "Nurse"])
+# mean(plots_users_mean_visits_data_test2$visit_count[plots_users_mean_visits_data_test2$month_after_index == 1 & plots_users_mean_visits_data_test2$specialty_reduced == "Other"])
+
+(plots_users_mean_costs <- plots_users_mean_costs_data %>% 
+    ggplot(aes(x = month_after_index,
+               y = mean_visit_count, 
+               fill = specialty_reduced)) +
+    geom_col(position = "stack") +
+    labs(y = "Mean Costs", 
+         x = "Month After Index") +
+    scale_fill_manual(name = "Specialty", 
+                      values = c("General Practitioner" = "#009ACD", 
+                                 "Nurse" = "#1874CD",
+                                 "Other" = "#27408B")) +
+    theme_minimal(base_size = 11) +
+    theme(
+      plot.title = element_text(face = "bold", 
+                                hjust = 0.5, 
+                                size = 12),
+      axis.title = element_text(hjust = 0.5, 
+                                size = 10),
+      panel.spacing = unit(0.1, "lines")
+    ))
+
