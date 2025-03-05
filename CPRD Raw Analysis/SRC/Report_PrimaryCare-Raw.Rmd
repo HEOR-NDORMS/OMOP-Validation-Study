@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
 
 To assess the validity of primary and hospital care resource use and costs estimated based on OMOP-mapped CPRD data against its corresponding source data using a cohort of women with postmenopausal fragility fractures in the UK.
 
-The cohort of interest is made of women aged >50 years with an incident fragility fracture in any site except the face, skull or digits and no history of fracture in the two years prior. The outcomes of interest are *primary* and *secondary healthcare resource utilisation* and *direct costs* associated to first incident fracture measured during the 730 days post index date or until a censoring event occurs and expressed as values per person/year. A detailed analysis plan for this study is available here.
+The cohort of interest is made of women aged >50 years with an incident fragility fracture in any site except the face, skull or digits and no history of fracture in the two years prior. The outcomes of interest are *primary* and *secondary healthcare resource utilisation* and *direct costs* associated to first incident fracture measured during the 730 days post index date or until a censoring event occurs and expressed as values per person/year. A detailed analysis plan for this study is available [here](https://github.com/LucyNjokiNjuki/OMOP-Validation-Study/raw/refs/heads/main/Analysis_plan_V.2_final.docx).
 
 This RMarkdown reports the data preparation and results for the analysis conducted on the *source CPRD-HES* dataset. 
 
@@ -119,33 +119,6 @@ table1_data %>%
 
 ```
 
-```{r}
-cohort_summary_raw_rp <- import(here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
-
-cohort_summary_raw_rp %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Cohort Summary Statistics**")
-    # subtitle = md("*Subjects Who Visited a Clinically Relevant Consultant*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      # table.width = px(600),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    num_distinct_women = "Number of Subjects",
-    num_non_service_users = "Number of Non-services Users",
-    perc_non_service_users = "Proportion of Non-services Users (%)",
-    num_service_users = "Number of Services Users",
-    perc_service_users = "Proportion of Services Users (%)"
-  )
-```
-
 
 ## Primary care {.tabset}
 
@@ -232,31 +205,9 @@ Mean_visits_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Res
 grid.raster(Mean_visits_per_specialty_weighted_raw)
 ```
 
-### Cost Figures
+## Costs {.tabset}
 
-Figure 4: Total number of primary care consultation costs
-
-```{r fig.height=6, fig.width=6}
-Plots_Total_Costs_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_costs.PNG"))
-grid.raster(Plots_Total_Costs_Raw)
-```
-
-Figure 5: Mean number of primary care consultation costs by provider specialty
-
-```{r fig.height=6, fig.width=6}
-Mean_costs_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
-grid.raster(Mean_costs_per_specialty_unweighted_raw)
-```
-
-Figure 6: Exposure-weighted mean number of primary care consultations costs by provider specialty
-
-```{r fig.height=6, fig.width=6}
-Mean_costs_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
-grid.raster(Mean_costs_per_specialty_weighted_raw)
-```
-
-
-User only summary statistics
+### Costs Summary Results
 
 ```{r}
 user_cost_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_cost_summary_statistics")
@@ -286,7 +237,6 @@ user_cost_summary_statistics_rp %>%
   )
 ```
 
-All patients costs
 
 ```{r}
 all_cost_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary_statistics")
@@ -317,9 +267,35 @@ all_cost_summary_statistics_rp %>%
 ```
 
 
-# Appendix
+### Cost Figures
 
-Summary statistics of visits by specialty
+Figure 4: Total number of primary care consultation costs
+
+```{r fig.height=6, fig.width=6}
+Plots_Total_Costs_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_costs.PNG"))
+grid.raster(Plots_Total_Costs_Raw)
+```
+
+Figure 5: Mean number of primary care consultation costs by provider specialty
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
+grid.raster(Mean_costs_per_specialty_unweighted_raw)
+```
+
+Figure 6: Exposure-weighted mean number of primary care consultations costs by provider specialty
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
+grid.raster(Mean_costs_per_specialty_weighted_raw)
+```
+
+
+
+
+# Appendix {.tabset}
+
+## HCRU by specialty - Users
 
 ```{r}
 user_only_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary")
@@ -327,7 +303,7 @@ user_only_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visi
 
 
 ```{r}
-colnames(user_only_summary_rp) <- c("Specialty", "Total visits", "Mean visits per year", "SD visits per year", "Minimum visits per year", "Maximum visits per year", "Number of subjects")
+colnames(user_only_summary_rp) <- c("Specialty", "Total Visits", "Mean Visits per Year", "SD Visits per Year", "Minimum Visits per Year", "Maximum Visits per Year", "Number of Subjects")
 
 # datatable(user_only_summary_rp,
 #     rownames = FALSE, 
@@ -370,6 +346,8 @@ datatable(user_only_summary_rp,
     )
 )
 ```
+
+## HCRU by specialty - All Patients
 
 ```{r}
 all_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary")
@@ -420,7 +398,7 @@ datatable(all_summary_rp,
 )
 ```
 
-Summary statistics of visits cost by specialty
+## Costs by specialty - Users
 
 ```{r}
 user_only_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_only_cost_summary")
@@ -472,6 +450,8 @@ datatable(user_only_cost_summary_rp,
 )
 ```
 
+## Costs by specialty - All Patients
+
 ```{r}
 all_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary")
 ```
@@ -503,3 +483,34 @@ datatable(all_cost_summary_rp,
     )
 )
 ```
+
+## Assumptions made about the costs
+
+```{r}
+provider_cost_inputs_rp <- rio::import(here("CPRD Raw Analysis", "SRC",  "provider_specialty_cprd_V.0.3_summarised.xlsx")) %>%
+  janitor::clean_names() %>% 
+  select(!include) %>% 
+  select(specialty_source_value, specialty_source_value_summarised, everything())
+
+colnames(provider_cost_inputs_rp) <- c("Specialty", "Specialty Reduced", "Unit Cost", "Assumptions")
+```
+
+
+```{r}
+datatable(provider_cost_inputs_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        )
+    )
+)
+```
+
