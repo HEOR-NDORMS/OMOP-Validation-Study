@@ -137,18 +137,41 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
                  follow_up_time, user_status, not_users_status),
      # rename the variable names
      label = list(
-       age_fracture = "Age at fracture occurrence",
-       site = "Fracture site", 
-       follow_up_reason = "Censoring event",
-       follow_up_time = "Follow up time",
-       user_status = "User status",
-       not_users_status = "Non-visits status"
+       age_fracture = "Age at Fracture Occurrence",
+       site = "Fracture Site", 
+       follow_up_reason = "Censoring Event",
+       follow_up_time = "Follow up Time",
+       user_status = "User Status",
+       not_users_status = "Non-user Visit Status"
      ),
      # indicate whether we want the missing values to be seen in the summary table
      missing = "no"
    ) %>%
    gtsummary::modify_header(label = "**Variable**"))
    
+library(dplyr)
+library(forcats)
+
+table_one_raw_visit_data <- table_one_raw_visit_data %>%
+  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason))  # Reorder factor by frequency
+
+(gt_summary_table <- table_one_raw_visit_data %>% 
+  gtsummary::tbl_summary(
+    include = c(age_fracture, site, follow_up_reason, 
+                follow_up_time, user_status, not_users_status),
+    label = list(
+      age_fracture = "Age at Fracture Occurrence",
+      site = "Fracture Site", 
+      follow_up_reason = "Censoring Event",
+      follow_up_time = "Follow up Time",
+      user_status = "User Status",
+      not_users_status = "Non-user Visit Status"
+    ),
+    missing = "no"
+  ) %>%
+  gtsummary::modify_header(label = "**Variable**"))
+
+
    # gtsummary::modify_header(label = "**Variable**") %>% 
    # gtsummary::remove_footnote_header(stat_0) %>% 
    

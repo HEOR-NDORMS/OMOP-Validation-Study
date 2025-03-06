@@ -74,8 +74,8 @@ table1_data <- rio::import(here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 # Define parent variables and subcategories
-parent_vars <- c("Fracture site", "Censoring event",
-                 "User status", "Non-visits status")  
+parent_vars <- c("Fracture Site", "Censoring Event",
+                 "User Status", "Non-user Visits Status")  
 
 subcategories <- c("Hip", "Vertebra", "NHNV", 
                    "Cancer", "Cancer, Fracture ensuing incident (index) fracture",
@@ -114,7 +114,11 @@ table1_data %>%
   opt_stylize(style = 3) %>%
   tab_footnote(
     footnote = "Median (Q1, Q3); n (%)",
-    locations = cells_title(groups = "title")  # Places footnote under the title
+    locations = cells_title(groups = "title")) %>% 
+  tab_footnote(
+    footnote = md("*User defined as subjects with >=1 visit with a clinically relevant healthcare provider and Non-User as Subjects with no visits, or visits with non-clinically relevant healthcare provider*"),
+    locations = cells_body(columns = Variable,
+                           rows = c(21))
   )
 
 ```
@@ -191,14 +195,14 @@ Plots_Total_Visits_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", 
 grid.raster(Plots_Total_Visits_Raw)
 ```
 
-Figure 2: Mean number of primary care consultations by provider specialty
+Figure 2: Mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
 Mean_visits_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
 grid.raster(Mean_visits_per_specialty_unweighted_raw)
 ```
 
-Figure 3: Exposure-weighted mean number of primary care consultations by provider specialty
+Figure 3: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
 Mean_visits_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
@@ -276,14 +280,14 @@ Plots_Total_Costs_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "
 grid.raster(Plots_Total_Costs_Raw)
 ```
 
-Figure 5: Mean number of primary care consultation costs by provider specialty
+Figure 5: Mean number of primary care consultation costs by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
 Mean_costs_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
 grid.raster(Mean_costs_per_specialty_unweighted_raw)
 ```
 
-Figure 6: Exposure-weighted mean number of primary care consultations costs by provider specialty
+Figure 6: Exposure-weighted mean number of primary care consultations costs by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
 Mean_costs_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
@@ -295,7 +299,7 @@ grid.raster(Mean_costs_per_specialty_weighted_raw)
 
 # Appendix {.tabset}
 
-## HCRU by specialty - Users
+## HCRU by Specialty - Users
 
 ```{r}
 user_only_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary")
@@ -347,10 +351,11 @@ datatable(user_only_summary_rp,
 )
 ```
 
-## HCRU by specialty - All Patients
+## HCRU by Specialty - All Patients
 
 ```{r}
-all_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary")
+all_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary") %>% 
+   mutate(specialty = forcats::fct_recode(specialty, "Non-users" = "Not Clinically Relevant"))
 ```
 
 
@@ -398,7 +403,7 @@ datatable(all_summary_rp,
 )
 ```
 
-## Costs by specialty - Users
+## Costs by Specialty - Users
 
 ```{r}
 user_only_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_only_cost_summary")
@@ -450,10 +455,11 @@ datatable(user_only_cost_summary_rp,
 )
 ```
 
-## Costs by specialty - All Patients
+## Costs by Specialty - All Patients
 
 ```{r}
-all_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary")
+all_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary") %>% 
+  mutate(specialty = forcats::fct_recode(specialty, "Non-users" = "Not Clinically Relevant"))
 ```
 
 
@@ -484,7 +490,7 @@ datatable(all_cost_summary_rp,
 )
 ```
 
-## Assumptions made about the costs
+## Assumptions Underlying Cost Calculations
 
 ```{r}
 provider_cost_inputs_rp <- rio::import(here("CPRD Raw Analysis", "SRC",  "provider_specialty_cprd_V.0.3_summarised.xlsx")) %>%
@@ -492,7 +498,7 @@ provider_cost_inputs_rp <- rio::import(here("CPRD Raw Analysis", "SRC",  "provid
   select(!include) %>% 
   select(specialty_source_value, specialty_source_value_summarised, everything())
 
-colnames(provider_cost_inputs_rp) <- c("Specialty", "Specialty Reduced", "Unit Cost", "Assumptions")
+colnames(provider_cost_inputs_rp) <- c("Specialty", "Specialty Reduced", "Unit Cost", "Source PSSRU 2023 Unless Stated Otherwise (Assumptions)")
 ```
 
 

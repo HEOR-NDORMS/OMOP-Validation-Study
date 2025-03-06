@@ -103,7 +103,7 @@ plots_users_mean_visits_specialty_weighted <- visits_per_specialty_month %>%
 plot3 <- ggplot(plots_users_mean_visits_specialty_weighted, 
                 aes(x = month_after_index, y = weighted_visits * proportion, fill = specialty_reduced)) +
   geom_bar(stat = "identity", position = "stack") +  
-  scale_fill_manual(values = c("General Practitioner" = "#1f77b4", 
+  scale_fill_manual(values = c("General Practitioner" = "cadetblue2", 
                                "Nurse" = "#377eb8", 
                                "Other" = "#253494")) + 
   labs(x = "Month After Index", y = "Exposure-Weighted Visits per User", fill = "Specialty") +
