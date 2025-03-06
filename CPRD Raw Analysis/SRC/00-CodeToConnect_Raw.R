@@ -1,5 +1,5 @@
 # Set up the R environ
-renv::activate()
+# renv::activate()
 # usethis::edit_r_environ()
 
 # install.packages("DBI")
@@ -14,7 +14,14 @@ renv::activate()
 # install.packages("usethis")
 # install.packages("duckdb")
 
-#load packages from library
+# you can use this below to install an older version of package
+# devtools::install_version("usethis",version = "2.2.2", repos = "http://cran.us.r-project.org" )
+# or
+# url <- "http://cran.r-project.org/src/contrib/Archive/DWD/DWD_0.11.tar.gz"
+# install.packages(url, type="source", repos=NULL)
+# Resource: https://www.listendata.com/2015/05/r-install-archived-package.html
+
+# load packages from library
 library(DBI)
 library(RPostgres)
 library(dbplyr)

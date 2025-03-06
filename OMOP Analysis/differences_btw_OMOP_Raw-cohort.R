@@ -41,32 +41,6 @@ cat("Subjects in both datasets:", length(overlap_subjects), "\n")
 cat("Subjects only in OMOP:", length(only_in_omop), "\n")
 cat("Subjects only in Raw:", length(only_in_raw), "\n") 
 
-# Compute values
-overlap_count <- length(overlap_subjects)   # Subjects in both OMOP and Raw
-only_in_omop_count <- length(only_in_omop)  # Subjects only in OMOP
-only_in_raw_count <- length(only_in_raw)    # Subjects only in Raw
-
-# Total counts
-total_omop <- overlap_count + only_in_omop_count  # Total in OMOP
-total_raw <- overlap_count + only_in_raw_count    # Total in Raw
-total_both <- total_omop + only_in_raw_count      # Total in OMOP + Raw
-
-# Create a contingency table with row/column totals
-(contingency_table <- matrix(c(
-  only_in_omop_count, overlap_count, total_omop,
-  overlap_count, only_in_raw_count, total_raw,
-  total_omop, total_raw, total_both
-), 
-nrow = 3, byrow = TRUE, 
-dimnames = list(
-  c("OMOP", "Raw", "Total"),
-  c("OMOP", "Raw", "Total")
-)))
-
-# Export 
-contingency_table_df <- as.data.frame(contingency_table)
-rio::export(contingency_table_df, here::here("contigency_table_cohort_comparison.xlsx"))
-
 ## Venn Diagram ----
 venn_plot <- draw.pairwise.venn(area1 = nrow(cohort_table_omop), area2 = nrow(cohort_table_raw), cross.area = length(overlap_subjects),
                                 category = c("OMOP", "Raw"), fill = c("#1E90FF", "#FF34B3"), alpha = 0.4)
@@ -147,7 +121,7 @@ summary(overlap_df$aurum_max_accept_date)
 overlap_df.1 <- overlap_df %>% 
   dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>% 
   mutate(fracture_site = recode(fracture_site, NHNS = "NHNV")) %>% 
-  mutate(site = recode(site, hip = "Hip", vert = "Vertebra", nhnv = "NHNV")) %>% 
+  mutate(site = recode(site, hip = "Hip", vert = "Vertebral", nhnv = "NHNV")) %>% 
   mutate(age_fracture_o = lubridate::year(condition_start_date) - year_of_birth) %>%
   mutate(age_fracture_r = lubridate::year(fx_date) - yob) %>%
   select(!c(gender_concept_id, month_of_birth, day_of_birth, birth_datetime,
@@ -157,105 +131,33 @@ overlap_df.1 <- overlap_df %>%
             ethnicity_source_concept_id)) %>% 
   mutate(age_diff = age_fracture_o - age_fracture_r)
 
-# Boxplot to compare Age at Fracture
-(stats_o <- overlap_df.1 %>%
-  summarise(
-    Q1 = quantile(age_fracture_o, 0.25),
-    Q3 = quantile(age_fracture_o, 0.75),
-    IQR = IQR(age_fracture_o),
-    lower_whisker = Q1 - 1.5 * IQR,
-    upper_whisker = Q3 + 1.5 * IQR,
-    median = median(age_fracture_o)
-  ))
-
-(bp_plot_o <- ggplot() +
-    geom_boxplot(data = overlap_df.1, aes(x = "OMOP", y = age_fracture_o), fill = "#FFC1C1", alpha = 0.5, outlier.color = "black") +
-    labs(title = "",
-         y = "Age at Fracture",
-         x = "") +
-    scale_y_continuous(limits = c(0, 130)) +
-    theme_minimal() +
-    geom_text(data = stats_o, aes(x = 1, y = lower_whisker, label = paste0("lower whisker:", round(lower_whisker, 1))), vjust = 1.5, color = "#104E8B") +
-    geom_text(data = stats_o, aes(x = 1, y = upper_whisker, label = paste0("upper whisker:", round(upper_whisker, 1))), vjust = -0.5, color = "#104E8B") +
-    geom_text(data = stats_o, aes(x = 1, y = Q1, label = paste0("Q1:", round(Q1, 1))), vjust = 1.5, color = "#8B1A1A") +
-    geom_text(data = stats_o, aes(x = 1, y = Q3, label = paste0("Q3:", round(Q3, 1))), vjust = -0.5, color = "#8B1A1A") +
-    geom_text(data = stats_o, aes(x = 1, y = median, label = paste0("Median:", round(median, 1))), vjust = -0.5, color = "#458B00")) 
-
-stats_r <- overlap_df.1 %>%
-  summarise(
-    Q1 = quantile(age_fracture_r, 0.25),
-    Q3 = quantile(age_fracture_r, 0.75),
-    IQR = IQR(age_fracture_r),
-    lower_whisker = Q1 - 1.5 * IQR,
-    upper_whisker = Q3 + 1.5 * IQR,
-    median = median(age_fracture_r)
-  )
-
-(bp_plot_r <- ggplot() +
-    geom_boxplot(data = overlap_df.1, aes(x = "Raw", y = age_fracture_r), fill = "plum1", alpha = 0.5, outlier.color = "black") +
-    labs(title = "",
-         y = "Age at Fracture",
-         x = "") +
-    scale_y_continuous(limits = c(0, 130)) +
-    theme_minimal() +
-    geom_text(data = stats_r, aes(x = 1, y = lower_whisker, label = paste0("lower whisker:", round(lower_whisker, 1))), vjust = 1.5, color = "#104E8B") +
-    geom_text(data = stats_r, aes(x = 1, y = upper_whisker, label = paste0("upper whisker:", round(upper_whisker, 1))), vjust = -0.5, color = "#104E8B") +
-    geom_text(data = stats_r, aes(x = 1, y = Q1, label = paste0("Q1:", round(Q1, 1))), vjust = 1.5, color = "#8B1A1A") +
-    geom_text(data = stats_r, aes(x = 1, y = Q3, label = paste0("Q3:", round(Q3, 1))), vjust = -0.5, color = "#8B1A1A") +
-    geom_text(data = stats_r, aes(x = 1, y = median, label = paste0("Median:", round(median, 1))), vjust = -0.5, color = "#458B00"))
-
-(age_plot <- bp_plot_o + bp_plot_r + plot_annotation(title = "Comparison of Age at Fracture: OMOP vs Raw"))
-
-
-## for the same fx date, same site, different ages? ----
-mismatched_ages_1 <- overlap_df.1 %>%
-  filter(condition_start_date == fx_date,
-         fracture_site == site,
+mismatched_ages_for_dff_fxdate_diff_fx <- overlap_df.1 %>%
+  filter(condition_start_date != fx_date,
          age_fracture_o != age_fracture_r,
-         ) %>%
-  select(subject_id,condition_concept_id, condition_start_date, fx_date,
-         fracture_site, site, year_of_birth, yob, age_fracture_o, age_fracture_r)
+         fracture_site == site) %>%
+  select(subject_id,condition_concept_id, condition_start_date, fx_date, 
+         fracture_site, site, year_of_birth, yob, age_fracture_o, age_fracture_r) 
 
-n_distinct(mismatched_ages_1$subject_id)
+n_distinct(mismatched_ages_for_dff_fxdate_diff_fx$subject_id)
 
-## How many patients and % had different ages for the same fracture? ---- 
+### How many patients and % had different dates for the same fracture? ---- 
 
-mismatched_ages_2 <- overlap_df.1 %>%
+mismatched_ages_for_same_fx <- overlap_df.1 %>%
   filter(fracture_site == site,
          age_fracture_o != age_fracture_r) %>%
   select(subject_id,condition_concept_id, condition_start_date, fx_date,
          fracture_site, site,
          year_of_birth, yob, age_fracture_o, age_fracture_r) 
-n_distinct(mismatched_ages_2$subject_id)
+n_distinct(mismatched_ages_for_same_fx$subject_id)
 
-## How many patients and % had same site for different dates? ----
-mismatched_fx_1 <- overlap_df.1 %>%
-  filter(
-    fracture_site == site,
-    condition_start_date != fx_date) %>%
+mismatched_ages_for_dff_fx <- overlap_df.1 %>%
+  filter(age_fracture_o == age_fracture_r,
+         fracture_site != site
+         ) %>%
   select(subject_id,condition_concept_id, condition_start_date, fx_date,
-         fracture_site, site) 
-n_distinct(mismatched_fx_1$subject_id)
-
-## How many patients and % had same dates for the same site? ----
-mismatched_fx_2 <- overlap_df.1 %>%
-  filter(
-    fracture_site == site,
-    condition_start_date == fx_date) %>%
-  select(subject_id,condition_concept_id, condition_start_date, fx_date,
-         fracture_site, site) 
-n_distinct(mismatched_fx_2$subject_id)
-
-## How many patients and % had same dates for the different site? ----
-mismatched_fx_3 <- overlap_df.1 %>%
-  filter(
-    condition_start_date == fx_date,
-    fracture_site != site
-    ) %>%
-  select(subject_id,condition_concept_id, condition_start_date, fx_date,
-         fracture_site, site) 
-n_distinct(mismatched_fx_3$subject_id)
-
+         fracture_site, site,
+         year_of_birth, yob, age_fracture_o, age_fracture_r) 
+n_distinct(mismatched_ages_for_dff_fx$subject_id)
 
 ## Assessing death date ----
 overlap_df.1 <- overlap_df.1 %>% 
@@ -292,40 +194,13 @@ median_death_date_raw <- as.Date(median(overlap_df.1$death_date_raw, na.rm = T),
     # scale_y_continuous(limits = c(0, 700)) +
     theme_minimal())
 
-(death_plot <- hp_o + hp_r + plot_annotation(title = "Comparison of Death Date: OMOP vs Raw"))
+(death_plot <- hp_o + hp_r + plot_annotation(title = "Comparison of Death Date (before removing fx after death) at pt level: OMOP vs Raw"))
 
 ## How many patients have different death date in OMOP and Raw?----
-mismatched_deaths <- overlap_df.1 %>% 
+mismatched_deaths.1 <- mismatched_deaths %>% 
   group_by(subject_id) %>%
-  filter(!is.na(death_date_omop) | !is.na(death_date_raw)) %>% 
-  filter(death_date_omop != death_date_raw) %>% 
-  ungroup() %>% 
-    select(subject_id, death_date_omop, death_date_raw)
-
-mismatched_deaths_1 <- overlap_df.1 %>% 
-  group_by(subject_id) %>%
-  filter(!is.na(death_date_omop) | !is.na(death_date_raw)) %>% 
-  filter(death_date_omop == death_date_raw) %>% 
-  ungroup() %>% 
-  select(subject_id, death_date_omop, death_date_raw)
-
-## Table 1 ----
-# Using gtsummary::tbl_summary, we can summarise the table as follows
-(gt_summary_table <- table_one_omop %>% 
-   gtsummary::tbl_summary(
-     # select the variables of interest
-     include = c(age_fracture, fracture_site, follow_up_reason, follow_up_time),
-     # rename the variable names
-     label = list(
-       age_fracture = "Age at fracture occurrence",
-       fracture_site = "Fracture site", 
-       follow_up_reason = "Censoring event",
-       follow_up_time = "Follow up time"
-     ),
-     # indicate whether we want the missing values to be seen in the summary table
-     missing = "no"
-   ))  
-
+  filter(death_date_o != death_date_r | is.na(death_date_o) | is.na(death_date_r)) %>% 
+  ungroup() 
 # Only Raw and Only OMOP ----
                          
 only_in_omop_df <- cohort_table_omop %>% 

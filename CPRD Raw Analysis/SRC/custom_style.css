@@ -1,0 +1,45 @@
+/* Title */
+h1.title {
+    font-size: 24px !important; /* Adjust title size */
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+    color: #2C3E50; /* Dark blue-gray */
+}
+
+/* Subtitle */
+h4.subtitle {
+    font-size: 20px !important; /* Adjust subtitle size */
+    font-weight: normal;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Author */
+.author {
+    font-size: 20px !important; /* Adjust author size */
+    text-align: center;
+    font-weight: normal;
+}
+
+/* Date */
+.date {
+    font-size: 20px !important; /* Adjust date size */
+    /*text-align: center;*/
+}
+
+/* Body Text */
+body {
+    font-size: 18px !important; /* Adjust body text size */
+    font-family: "Times New Roman", serif; /* Professional look */
+    line-height: 1.5;
+}
+
+/* Optional: Customize links */
+a {
+    color: #2980B9; /* Blue */
+}
+
+a:hover {
+    color: #C0392B; /* Dark red */
+}

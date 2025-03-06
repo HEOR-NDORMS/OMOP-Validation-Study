@@ -1,0 +1,522 @@
+---
+title: "Validating primary and hospital care resource use and costs based on OMOP-mapped CPRD data against corresponding source data: the case of postmenopausal fragility fractures in the UK"
+author: "Njoki Njuki, Gianluca Fabiano"
+date: "`r format(Sys.Date(), '%A, %d %B %Y')`"
+output: 
+ html_document:
+  toc: true
+  toc_float: true
+  toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+## Global options
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+```
+
+# Objectives 
+
+To assess the validity of primary and hospital care resource use and costs estimated based on OMOP-mapped CPRD data against its corresponding source data using a cohort of women with postmenopausal fragility fractures in the UK.
+
+The cohort of interest is made of women aged >50 years with an incident fragility fracture in any site except the face, skull or digits and no history of fracture in the two years prior. The outcomes of interest are *primary* and *secondary healthcare resource utilisation* and *direct costs* associated to first incident fracture measured during the 730 days post index date or until a censoring event occurs and expressed as values per person/year. A detailed analysis plan for this study is available [here](https://github.com/LucyNjokiNjuki/OMOP-Validation-Study/raw/refs/heads/main/Analysis_plan_V.2_final.docx).
+
+This RMarkdown reports the data preparation and results for the analysis conducted on the *source CPRD-HES* dataset. 
+
+# Data Preparation
+
+The attrition table below shows the steps we followed to clean and prepare the data for the analysis.
+
+```{r echo=FALSE}
+library(here)
+library(rio)
+library(tidyverse)
+library(gtsummary)
+library(gt)
+library(rvest)
+library(DT)
+library(png)
+library(grid)
+```
+
+
+```{r}
+attrition_report <- import(here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
+
+
+attrition_report %>%
+  gt() %>%
+  tab_header(
+    title = md("**Attrition table**")
+  ) %>%
+  #opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman",
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) 
+```
+
+# Results 
+
+## Table 1
+
+```{r}
+# Import data
+# table1_data <- read_html(here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html")) %>% 
+#   html_node("table") %>%
+#   html_table()
+
+# Import data
+table1_data <- rio::import(here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
+
+# Define parent variables and subcategories
+parent_vars <- c("Fracture Site", "Censoring Event",
+                 "User Status", "Non-user Visits Status")  
+
+subcategories <- c("Hip", "Vertebra", "NHNV", 
+                   "Cancer", "Cancer, Fracture ensuing incident (index) fracture",
+                   "Death", "End of data collection period",
+                   "End of data collection period, Cancer",
+                   "End of data collection period, Fracture ensuing incident (index) fracture",
+                   "Fracture ensuing incident (index) fracture",
+                   "Max of 730 days from index date",
+                   "Max of 730 days from index date, Cancer",
+                   "Max of 730 days from index date, End of data collection period",
+                   "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
+                   "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
+                   "Paget’s disease of the bone, or other metabolic bone diseases",
+                   "Non-User", "User",
+                   "No Visits", "Visits with Non-clinically Relevant Staff")
+
+# Add indentation dynamically
+table1_data <- table1_data %>%
+  mutate(Variable = case_when(
+    Variable %in% subcategories ~ paste0("&nbsp;&nbsp;&nbsp;", Variable), # Indent subcategories using HTML space
+    TRUE ~ Variable
+  ))
+
+# Create gt table with a footnote
+table1_data %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Patient Characteristics**")
+  ) %>%
+  opt_all_caps() %>% 
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  fmt_markdown(columns = "Variable") %>%  # Apply markdown formatting for indentation
+  opt_stylize(style = 3) %>%
+  tab_footnote(
+    footnote = "Median (Q1, Q3); n (%)",
+    locations = cells_title(groups = "title")) %>% 
+  tab_footnote(
+    footnote = md("*User defined as subjects with >=1 visit with a clinically relevant healthcare provider and Non-User as Subjects with no visits, or visits with non-clinically relevant healthcare provider*"),
+    locations = cells_body(columns = Variable,
+                           rows = c(21))
+  )
+
+```
+
+
+## Primary care {.tabset}
+
+### Healthcare resource utilisation (HCRU)
+
+```{r}
+all_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary_statistics")
+
+all_summary_statistics_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**All Patients - Visits per patient per year**"),
+    subtitle = md("*Users and non-users*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    mean_visit_per_year = "Mean",
+    min_visit_per_year = "Minimum",
+    max_visit_per_year = "Maximum",
+    sd_visit_per_year = "SD",
+    median_visit_per_year = "Median",
+    lower_q_visits_per_year = "Lower Quartile",
+    upper_q_visits_per_year = "Upper Quartile"
+  )
+```
+
+```{r}
+user_only_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary_statistics")
+
+user_only_summary_statistics_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Service users - Visits per patient per year**"),
+    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    mean_visit_per_year = "Mean",
+    min_visit_per_year = "Minimum",
+    max_visit_per_year = "Maximum",
+    sd_visit_per_year = "SD ",
+    median_visit_per_year = "Median ",
+    lower_q_visits_per_year = "Lower Quartile",
+    upper_q_visits_per_year = "Upper Quartile"
+  )
+```
+
+### HCRU Figures
+
+Figure 1: Total number of primary care consultations
+
+```{r fig.height=6, fig.width=6}
+Plots_Total_Visits_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_visits.PNG"))
+grid.raster(Plots_Total_Visits_Raw)
+```
+
+Figure 2: Mean number of primary care consultations by provider specialty, users-only.
+
+```{r fig.height=6, fig.width=6}
+Mean_visits_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
+grid.raster(Mean_visits_per_specialty_unweighted_raw)
+```
+
+Figure 3: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
+
+```{r fig.height=6, fig.width=6}
+Mean_visits_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
+grid.raster(Mean_visits_per_specialty_weighted_raw)
+```
+
+## Costs {.tabset}
+
+### Costs Summary Results
+
+```{r}
+user_cost_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_cost_summary_statistics")
+
+user_cost_summary_statistics_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**User Only Cost Summary Statistics**"),
+    subtitle = md("*Subjects Who Visited a Clinically Relevant Consultant*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left",
+      table.font.names = "Times New Roman"
+    ) |> 
+  opt_stylize(style = 2) %>% 
+  cols_label(
+    mean_visit_cost_per_year = "Mean Visit Costs per Year",
+    min_visit_cost_per_year = "Minimum Visit Costs per Year",
+    max_visit_cost_per_year = "Maximum Visit Costs per Year",
+    sd_visit_cost_per_year = "SD Visit Costs per Year",
+    median_visit_cost_per_year = "Median Visit Costs per Year",
+    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
+    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+  )
+```
+
+
+```{r}
+all_cost_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary_statistics")
+
+all_cost_summary_statistics_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**All Patients Costs Summary Statistics**"),
+    subtitle = md("*Subjects Who Visited Both Clinically Relevant and Non-Relevant Consultants*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left",
+      table.font.names = "Times New Roman"
+    ) |> 
+  opt_stylize(style = 2) %>% 
+  cols_label(
+    mean_visit_cost_per_year = "Mean Visit Costs per Year",
+    min_visit_cost_per_year = "Minimum Visit Costs per Year",
+    max_visit_cost_per_year = "Maximum Visit Costs per Year",
+    sd_visit_cost_per_year = "SD Visit Costs per Year",
+    median_visit_cost_per_year = "Median Visit Costs per Year",
+    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
+    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+  )
+```
+
+
+### Cost Figures
+
+Figure 4: Total number of primary care consultation costs
+
+```{r fig.height=6, fig.width=6}
+Plots_Total_Costs_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_costs.PNG"))
+grid.raster(Plots_Total_Costs_Raw)
+```
+
+Figure 5: Mean number of primary care consultation costs by provider specialty, users-only.
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
+grid.raster(Mean_costs_per_specialty_unweighted_raw)
+```
+
+Figure 6: Exposure-weighted mean number of primary care consultations costs by provider specialty, users-only.
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
+grid.raster(Mean_costs_per_specialty_weighted_raw)
+```
+
+
+
+
+# Appendix {.tabset}
+
+## HCRU by Specialty - Users
+
+```{r}
+user_only_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary")
+```
+
+
+```{r}
+colnames(user_only_summary_rp) <- c("Specialty", "Total Visits", "Mean Visits per Year", "SD Visits per Year", "Minimum Visits per Year", "Maximum Visits per Year", "Number of Subjects")
+
+# datatable(user_only_summary_rp,
+#     rownames = FALSE, 
+#     filter = 'top', 
+#     options = list(
+#         scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+#         search = list(regex = FALSE, caseInsensitive = TRUE),
+#         autoWidth = TRUE,  # Automatically adjust column widths
+#         columnDefs = list(
+#           list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+#             list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+#             list(
+#                 targets = "_all",  # Apply to all columns
+#                 className = "dt-center"  # Center align all columns
+#             )
+#         )
+#     )
+# )
+
+datatable(user_only_summary_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+## HCRU by Specialty - All Patients
+
+```{r}
+all_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary") %>% 
+   mutate(specialty = forcats::fct_recode(specialty, "Non-users" = "Not Clinically Relevant"))
+```
+
+
+```{r}
+colnames(all_summary_rp) <- c("Specialty", "Total Visits", "Mean Visits Per Year", "SD Visits Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
+
+# datatable(all_summary_rp,
+#     rownames = FALSE, 
+#     filter = 'top', 
+#     options = list(
+#         scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+#         search = list(regex = FALSE, caseInsensitive = TRUE),
+#         autoWidth = TRUE,  # Automatically adjust column widths
+#         columnDefs = list(
+#           list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+#             list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+#             list(
+#                 targets = "_all",  # Apply to all columns
+#                 className = "dt-center"  # Center align all columns
+#             )
+#         )
+#     )
+# )
+datatable(all_summary_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+## Costs by Specialty - Users
+
+```{r}
+user_only_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_only_cost_summary")
+```
+
+
+```{r}
+colnames(user_only_cost_summary_rp) <- c("Specialty", "Total Visit Costs", "Mean Visit Costs Per Year", "SD Visit Costs Per Year", "Minimum Visit Costs Per Year", "Maximum Visit Costs Per Year", "Number of Subjects")
+
+# datatable(user_only_cost_summary_rp,
+#     rownames = FALSE, 
+#     filter = 'top', 
+#     options = list(
+#         scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+#         search = list(regex = FALSE, caseInsensitive = TRUE),
+#         autoWidth = TRUE,  # Automatically adjust column widths
+#         columnDefs = list(
+#           list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+#             list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+#             list(
+#                 targets = "_all",  # Apply to all columns
+#                 className = "dt-center"  # Center align all columns
+#             )
+#         )
+#     )
+# )
+
+datatable(user_only_cost_summary_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+## Costs by Specialty - All Patients
+
+```{r}
+all_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary") %>% 
+  mutate(specialty = forcats::fct_recode(specialty, "Non-users" = "Not Clinically Relevant"))
+```
+
+
+```{r}
+colnames(all_cost_summary_rp) <- c("Specialty", "Total Visit Costs", "Mean Visits Per Year", "SD Visit Costs Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
+
+datatable(all_cost_summary_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+## Assumptions Underlying Cost Calculations
+
+```{r}
+provider_cost_inputs_rp <- rio::import(here("CPRD Raw Analysis", "SRC",  "provider_specialty_cprd_V.0.3_summarised.xlsx")) %>%
+  janitor::clean_names() %>% 
+  select(!include) %>% 
+  select(specialty_source_value, specialty_source_value_summarised, everything())
+
+colnames(provider_cost_inputs_rp) <- c("Specialty", "Specialty Reduced", "Unit Cost", "Source PSSRU 2023 Unless Stated Otherwise (Assumptions)")
+```
+
+
+```{r}
+datatable(provider_cost_inputs_rp,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        )
+    )
+)
+```
+

@@ -214,6 +214,9 @@ cohort_table <- cohort_table %>%
                    by = "patid")
 
 ### Creating follow-up end ------
+# Run the functions script
+source(here::here("CPRD Raw Analysis", "SRC", "Functions_Raw.R"))
+
 # Create index date 
 cohort_table <- addIndex(cohort_table)
 # 730 days after the index date ----
