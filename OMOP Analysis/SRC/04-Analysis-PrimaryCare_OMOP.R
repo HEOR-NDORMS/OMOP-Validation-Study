@@ -1,0 +1,457 @@
+# ****************************************************************************** #
+#	Project name: Validation Study			    	
+#	Author: Njoki Njuki	
+# Do file name: Primary care and Secondary care analysis	
+# Date: 10.02.2025
+# Last date edited: 10.02.2025
+# ****************************************************************************** #
+
+# Service users are defined as patients with records of healthcare encounters 
+# with the NHS and their resource use and associated costs will be estimated 
+# separately for primary care (hence excluding patients with no record of primary care visits with any relevant healthcare staff),
+
+# Table 5 “validation_staff” contains the requested fields from aurum.staff
+
+library(tidylog)
+
+# Starting with table_one_omop
+
+cohort_data_omop <- table_one_omop
+
+
+# Remove the visits that are not clinically relevance ----
+# the costs are to be updated
+provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.3_summarised.xlsx") 
+
+# Join visit_detail and provider tables
+joined_visit_provider_tables <- cdm$visit_detail %>% 
+  dplyr::inner_join(cdm$provider) 
+
+## Sub-setting the visit data ----
+# cdm[["visit_data"]] <- NULL
+cdm[["visit_data"]] <- joined_visit_provider_tables %>%
+  dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include == "1"), by = "specialty_source_value", copy=TRUE) %>% # Filter for only meaningful specialties
+  dplyr::select(person_id, provider_id, specialty_source_value, specialty_source_value_summarised, visit_detail_start_date, visit_detail_id, unit_cost) %>%
+  dplyr::filter(visit_detail_start_date >= study_start_date & # include only visits in the study period
+                  visit_detail_start_date <= study_end_date) %>%
+  dplyr::rename(subject_id=person_id) %>% # just renaming for consistency with cohort data
+  dplyr::distinct(visit_detail_start_date, subject_id, specialty_source_value, .keep_all=TRUE) %>% # Keep only distinct rows - eliminate all visits in the same day with the same specialist by the same patient
+  dplyr::rename(specialty = specialty_source_value,
+                specialty_reduced =  specialty_source_value_summarised) %>%  # renaming for consistency with other countries as this variable is used for the HCRU and costs too
+  computeQuery()
+
+visit_data_df <- cdm[["visit_data"]] %>% dplyr::collect()
+
+# merge the cohort data to this visit_data_df
+visit_data <- left_join(cohort_data_omop, visit_data_df, 
+                        by = "subject_id")
+
+## Clinically Relevant Consultations ----
+specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value)
+
+### Filter the data with these clinically relevant ----
+visit_data <- visit_data %>% 
+    mutate(specialty = case_when(
+      specialty %in% specialty_source_value_ids ~ specialty,
+    TRUE ~ "Not Clinically Relevant"
+  )) %>%
+   mutate(is_clinically_relevant = if_else(
+     specialty == "Not Clinically Relevant", 0, 1)) %>%
+  mutate(specialty_reduced = ifelse(
+    is.na(specialty_reduced), 
+    "Not Clinically Relevant",
+    specialty_reduced)) %>%
+  group_by(subject_id) %>%
+  mutate(user_status = if_else(
+    any(is_clinically_relevant == 1, na.rm = TRUE), 
+    "User", "Non-User")) %>%
+  ungroup()
+
+
+### Create a new df so that we can create visits based on these reduced specialty ----
+visit_data_reduced <- visit_data
+
+# Count of users/non-users
+(u_n_summary <- visit_data %>%
+    group_by(user_status) %>%
+    summarise(count_of_pts = n_distinct(subject_id)) %>%
+    ungroup())
+
+### Create summary visits ----
+summary_visits <- visit_data %>%
+  group_by(subject_id, index_date, specialty) %>%
+  summarise(visit_count = n(), .groups = "drop")
+
+# Merge the summary visits back to the visits_data
+# Merge back to the visits_data
+visit_data <- left_join(visit_data, summary_visits,
+                        by = c("subject_id", "index_date", "specialty")) %>%
+  group_by(subject_id) %>%
+  mutate(
+    visit_count = if_else(
+      specialty == "Not Clinically Relevant", 0, visit_count),
+    unit_cost = if_else(
+      specialty == "Not Clinically Relevant", 0, unit_cost),
+    exposed_yrs = as.numeric(follow_up_end - index_date) / 360.25,
+    visits_per_year = visit_count / exposed_yrs,
+    visits_per_year = replace_na(visits_per_year, 0),
+    visit_cost = visit_count * unit_cost,
+    visits_costs_per_year = visit_cost / exposed_yrs,
+    visits_costs_per_year = replace_na(visits_costs_per_year, 0)
+  ) %>%
+  ungroup()
+
+### Create summary visits based on the reduced specialties -----
+summary_visits_reduced <- visit_data_reduced %>%
+  group_by(subject_id, index_date, specialty_reduced) %>%
+  summarise(visit_count = n(), .groups = "drop")
+
+# merge it back to visit data
+visit_data_reduced <- left_join(visit_data_reduced, summary_visits_reduced,
+                                by = c("subject_id", "index_date", "specialty_reduced")) %>%
+  group_by(subject_id) %>%
+  mutate(
+    visit_count = if_else(
+      specialty_reduced == "Not Clinically Relevant", 
+      0, 
+      visit_count),
+    unit_cost = if_else(
+      specialty_reduced == "Not Clinically Relevant", 
+      0, 
+      unit_cost),
+    exposed_yrs = as.numeric(follow_up_end - index_date) / 360.25,
+    visits_per_year = visit_count / exposed_yrs,
+    visits_per_year = replace_na(visits_per_year, 0),
+    visit_cost = visit_count * unit_cost,
+    visits_costs_per_year = visit_cost / exposed_yrs,
+    visits_costs_per_year = replace_na(visits_costs_per_year, 0)
+  ) %>%
+  ungroup()
+
+## Visits - Primary care ----
+# NOTE:
+# users as those with at least one visit, regardless of who they had it with.
+# So if one had a GP visit and another patient had one with cardiologist they are both considered users.
+# Non-user would be someone with a overall count = 0
+visits_results_omop <- analyse_visits(
+  visit_data = visit_data
+)
+
+# Get the output
+user_only_summary <- visits_results_omop$user_only_summary
+all_summary <- visits_results_omop$all_summary
+(non_service_users <- visits_results_omop$non_service_users)
+(tot_exposed_yrs_all <- visits_results_omop$tot_exposed_yrs_all)
+(tot_exposed_yrs_user <- visits_results_omop$tot_exposed_yrs_user)
+
+# Visits with reduced specialties
+visits_results_omop_reduced <- analyse_visits_reduced(
+  visit_data_reduced = visit_data_reduced
+)
+
+# Get the output
+user_only_summary_reduced <- visits_results_omop_reduced$user_only_summary_reduced
+all_summary_reduced <- visits_results_omop_reduced$all_summary_reduced
+(non_service_users_reduced <- visits_results_omop_reduced$non_service_users_reduced)
+(tot_exposed_yrs_all <- visits_results_omop_reduced$tot_exposed_yrs_all)
+(tot_exposed_yrs_user <- visits_results_omop_reduced$tot_exposed_yrs_user)
+
+
+### Overall visits summaries ----
+# User-only summary statistics
+user_only_summary_statistics_df <- visit_data %>%
+  filter(user_status == "User",
+         specialty != "Not Clinically Relevant") %>%
+  group_by(subject_id, specialty) %>%
+  summarise(
+    total_patient_visits = first(visit_count),
+    total_exposed_yrs = first(exposed_yrs),
+    visits_per_year = total_patient_visits / total_exposed_yrs,
+    .groups = "drop"
+  ) %>%
+  group_by(subject_id) %>%
+  summarise(
+    tot_visits = sum(total_patient_visits, na.rm = TRUE),
+    tot_exposed_yrs = first(total_exposed_yrs),
+    tot_visits_per_yr = tot_visits / tot_exposed_yrs,
+    .groups = "drop"
+  )
+
+
+# mean(user_only_summary_statistics_df$tot_visits_per_yr)
+
+user_only_summary_statistics <- tibble(
+  mean_visit_per_year = round(sum(user_only_summary_statistics_df$tot_visits) / sum(user_only_summary_statistics_df$tot_exposed_yrs), 2),
+  min_visit_per_year = round(min(user_only_summary_statistics_df$tot_visits_per_yr), 2),
+  max_visit_per_year = round(max(user_only_summary_statistics_df$tot_visits_per_yr), 2),
+  sd_visit_per_year = round(sd(user_only_summary_statistics_df$tot_visits_per_yr), 2),
+  median_visit_per_year = round(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.5)), 2),
+  lower_q_visits_per_year = round(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.25)), 2),
+  upper_q_visits_per_year = round(quantile(user_only_summary_statistics_df$tot_visits_per_yr, probs = (.75)), 2)
+)
+
+# reducing the specialty
+user_only_summary_statistics_df_reduced <- visit_data_reduced %>%
+  filter(user_status == "User", 
+         specialty_reduced != "Not Clinically Relevant") %>%
+  group_by(subject_id, specialty_reduced) %>%
+  summarise(
+    total_patient_visits = first(visit_count),
+    total_exposed_yrs = first(exposed_yrs),
+    visits_per_year = total_patient_visits / total_exposed_yrs,
+    .groups = "drop"
+  ) %>%
+  group_by(subject_id) %>%
+  summarise(
+    tot_visits = sum(total_patient_visits, na.rm = TRUE),
+    tot_exposed_yrs = first(total_exposed_yrs),
+    tot_visits_per_yr = tot_visits / tot_exposed_yrs,
+    .groups = "drop"
+  )
+
+
+# mean(user_only_summary_statistics_df_reduced$tot_visits_per_yr)
+
+user_only_summary_statistics_reduced <- tibble(
+  mean_visit_per_year = round(sum(user_only_summary_statistics_df_reduced$tot_visits) / sum(user_only_summary_statistics_df_reduced$tot_exposed_yrs), 2),
+  min_visit_per_year = round(min(user_only_summary_statistics_df_reduced$tot_visits_per_yr), 2),
+  max_visit_per_year = round(max(user_only_summary_statistics_df_reduced$tot_visits_per_yr), 2),
+  sd_visit_per_year = round(sd(user_only_summary_statistics_df_reduced$tot_visits_per_yr), 2),
+  median_visit_per_year = round(quantile(user_only_summary_statistics_df_reduced$tot_visits_per_yr, probs = (.5)), 2),
+  lower_q_visits_per_year = round(quantile(user_only_summary_statistics_df_reduced$tot_visits_per_yr, probs = (.25)), 2),
+  upper_q_visits_per_year = round(quantile(user_only_summary_statistics_df_reduced$tot_visits_per_yr, probs = (.75)), 2)
+)
+
+
+# All summary statistics
+all_summary_statistics_df <- visit_data %>%
+  group_by(subject_id, specialty) %>%
+  summarise(
+    total_patient_visits = first(visit_count),
+    total_exposed_yrs = first(exposed_yrs),
+    visits_per_year = total_patient_visits / total_exposed_yrs,
+    user_status = first(user_status),
+    .groups = "drop"
+  ) %>%
+  group_by(subject_id) %>%
+  summarise(
+    tot_visits = sum(total_patient_visits, na.rm = TRUE),
+    tot_exposed_yrs = first(total_exposed_yrs),
+    tot_visits_per_yr = tot_visits / tot_exposed_yrs,
+    .groups = "drop"
+  ) %>%
+  mutate(tot_visits_per_yr = replace_na(tot_visits_per_yr, 0))
+
+# reducing the specialty
+all_summary_statistics <- tibble(
+  mean_visit_per_year = round(sum(all_summary_statistics_df$tot_visits) / sum(all_summary_statistics_df$tot_exposed_yrs), 2),
+  min_visit_per_year = round(min(all_summary_statistics_df$tot_visits_per_yr), 2),
+  max_visit_per_year = round(max(all_summary_statistics_df$tot_visits_per_yr), 2),
+  sd_visit_per_year = round(sd(all_summary_statistics_df$tot_visits_per_yr), 2),
+  median_visit_per_year = round(quantile(all_summary_statistics_df$tot_visits_per_yr, probs = (.5)), 2),
+  lower_q_visits_per_year = round(quantile(all_summary_statistics_df$tot_visits_per_yr, probs = (.25)), 2),
+  upper_q_visits_per_year = round(quantile(all_summary_statistics_df$tot_visits_per_yr, probs = (.75)), 2)
+)
+
+all_summary_statistics_df_reduced <- visit_data_reduced %>%
+  group_by(subject_id, specialty_reduced) %>%
+  summarise(
+    total_patient_visits = first(visit_count),
+    total_exposed_yrs = first(exposed_yrs),
+    visits_per_year = total_patient_visits / total_exposed_yrs,
+    user_status = first(user_status),
+    .groups = "drop"
+  ) %>%
+  group_by(subject_id) %>%
+  summarise(
+    tot_visits = sum(total_patient_visits, na.rm = TRUE),
+    tot_exposed_yrs = first(total_exposed_yrs),
+    tot_visits_per_yr = tot_visits / tot_exposed_yrs,
+    .groups = "drop"
+  ) %>%
+  mutate(tot_visits_per_yr = replace_na(tot_visits_per_yr, 0))
+
+
+all_summary_statistics_reduced <- tibble(
+  mean_visit_per_year = round(sum(all_summary_statistics_df_reduced$tot_visits) / sum(all_summary_statistics_df_reduced$tot_exposed_yrs), 2),
+  min_visit_per_year = round(min(all_summary_statistics_df_reduced$tot_visits_per_yr), 2),
+  max_visit_per_year = round(max(all_summary_statistics_df_reduced$tot_visits_per_yr), 2),
+  sd_visit_per_year = round(sd(all_summary_statistics_df_reduced$tot_visits_per_yr), 2),
+  median_visit_per_year = round(quantile(all_summary_statistics_df_reduced$tot_visits_per_yr, probs = (.5)), 2),
+  lower_q_visits_per_year = round(quantile(all_summary_statistics_df_reduced$tot_visits_per_yr, probs = (.25)), 2),
+  upper_q_visits_per_year = round(quantile(all_summary_statistics_df_reduced$tot_visits_per_yr, probs = (.75)), 2)
+)
+
+
+# Export the output
+library(writexl)
+
+visits_list <- list(
+  user_only_summary_statistics = user_only_summary_statistics,
+  all_summary_statistics = all_summary_statistics,
+  user_only_summary = user_only_summary,
+  all_summary = all_summary,
+  user_only_summary_statistics_reduced = user_only_summary_statistics_reduced,
+  all_summary_statistics_reduced = all_summary_statistics_reduced,
+  user_only_summary_reduced = user_only_summary_reduced,
+  all_summary_reduced = all_summary_reduced
+)
+
+# Write to an Excel file
+# write_xlsx(visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"))
+
+## Cost - Primary care ----
+cost_results_omop <- analyse_visits_cost(
+  visit_data = visit_data
+)
+
+# reducing the specialty
+cost_results_omop_reduced <- analyse_visits_cost_reduced(
+  visit_data_reduced = visit_data_reduced
+)
+### Get the output grouped by specialty ----
+user_only_cost_summary <- cost_results_omop$user_only_cost_summary
+all_cost_summary <- cost_results_omop$all_cost_summary
+(tot_exposed_yrs_all <- cost_results_omop$tot_exposed_yrs_all)
+(tot_exposed_yrs_user <- cost_results_omop$tot_exposed_yrs_user)
+user_only_cost_summary_reduced <- cost_results_omop_reduced$user_only_cost_summary_reduced
+all_cost_summary_reduced <- cost_results_omop_reduced$all_cost_summary_reduced
+
+### Overall cost summaries ----
+user_cost_summary_statistics_df <- visit_data %>%
+  filter(user_status == "User", 
+         specialty != "Not Clinically Relevant") %>%
+  filter(visit_cost > 0) %>%
+  group_by(subject_id, specialty) %>%
+  summarise(
+    total_patient_cost = first(visit_cost),
+    total_exposed_yrs = first(exposed_yrs),
+    visits_costs_per_year = total_patient_cost / total_exposed_yrs,
+    .groups = "drop"
+  ) %>%
+  group_by(subject_id) %>%
+  summarise(
+    tot_costs = sum(total_patient_cost, na.rm = TRUE),
+    tot_exposed_yrs = first(total_exposed_yrs),
+    tot_costs_per_yr = tot_costs / tot_exposed_yrs,
+    .groups = "drop"
+  )
+
+user_cost_summary_statistics <- tibble(
+  mean_visit_cost_per_year = round(sum(user_cost_summary_statistics_df$tot_costs) / sum(user_cost_summary_statistics_df$tot_exposed_yrs), 2),
+  min_visit_cost_per_year = round(min(user_cost_summary_statistics_df$tot_costs_per_yr), 2),
+  max_visit_cost_per_year = round(max(user_cost_summary_statistics_df$tot_costs_per_yr), 2),
+  sd_visit_cost_per_year = round(sd(user_cost_summary_statistics_df$tot_costs_per_yr), 2),
+  median_visit_cost_per_year = round(quantile(user_cost_summary_statistics_df$tot_costs_per_yr, probs = (.5)), 2),
+  lower_q_visits_cost_per_year = round(quantile(user_cost_summary_statistics_df$tot_costs_per_yr, probs = (.25)), 2),
+  upper_q_visits_cost_per_year = round(quantile(user_cost_summary_statistics_df$tot_costs_per_yr, probs = (.75)), 2)
+)
+
+# reducing the specialties
+user_cost_summary_statistics_df_reduced <- visit_data_reduced %>%
+  filter(user_status == "User", 
+         specialty_reduced != "Not Clinically Relevant") %>%
+  filter(visit_cost > 0) %>%
+  group_by(subject_id, specialty_reduced) %>%
+  summarise(
+    total_patient_cost = first(visit_cost),
+    total_exposed_yrs = first(exposed_yrs),
+    visits_costs_per_year = total_patient_cost / total_exposed_yrs,
+    .groups = "drop"
+  ) %>%
+  group_by(subject_id) %>%
+  summarise(
+    tot_costs = sum(total_patient_cost, na.rm = TRUE),
+    tot_exposed_yrs = first(total_exposed_yrs),
+    tot_costs_per_yr = tot_costs / tot_exposed_yrs,
+    .groups = "drop"
+  )
+
+user_cost_summary_statistics_reduced <- tibble(
+  mean_visit_cost_per_year = round(sum(user_cost_summary_statistics_df_reduced$tot_costs) / sum(user_cost_summary_statistics_df_reduced$tot_exposed_yrs), 2),
+  min_visit_cost_per_year = round(min(user_cost_summary_statistics_df_reduced$tot_costs_per_yr), 2),
+  max_visit_cost_per_year = round(max(user_cost_summary_statistics_df_reduced$tot_costs_per_yr), 2),
+  sd_visit_cost_per_year = round(sd(user_cost_summary_statistics_df_reduced$tot_costs_per_yr), 2),
+  median_visit_cost_per_year = round(quantile(user_cost_summary_statistics_df_reduced$tot_costs_per_yr, probs = (.5)), 2),
+  lower_q_visits_cost_per_year = round(quantile(user_cost_summary_statistics_df_reduced$tot_costs_per_yr, probs = (.25)), 2),
+  upper_q_visits_cost_per_year = round(quantile(user_cost_summary_statistics_df_reduced$tot_costs_per_yr, probs = (.75)), 2)
+)
+
+
+all_cost_summary_statistics_df <- visit_data %>%
+  group_by(subject_id, specialty) %>%
+  summarise(
+    total_patient_cost = first(visit_cost),
+    total_exposed_yrs = first(exposed_yrs),
+    visits_costs_per_year = total_patient_cost / total_exposed_yrs,
+    user_status = first(user_status),
+    .groups = "drop"
+  ) %>%
+  group_by(subject_id) %>%
+  summarise(
+    tot_costs = sum(total_patient_cost, na.rm = TRUE),
+    tot_exposed_yrs = first(total_exposed_yrs),
+    tot_costs_per_yr = tot_costs / tot_exposed_yrs,
+    .groups = "drop"
+  ) %>%
+  mutate(tot_costs_per_yr = replace_na(tot_costs_per_yr, 0))
+
+all_cost_summary_statistics <- tibble(
+  mean_visit_cost_per_year = round(sum(all_cost_summary_statistics_df$tot_costs) / sum(all_cost_summary_statistics_df$tot_exposed_yrs), 2),
+  min_visit_cost_per_year = round(min(all_cost_summary_statistics_df$tot_costs_per_yr), 2),
+  max_visit_cost_per_year = round(max(all_cost_summary_statistics_df$tot_costs_per_yr), 2),
+  sd_visit_cost_per_year = round(sd(all_cost_summary_statistics_df$tot_costs_per_yr), 2),
+  median_visit_cost_per_year = round(quantile(all_cost_summary_statistics_df$tot_costs_per_yr, probs = (.5)), 2),
+  lower_q_visits_cost_per_year = round(quantile(all_cost_summary_statistics_df$tot_costs_per_yr, probs = (.25)), 2),
+  upper_q_visits_cost_per_year = round(quantile(all_cost_summary_statistics_df$tot_costs_per_yr, probs = (.75)), 2)
+)
+
+# reducing the specialties
+all_cost_summary_statistics_df_reduced <- visit_data_reduced %>%
+  group_by(subject_id, specialty_reduced) %>%
+  summarise(
+    total_patient_cost = first(visit_cost),
+    total_exposed_yrs = first(exposed_yrs),
+    visits_costs_per_year = total_patient_cost / total_exposed_yrs,
+    user_status = first(user_status),
+    .groups = "drop"
+  ) %>%
+  group_by(subject_id) %>%
+  summarise(
+    tot_costs = sum(total_patient_cost, na.rm = TRUE),
+    tot_exposed_yrs = first(total_exposed_yrs),
+    tot_costs_per_yr = tot_costs / tot_exposed_yrs,
+    .groups = "drop"
+  ) %>%
+  mutate(tot_costs_per_yr = replace_na(tot_costs_per_yr, 0))
+
+all_cost_summary_statistics_reduced <- tibble(
+  mean_visit_cost_per_year = round(sum(all_cost_summary_statistics_df_reduced$tot_costs) / sum(all_cost_summary_statistics_df_reduced$tot_exposed_yrs), 2),
+  min_visit_cost_per_year = round(min(all_cost_summary_statistics_df_reduced$tot_costs_per_yr), 2),
+  max_visit_cost_per_year = round(max(all_cost_summary_statistics_df_reduced$tot_costs_per_yr), 2),
+  sd_visit_cost_per_year = round(sd(all_cost_summary_statistics_df_reduced$tot_costs_per_yr), 2),
+  median_visit_cost_per_year = round(quantile(all_cost_summary_statistics_df_reduced$tot_costs_per_yr, probs = (.5)), 2),
+  lower_q_visits_cost_per_year = round(quantile(all_cost_summary_statistics_df_reduced$tot_costs_per_yr, probs = (.25)), 2),
+  upper_q_visits_cost_per_year = round(quantile(all_cost_summary_statistics_df_reduced$tot_costs_per_yr, probs = (.75)), 2)
+)
+
+# List of the output of costs
+costs_list <- list(
+  user_cost_summary_statistics = user_cost_summary_statistics,
+  all_cost_summary_statistics = all_cost_summary_statistics,
+  user_only_cost_summary = user_only_cost_summary,
+  all_cost_summary = all_cost_summary,
+  user_cost_summary_statistics_reduced = user_cost_summary_statistics_reduced,
+  all_cost_summary_statistics_reduced = all_cost_summary_statistics_reduced,
+  user_only_cost_summary_reduced = user_only_cost_summary_reduced,
+  all_cost_summary_reduced = all_cost_summary_reduced
+)
+
+# Write to an Excel file
+# write_xlsx(costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"))
+
+## Cohort summary ----
+cohort_summary_omop <- cohort_summary(visit_data)
+
+# Write to an Excel file
+rio::export(cohort_summary_omop, here::here("OMOP Analysis", "Results", "cohort_summary_OMOP.xlsx"))
