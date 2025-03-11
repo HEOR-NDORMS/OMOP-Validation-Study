@@ -58,30 +58,120 @@ table_one_omop <- cohort_table %>%
   dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>% 
   dplyr::mutate(age_fracture = lubridate::year(condition_start_date) - year_of_birth)
 
+
+# Remove the visits that are not clinically relevance
+# the costs are to be updated
+provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.3_summarised.xlsx") 
+
+# Join visit_detail and provider tables
+joined_visit_provider_tables <- cdm$visit_detail %>% 
+  dplyr::inner_join(cdm$provider) 
+
+## Sub-setting the visit data
+# cdm[["visit_data"]] <- NULL
+cdm[["visit_data"]] <- joined_visit_provider_tables %>%
+  dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include == "1"), by = "specialty_source_value", copy=TRUE) %>% # Filter for only meaningful specialties
+  dplyr::select(person_id, provider_id, specialty_source_value, specialty_source_value_summarised, visit_detail_start_date, visit_detail_id, unit_cost) %>%
+  dplyr::filter(visit_detail_start_date >= study_start_date & # include only visits in the study period
+                  visit_detail_start_date <= study_end_date) %>%
+  dplyr::rename(subject_id=person_id) %>% # just renaming for consistency with cohort data
+  dplyr::distinct(visit_detail_start_date, subject_id, specialty_source_value, .keep_all=TRUE) %>% # Keep only distinct rows - eliminate all visits in the same day with the same specialist by the same patient
+  dplyr::rename(specialty = specialty_source_value,
+                specialty_reduced =  specialty_source_value_summarised) %>%  # renaming for consistency with other countries as this variable is used for the HCRU and costs too
+  computeQuery()
+
+visit_data_df <- cdm[["visit_data"]] %>% dplyr::collect()
+
+# merge the cohort data to this visit_data_df
+table_one_omop_visit_data <- left_join(table_one_omop, visit_data_df, 
+                        by = "subject_id") %>% 
+  # in order to count all the visits from index date until follow-up end date
+  filter(visit_detail_start_date >= index_date & visit_detail_start_date <= follow_up_end)
+
+## Clinically Relevant Consultations
+specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value)
+
+### Filter the data with these clinically relevant
+# This would make it easier to identify users/non-users as well. Bc technically, if a patient had only visits before index but not during the exposure time, that is a non-user. 
+# So it is simpler if you prepare the visit data first, with visits in the exposure time and then join back to the list of patients to identify users as those who have at last one visit during that time (and with a relevant staff) and non-users are all the others (i.e., zero visits or only non-relevant visits).
+table_one_omop_visit_data <- table_one_omop %>% 
+  left_join(visit_data, by = c("subject_id", "cohort_start_date", 
+                               "cohort_end_date", "condition_concept_id",
+                               "condition_start_date", "fracture_site", 
+                               "class", "index_date", "after_index", 
+                               "observation_period_end_date", "cancer_date", 
+                               "mbd_date", "fracture_after_index", "death_date",
+                               "follow_up_end", "follow_up_reason", 
+                               "follow_up_time", "gender_concept_id", 
+                               "year_of_birth", "month_of_birth", "day_of_birth",
+                               "birth_datetime", "race_concept_id",
+                               "ethnicity_concept_id", "location_id", 
+                               "care_site_id", "person_source_value", 
+                               "gender_source_value", "gender_source_concept_id",
+                               "race_source_value", "race_source_concept_id", 
+                               "ethnicity_source_value", "ethnicity_source_concept_id", 
+                               "age_fracture"
+  ), copy = T) %>% 
+  mutate(
+    specialty = case_when(
+      specialty %in% specialty_source_value_ids ~ specialty,
+      TRUE ~ "Not Clinically Relevant"
+    ),
+    is_clinically_relevant = if_else(specialty == "Not Clinically Relevant", 0, 1),
+    in_exposure_time = if_else(
+      !is.na(visit_detail_start_date), 1, 0
+    )
+  ) %>% 
+  mutate(specialty_reduced = ifelse(
+    is.na(specialty_reduced), 
+    "Not Clinically Relevant",
+    specialty_reduced)) %>%
+  group_by(subject_id) %>%
+  mutate(user_status = if_else(
+    any(is_clinically_relevant == 1 & in_exposure_time == 1, na.rm = TRUE),
+    "User", "Non-User"
+  )) %>%
+  mutate(not_users_status = case_when(
+    user_status == "Non-User" & in_exposure_time == 0 ~ "No Visits",
+    user_status == "Non-User" ~ "Visits with Non-clinically Relevant Staff"
+  )) %>% 
+  ungroup() %>% 
+  distinct(subject_id, user_status, .keep_all = TRUE)
+
+
 # Summary table ----
+
+# Reorder factor by frequency
+table_one_omop_visit_data <- table_one_omop_visit_data %>%
+  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason))  
+
 # Using gtsummary::tbl_summary, we can summarise the table as follows
-(gt_summary_table <- table_one_omop %>% 
+(gt_summary_table <- table_one_omop_visit_data %>% 
    gtsummary::tbl_summary(
      # select the variables of interest
-     include = c(age_fracture, fracture_site, follow_up_reason, follow_up_time),
+     include = c(age_fracture, fracture_site, follow_up_reason, follow_up_time,
+                 user_status, not_users_status),
      # rename the variable names
      label = list(
-       age_fracture = "Age at fracture occurrence",
-       fracture_site = "Fracture site", 
+       age_fracture = "Age at Fracture Occurrence",
+       fracture_site = "Fracture Site", 
        follow_up_reason = "Censoring event",
-       follow_up_time = "Follow up time"
+       follow_up_time = "Follow up time",
+       user_status = "User Status",
+       not_users_status = "Non-user Visit Status"
      ),
      # indicate whether we want the missing values to be seen in the summary table
      missing = "no"
-   ))
+   ) %>%
+   gtsummary::modify_header(label = "**Variable**"))
 
 # Sense check ----
 ## Number of patients ----
-(number_of_patients <- n_distinct(table_one_omop$subject_id))
+(number_of_patients <- n_distinct(table_one_omop_visit_data$subject_id))
 
 ## Age (median, IQR) ----
-(median_age <- median(table_one_omop$age_fracture))
-(iqr_age <- IQR(table_one_omop$age_fracture))
+(median_age <- median(table_one_omop_visit_data$age_fracture))
+(iqr_age <- IQR(table_one_omop_visit_data$age_fracture))
 (results_age <- paste0(median_age, "(", iqr_age, ")"))
 
 ## Site of index fracture ----
@@ -89,7 +179,7 @@ table_one_omop <- cohort_table %>%
 # vertebra (n%)
 # NHNS (n%)
 
-(site_count <- table_one_omop %>% 
+(site_count <- table_one_omop_visit_data %>% 
    group_by(fracture_site) %>%
    summarise(count_of_pts = n_distinct(subject_id)) %>%
    mutate(percent = round(count_of_pts / sum(count_of_pts) * 100, 2),
@@ -104,15 +194,15 @@ table_one_omop <- cohort_table %>%
 # end of data collection period (n%)
 # maximum of 730 days from index date (n%)
 
-(censoring_events_count <- table_one_omop %>% 
+(censoring_events_count <- table_one_omop_visit_data %>% 
    group_by(follow_up_reason) %>%
    summarise(count_of_pts = n_distinct(subject_id), .groups = "drop") %>% 
    mutate(percent = round(count_of_pts / sum(count_of_pts) * 100, 2),
           result = paste0(count_of_pts, "(", percent, "%", ")")))
 
 ## Follow-up time in days ----
-(median_followup_time <- median(table_one_omop$follow_up_time))
-(iqr_followup_time <- IQR(table_one_omop$follow_up_time))
+(median_followup_time <- median(table_one_omop_visit_data$follow_up_time))
+(iqr_followup_time <- IQR(table_one_omop_visit_data$follow_up_time))
 
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
@@ -124,5 +214,5 @@ rio::export(gt_summary_table_df, here::here("OMOP Analysis", "Results", "Table1_
 
 # or HTML
 # Saving the summary table as an HTML file
-gtsummary::as_gt(gt_summary_table) %>%
-  gt::gtsave(here::here("OMOP Analysis", "Results", "gt_summary_table_OMOP.html"))
+# gtsummary::as_gt(gt_summary_table) %>%
+#   gt::gtsave(here::here("OMOP Analysis", "Results", "gt_summary_table_OMOP.html"))

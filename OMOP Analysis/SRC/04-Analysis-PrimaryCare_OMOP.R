@@ -44,35 +44,99 @@ visit_data_df <- cdm[["visit_data"]] %>% dplyr::collect()
 
 # merge the cohort data to this visit_data_df
 visit_data <- left_join(cohort_data_omop, visit_data_df, 
-                        by = "subject_id")
+                        by = "subject_id") %>% 
+  # in order to count all the visits from index date until follow-up end date
+  filter(visit_detail_start_date >= index_date & visit_detail_start_date <= follow_up_end)
 
 ## Clinically Relevant Consultations ----
 specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value)
 
 ### Filter the data with these clinically relevant ----
-visit_data <- visit_data %>% 
-    mutate(specialty = case_when(
+# This would make it easier to identify users/non-users as well. Bc technically, if a patient had only visits before index but not during the exposure time, that is a non-user. 
+# So it is simpler if you prepare the visit data first, with visits in the exposure time and then join back to the list of patients to identify users as those who have at last one visit during that time (and with a relevant staff) and non-users are all the others (i.e., zero visits or only non-relevant visits).
+visit_data <- cohort_data_omop %>% 
+  left_join(visit_data, by = c("subject_id", "cohort_start_date", 
+                               "cohort_end_date", "condition_concept_id",
+                               "condition_start_date", "fracture_site", 
+                               "class", "index_date", "after_index", 
+                               "observation_period_end_date", "cancer_date", 
+                               "mbd_date", "fracture_after_index", "death_date",
+                               "follow_up_end", "follow_up_reason", 
+                               "follow_up_time", "gender_concept_id", 
+                               "year_of_birth", "month_of_birth", "day_of_birth",
+                               "birth_datetime", "race_concept_id",
+                               "ethnicity_concept_id", "location_id", 
+                               "care_site_id", "person_source_value", 
+                               "gender_source_value", "gender_source_concept_id",
+                               "race_source_value", "race_source_concept_id", 
+                               "ethnicity_source_value", "ethnicity_source_concept_id", 
+                               "age_fracture"
+  ), copy = T) %>% 
+  mutate(
+    specialty = case_when(
       specialty %in% specialty_source_value_ids ~ specialty,
-    TRUE ~ "Not Clinically Relevant"
-  )) %>%
-   mutate(is_clinically_relevant = if_else(
-     specialty == "Not Clinically Relevant", 0, 1)) %>%
+      TRUE ~ "Not Clinically Relevant"
+    ),
+    is_clinically_relevant = if_else(specialty == "Not Clinically Relevant", 0, 1),
+    in_exposure_time = if_else(
+      !is.na(visit_detail_start_date), 1, 0
+    )
+  ) %>% 
   mutate(specialty_reduced = ifelse(
     is.na(specialty_reduced), 
     "Not Clinically Relevant",
     specialty_reduced)) %>%
   group_by(subject_id) %>%
   mutate(user_status = if_else(
-    any(is_clinically_relevant == 1, na.rm = TRUE), 
-    "User", "Non-User")) %>%
+    any(is_clinically_relevant == 1 & in_exposure_time == 1, na.rm = TRUE),
+    "User", "Non-User"
+  )) %>%
   ungroup()
+
+
+# 
+# visit_data <- cohort_data_omop %>% 
+#   left_join(visit_data, by = c("subject_id", "cohort_start_date", 
+#                                "cohort_end_date", "condition_concept_id",
+#                                "condition_start_date", "fracture_site", 
+#                                "class", "index_date", "after_index", 
+#                                "observation_period_end_date", "cancer_date", 
+#                                "mbd_date", "fracture_after_index", "death_date",
+#                                "follow_up_end", "follow_up_reason", 
+#                                "follow_up_time", "gender_concept_id", 
+#                                "year_of_birth", "month_of_birth", "day_of_birth",
+#                                "birth_datetime", "race_concept_id",
+#                                "ethnicity_concept_id", "location_id", 
+#                                "care_site_id", "person_source_value", 
+#                                "gender_source_value", "gender_source_concept_id",
+#                                "race_source_value", "race_source_concept_id", 
+#                                "ethnicity_source_value", "ethnicity_source_concept_id", 
+#                                "age_fracture", "specialty", "specialty_reduced",
+#                                "visit_detail_start_date", "visit_detail_id", "unit_cost"
+# ), copy = T) %>% 
+#     mutate(specialty = case_when(
+#       specialty %in% specialty_source_value_ids ~ specialty,
+#     TRUE ~ "Not Clinically Relevant"
+#   )) %>%
+#    mutate(is_clinically_relevant = if_else(
+#      specialty == "Not Clinically Relevant", 0, 1)) %>%
+#   mutate(specialty_reduced = ifelse(
+#     is.na(specialty_reduced), 
+#     "Not Clinically Relevant",
+#     specialty_reduced)) %>%
+#   group_by(subject_id) %>%
+#   mutate(user_status = if_else(
+#     any(is_clinically_relevant == 1, na.rm = TRUE), 
+#     "User", "Non-User")) %>%
+#   ungroup()
+# 
 
 
 ### Create a new df so that we can create visits based on these reduced specialty ----
 visit_data_reduced <- visit_data
 
 # Count of users/non-users
-(u_n_summary <- visit_data %>%
+(u_n_summary <- visit_data_t %>%
     group_by(user_status) %>%
     summarise(count_of_pts = n_distinct(subject_id)) %>%
     ungroup())
@@ -454,4 +518,4 @@ costs_list <- list(
 cohort_summary_omop <- cohort_summary(visit_data)
 
 # Write to an Excel file
-rio::export(cohort_summary_omop, here::here("OMOP Analysis", "Results", "cohort_summary_OMOP.xlsx"))
+# rio::export(cohort_summary_omop, here::here("OMOP Analysis", "Results", "cohort_summary_OMOP.xlsx"))
