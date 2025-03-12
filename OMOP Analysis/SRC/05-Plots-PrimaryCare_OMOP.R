@@ -118,7 +118,7 @@ visit_data_reduced_user2 <- visit_data_reduced_MIN %>%
     theme_minimal())
 
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "Plots", "Tot_visits.PNG"),
+  "OMOP Analysis", "Results", "Plots", "Tot_visits.PNG"),
   plot = plot2,
   width = 8, 
   height = 6, 
@@ -190,7 +190,7 @@ plots_users_mean_visits_specialty_weighted <- visits_per_specialty_month %>%
     labs(x = "Month After Index", y = "Exposure-Weighted Visits per User", fill = "Specialty") +
     theme_minimal())
 
-ggsave(here::here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"),
+ggsave(here::here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"),
        plot = plot3, 
        width = 8, 
        height = 6, 

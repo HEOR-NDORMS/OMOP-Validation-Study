@@ -38,12 +38,16 @@ library(png)
 library(grid)
 ```
 
+## Attrition Report {.tabset}
+
+### Raw
 
 ```{r}
-attrition_report <- import(here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
+attrition_report_raw <- import(here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .)))
 
 
-attrition_report %>%
+attrition_report_raw %>%
   gt() %>%
   tab_header(
     title = md("**Attrition table**")
@@ -59,9 +63,68 @@ attrition_report %>%
   opt_stylize(style = 3) 
 ```
 
+### OMOP
+
+```{r}
+attrition_report_omop <- import(here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx")) %>% 
+  mutate(
+    subjects_excluded = as.numeric(subjects_excluded),  
+    number_subjects = as.numeric(number_subjects),
+    subjects_excluded = as.numeric(subjects_excluded),
+    records_excluded = as.numeric(records_excluded)
+  ) %>% 
+  mutate(
+    percent_excluded = ifelse(!is.na(lag(number_subjects)) & lag(number_subjects) != 0, 
+                              round((subjects_excluded / lag(number_subjects)) * 100, 2), 
+                              0)  # Use lag(number_subjects) for previous row
+  ) %>%
+  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded) %>%
+  mutate(across(c(number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded), 
+                ~ ifelse(is.na(.), NA, .)))
+
+
+
+attrition_report_omop %>%
+  gt() %>%
+  tab_header(
+    title = md("**Attrition table**")
+  ) %>%
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%  
+  opt_stylize(style = 3) |> 
+  fmt_number(
+    columns = c("number_records", "number_subjects", "subjects_excluded",
+                "records_excluded"), 
+    sep_mark = ",",  # Adds thousand separator
+    decimals = 0  # No decimals for integer counts
+  ) %>%  
+  fmt_number(
+    columns = "percent_excluded", 
+    sep_mark = ",",  
+    decimals = 2  # Keep two decimal places for percentages
+  ) %>% 
+  sub_missing(
+    columns = everything(), 
+    missing_text = ""  # Replace NA with an empty string
+  ) %>% 
+  cols_label(
+    reason = "Reason for exclusion",
+    number_records = "Number of records",
+    number_subjects = "Number of subjects",
+    subjects_excluded = "N subjects excluded",
+    percent_excluded = "Perc subjects excluded (%)",
+    records_excluded = "N records excluded"
+  )
+
+```
+
 # Results 
 
-## Table 1
+## Table 1 {.tabset}
+
+### Raw
 
 ```{r}
 # Import data
@@ -70,7 +133,7 @@ attrition_report %>%
 #   html_table()
 
 # Import data
-table1_data <- rio::import(here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx")) %>% 
+table1_data_raw <- rio::import(here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx")) %>% 
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 # Define parent variables and subcategories
@@ -93,14 +156,14 @@ subcategories <- c("Hip", "Vertebra", "NHNV",
                    "No Visits", "Visits with Non-clinically Relevant Staff")
 
 # Add indentation dynamically
-table1_data <- table1_data %>%
+table1_data_raw <- table1_data_raw %>%
   mutate(Variable = case_when(
     Variable %in% subcategories ~ paste0("&nbsp;&nbsp;&nbsp;", Variable), # Indent subcategories using HTML space
     TRUE ~ Variable
   ))
 
 # Create gt table with a footnote
-table1_data %>% 
+table1_data_raw %>% 
   gt() %>%
   tab_header(
     title = md("**Patient Characteristics**")
@@ -124,14 +187,76 @@ table1_data %>%
 ```
 
 
-## Primary care {.tabset}
+### OMOP
+
+```{r}
+# Import data
+# table1_data <- read_html(here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html")) %>% 
+#   html_node("table") %>%
+#   html_table()
+
+# Import data
+table1_data_omop <- rio::import(here("OMOP Analysis", "Results", "Table1_OMOP.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
+
+# Define parent variables and subcategories
+parent_vars <- c("Fracture Site", "Censoring Event",
+                 "User Status", "Non-user Visits Status")  
+
+subcategories <- c("Hip", "Vertebra", "NHNV", 
+                   "Cancer", "Cancer, Fracture ensuing incident (index) fracture",
+                   "Death", "End of data collection period",
+                   "End of data collection period, Cancer",
+                   "End of data collection period, Fracture ensuing incident (index) fracture",
+                   "Fracture ensuing incident (index) fracture",
+                   "Max of 730 days from index date",
+                   "Max of 730 days from index date, Cancer",
+                   "Max of 730 days from index date, End of data collection period",
+                   "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
+                   "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
+                   "Paget’s disease of the bone, or other metabolic bone diseases", "Cancer, Paget’s disease of the bone, or other metabolic bone diseases", "Paget’s disease of the bone, or other metabolic bone diseases, Fracture ensuing incident (index) fracture", 
+                   "Non-User", "User",
+                   "No Visits", "Visits with Non-clinically Relevant Staff")
+
+# Add indentation dynamically
+table1_data_omop <- table1_data_omop %>%
+  mutate(Variable = case_when(
+    Variable %in% subcategories ~ paste0("&nbsp;&nbsp;&nbsp;", Variable), # Indent subcategories using HTML space
+    TRUE ~ Variable
+  ))
+
+# Create gt table with a footnote
+table1_data_omop %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Patient Characteristics**")
+  ) %>%
+  opt_all_caps() %>% 
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  fmt_markdown(columns = "Variable") %>%  # Apply markdown formatting for indentation
+  opt_stylize(style = 3) %>%
+  tab_footnote(
+    footnote = "Median (Q1, Q3); n (%)",
+    locations = cells_title(groups = "title")) %>% 
+  tab_footnote(
+    footnote = md("*User defined as subjects with >=1 visit with a clinically relevant healthcare provider and Non-User as Subjects with no visits, or visits with non-clinically relevant healthcare provider*"),
+    locations = cells_body(columns = Variable,
+                           rows = c(23))
+  )
+
+```
+
+## Primary care - Raw {.tabset}
 
 ### Healthcare resource utilisation (HCRU)
 
 ```{r}
-all_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary_statistics")
+all_summary_statistics_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary_statistics")
 
-all_summary_statistics_rp %>% 
+all_summary_statistics_rp_raw %>% 
   gt() %>%
   tab_header(
     title = md("**All Patients - Visits per patient per year**"),
@@ -158,9 +283,9 @@ all_summary_statistics_rp %>%
 ```
 
 ```{r}
-user_only_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary_statistics")
+user_only_summary_statistics_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary_statistics")
 
-user_only_summary_statistics_rp %>% 
+user_only_summary_statistics_rp_raw %>% 
   gt() %>%
   tab_header(
     title = md("**Service users - Visits per patient per year**"),
@@ -209,14 +334,100 @@ Mean_visits_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Res
 grid.raster(Mean_visits_per_specialty_weighted_raw)
 ```
 
-## Costs {.tabset}
+## Primary care - OMOP {.tabset}
+
+### Healthcare resource utilisation (HCRU)
+
+```{r}
+all_summary_statistics_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "all_summary_statistics")
+
+all_summary_statistics_rp_omop %>% 
+  gt() %>%
+  tab_header(
+    title = md("**All Patients - Visits per patient per year**"),
+    subtitle = md("*Users and non-users*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    mean_visit_per_year = "Mean",
+    min_visit_per_year = "Minimum",
+    max_visit_per_year = "Maximum",
+    sd_visit_per_year = "SD",
+    median_visit_per_year = "Median",
+    lower_q_visits_per_year = "Lower Quartile",
+    upper_q_visits_per_year = "Upper Quartile"
+  )
+```
+
+```{r}
+user_only_summary_statistics_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "user_only_summary_statistics")
+
+user_only_summary_statistics_rp_omop %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Service users - Visits per patient per year**"),
+    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    mean_visit_per_year = "Mean",
+    min_visit_per_year = "Minimum",
+    max_visit_per_year = "Maximum",
+    sd_visit_per_year = "SD ",
+    median_visit_per_year = "Median ",
+    lower_q_visits_per_year = "Lower Quartile",
+    upper_q_visits_per_year = "Upper Quartile"
+  )
+```
+
+### HCRU Figures
+
+Figure 1: Total number of primary care consultations
+
+```{r fig.height=6, fig.width=6}
+Plots_Total_Visits_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Tot_visits.PNG"))
+grid.raster(Plots_Total_Visits_OMOP)
+```
+
+Figure 2: Mean number of primary care consultations by provider specialty, users-only.
+
+```{r fig.height=6, fig.width=6}
+Mean_visits_per_specialty_unweighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
+grid.raster(Mean_visits_per_specialty_unweighted_OMOP)
+```
+
+Figure 3: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
+
+```{r fig.height=6, fig.width=6}
+Mean_visits_per_specialty_weighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
+grid.raster(Mean_visits_per_specialty_weighted_OMOP)
+```
+
+
+## Costs - Raw {.tabset}
 
 ### Costs Summary Results
 
 ```{r}
-user_cost_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_cost_summary_statistics")
+user_cost_summary_statistics_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_cost_summary_statistics")
 
-user_cost_summary_statistics_rp %>% 
+user_cost_summary_statistics_rp_raw %>% 
   gt() %>%
   tab_header(
     title = md("**User Only Cost Summary Statistics**"),
@@ -243,9 +454,9 @@ user_cost_summary_statistics_rp %>%
 
 
 ```{r}
-all_cost_summary_statistics_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary_statistics")
+all_cost_summary_statistics_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary_statistics")
 
-all_cost_summary_statistics_rp %>% 
+all_cost_summary_statistics_rp_raw %>% 
   gt() %>%
   tab_header(
     title = md("**All Patients Costs Summary Statistics**"),
@@ -295,39 +506,108 @@ grid.raster(Mean_costs_per_specialty_weighted_raw)
 ```
 
 
+## Costs - OMOP {.tabset}
 
-
-# Appendix {.tabset}
-
-## HCRU by Specialty - Users
+### Costs Summary Results
 
 ```{r}
-user_only_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary")
+user_cost_summary_statistics_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "user_cost_summary_statistics")
+
+user_cost_summary_statistics_rp_omop %>% 
+  gt() %>%
+  tab_header(
+    title = md("**User Only Cost Summary Statistics**"),
+    subtitle = md("*Subjects Who Visited a Clinically Relevant Consultant*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left",
+      table.font.names = "Times New Roman"
+    ) |> 
+  opt_stylize(style = 2) %>% 
+  cols_label(
+    mean_visit_cost_per_year = "Mean Visit Costs per Year",
+    min_visit_cost_per_year = "Minimum Visit Costs per Year",
+    max_visit_cost_per_year = "Maximum Visit Costs per Year",
+    sd_visit_cost_per_year = "SD Visit Costs per Year",
+    median_visit_cost_per_year = "Median Visit Costs per Year",
+    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
+    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+  )
 ```
 
 
 ```{r}
-colnames(user_only_summary_rp) <- c("Specialty", "Total Visits", "Mean Visits per Year", "SD Visits per Year", "Minimum Visits per Year", "Maximum Visits per Year", "Number of Subjects")
+all_cost_summary_statistics_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "all_cost_summary_statistics")
 
-# datatable(user_only_summary_rp,
-#     rownames = FALSE, 
-#     filter = 'top', 
-#     options = list(
-#         scrollX = TRUE,  # Allow user to scroll wide tables horizontally
-#         search = list(regex = FALSE, caseInsensitive = TRUE),
-#         autoWidth = TRUE,  # Automatically adjust column widths
-#         columnDefs = list(
-#           list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
-#             list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
-#             list(
-#                 targets = "_all",  # Apply to all columns
-#                 className = "dt-center"  # Center align all columns
-#             )
-#         )
-#     )
-# )
+all_cost_summary_statistics_rp_omop %>% 
+  gt() %>%
+  tab_header(
+    title = md("**All Patients Costs Summary Statistics**"),
+    subtitle = md("*Subjects Who Visited Both Clinically Relevant and Non-Relevant Consultants*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      # table.width = px(600),
+      heading.title.font.weight = "bold",
+      heading.align = "left",
+      table.font.names = "Times New Roman"
+    ) |> 
+  opt_stylize(style = 2) %>% 
+  cols_label(
+    mean_visit_cost_per_year = "Mean Visit Costs per Year",
+    min_visit_cost_per_year = "Minimum Visit Costs per Year",
+    max_visit_cost_per_year = "Maximum Visit Costs per Year",
+    sd_visit_cost_per_year = "SD Visit Costs per Year",
+    median_visit_cost_per_year = "Median Visit Costs per Year",
+    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
+    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+  )
+```
 
-datatable(user_only_summary_rp,
+
+### Cost Figures
+
+Figure 4: Total number of primary care consultation costs
+
+```{r fig.height=6, fig.width=6}
+Plots_Total_Costs_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Tot_costs.PNG"))
+grid.raster(Plots_Total_Costs_Raw)
+```
+
+Figure 5: Mean number of primary care consultation costs by provider specialty, users-only.
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_unweighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
+grid.raster(Mean_costs_per_specialty_unweighted_raw)
+```
+
+Figure 6: Exposure-weighted mean number of primary care consultations costs by provider specialty, users-only.
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_weighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
+grid.raster(Mean_costs_per_specialty_weighted_raw)
+```
+
+
+# Appendix 
+
+## Raw {.tabset}
+
+### HCRU by Specialty - Users
+
+```{r}
+user_only_summary_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary")
+```
+
+
+```{r}
+colnames(user_only_summary_rp_raw) <- c("Specialty", "Total Visits", "Mean Visits per Year", "SD Visits per Year", "Minimum Visits per Year", "Maximum Visits per Year", "Number of Subjects")
+
+
+datatable(user_only_summary_rp_raw,
     rownames = FALSE, 
     filter = 'top', 
     options = list(
@@ -351,35 +631,18 @@ datatable(user_only_summary_rp,
 )
 ```
 
-## HCRU by Specialty - All Patients
+### HCRU by Specialty - All Patients
 
 ```{r}
-all_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary") %>% 
+all_summary_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary") %>% 
    mutate(specialty = forcats::fct_recode(specialty, "Non-users" = "Not Clinically Relevant"))
 ```
 
 
 ```{r}
-colnames(all_summary_rp) <- c("Specialty", "Total Visits", "Mean Visits Per Year", "SD Visits Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
+colnames(all_summary_rp_raw) <- c("Specialty", "Total Visits", "Mean Visits Per Year", "SD Visits Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
 
-# datatable(all_summary_rp,
-#     rownames = FALSE, 
-#     filter = 'top', 
-#     options = list(
-#         scrollX = TRUE,  # Allow user to scroll wide tables horizontally
-#         search = list(regex = FALSE, caseInsensitive = TRUE),
-#         autoWidth = TRUE,  # Automatically adjust column widths
-#         columnDefs = list(
-#           list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
-#             list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
-#             list(
-#                 targets = "_all",  # Apply to all columns
-#                 className = "dt-center"  # Center align all columns
-#             )
-#         )
-#     )
-# )
-datatable(all_summary_rp,
+datatable(all_summary_rp_raw,
     rownames = FALSE, 
     filter = 'top', 
     options = list(
@@ -403,35 +666,17 @@ datatable(all_summary_rp,
 )
 ```
 
-## Costs by Specialty - Users
+### Costs by Specialty - Users
 
 ```{r}
-user_only_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_only_cost_summary")
+user_only_cost_summary_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "user_only_cost_summary")
 ```
 
 
 ```{r}
-colnames(user_only_cost_summary_rp) <- c("Specialty", "Total Visit Costs", "Mean Visit Costs Per Year", "SD Visit Costs Per Year", "Minimum Visit Costs Per Year", "Maximum Visit Costs Per Year", "Number of Subjects")
+colnames(user_only_cost_summary_rp_raw) <- c("Specialty", "Total Visit Costs", "Mean Visit Costs Per Year", "SD Visit Costs Per Year", "Minimum Visit Costs Per Year", "Maximum Visit Costs Per Year", "Number of Subjects")
 
-# datatable(user_only_cost_summary_rp,
-#     rownames = FALSE, 
-#     filter = 'top', 
-#     options = list(
-#         scrollX = TRUE,  # Allow user to scroll wide tables horizontally
-#         search = list(regex = FALSE, caseInsensitive = TRUE),
-#         autoWidth = TRUE,  # Automatically adjust column widths
-#         columnDefs = list(
-#           list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
-#             list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
-#             list(
-#                 targets = "_all",  # Apply to all columns
-#                 className = "dt-center"  # Center align all columns
-#             )
-#         )
-#     )
-# )
-
-datatable(user_only_cost_summary_rp,
+datatable(user_only_cost_summary_rp_raw,
     rownames = FALSE, 
     filter = 'top', 
     options = list(
@@ -455,18 +700,18 @@ datatable(user_only_cost_summary_rp,
 )
 ```
 
-## Costs by Specialty - All Patients
+### Costs by Specialty - All Patients
 
 ```{r}
-all_cost_summary_rp <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary") %>% 
+all_cost_summary_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_cost_summary") %>% 
   mutate(specialty = forcats::fct_recode(specialty, "Non-users" = "Not Clinically Relevant"))
 ```
 
 
 ```{r}
-colnames(all_cost_summary_rp) <- c("Specialty", "Total Visit Costs", "Mean Visits Per Year", "SD Visit Costs Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
+colnames(all_cost_summary_rp_raw) <- c("Specialty", "Total Visit Costs", "Mean Visits Per Year", "SD Visit Costs Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
 
-datatable(all_cost_summary_rp,
+datatable(all_cost_summary_rp_raw,
     rownames = FALSE, 
     filter = 'top', 
     options = list(
@@ -489,6 +734,149 @@ datatable(all_cost_summary_rp,
     )
 )
 ```
+
+
+## OMOP {.tabset}
+
+### HCRU by Specialty - Users
+
+```{r}
+user_only_summary_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "user_only_summary")
+```
+
+
+```{r}
+colnames(user_only_summary_rp_omop) <- c("Specialty", "Total Visits", "Mean Visits per Year", "SD Visits per Year", "Minimum Visits per Year", "Maximum Visits per Year", "Number of Subjects")
+
+
+datatable(user_only_summary_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### HCRU by Specialty - All Patients
+
+```{r}
+all_summary_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "all_summary") %>% 
+   mutate(specialty = forcats::fct_recode(specialty, "Non-users" = "Not Clinically Relevant"))
+```
+
+
+```{r}
+colnames(all_summary_rp_omop) <- c("Specialty", "Total Visits", "Mean Visits Per Year", "SD Visits Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
+
+datatable(all_summary_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Costs by Specialty - Users
+
+```{r}
+user_only_cost_summary_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "user_only_cost_summary")
+```
+
+
+```{r}
+colnames(user_only_cost_summary_rp_omop) <- c("Specialty", "Total Visit Costs", "Mean Visit Costs Per Year", "SD Visit Costs Per Year", "Minimum Visit Costs Per Year", "Maximum Visit Costs Per Year", "Number of Subjects")
+
+datatable(user_only_cost_summary_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Costs by Specialty - All Patients
+
+```{r}
+all_cost_summary_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "all_cost_summary") %>% 
+  mutate(specialty = forcats::fct_recode(specialty, "Non-users" = "Not Clinically Relevant"))
+```
+
+
+```{r}
+colnames(all_cost_summary_rp_omop) <- c("Specialty", "Total Visit Costs", "Mean Visits Per Year", "SD Visit Costs Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
+
+datatable(all_cost_summary_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
 
 ## Assumptions Underlying Cost Calculations
 
