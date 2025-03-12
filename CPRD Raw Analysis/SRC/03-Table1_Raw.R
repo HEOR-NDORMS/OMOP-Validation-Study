@@ -149,11 +149,10 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
    ) %>%
    gtsummary::modify_header(label = "**Variable**"))
    
-library(dplyr)
-library(forcats)
 
+# Reorder factor by frequency
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
-  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason))  # Reorder factor by frequency
+  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason))  
 
 (gt_summary_table <- table_one_raw_visit_data %>% 
   gtsummary::tbl_summary(
@@ -184,25 +183,25 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
 
 # Sense check ----
 ## Number of patients ----
-(number_of_patients <- n_distinct(table_one_raw$patid))
+(number_of_patients <- n_distinct(table_one_raw_visit_data$patid))
 
 ## Age (median, IQR) ----
-(median_age <- median(table_one_raw$age_fracture))
-(iqr_age <- IQR(table_one_raw$age_fracture))
+(median_age <- median(table_one_raw_visit_data$age_fracture))
+(iqr_age <- IQR(table_one_raw_visit_data$age_fracture))
 (results_age <- paste0(median_age, "(", iqr_age, ")"))
 
-table_one_raw_pt <- table_one_raw %>% 
+table_one_raw_pt <- table_one_raw_visit_data %>% 
   distinct(patid, .keep_all = TRUE)
 
-(median_age_pt <- median(table_one_raw_pt$age_fracture))
-(iqr_age_pt <- IQR(table_one_raw_pt$age_fracture))
+(median_age_pt <- median(table_one_raw_visit_data$age_fracture))
+(iqr_age_pt <- IQR(table_one_raw_visit_data$age_fracture))
 
 ## Site of index fracture ----
 # hip (n%)
 # vertebra (n%)
 # NHNS (n%)
 
-(site_count <- table_one_raw %>% 
+(site_count <- table_one_raw_visit_data %>% 
    group_by(site) %>%
    summarise(count_of_pts = n_distinct(patid)) %>%
    mutate(percent = round(count_of_pts / sum(count_of_pts) * 100, 2),
@@ -217,15 +216,15 @@ table_one_raw_pt <- table_one_raw %>%
 # end of data collection period (n%)
 # maximum of 730 days from index date (n%)
 
-(censoring_events_count <- table_one_raw %>% 
+(censoring_events_count <- table_one_raw_visit_data %>% 
    group_by(follow_up_reason) %>%
    summarise(count_of_pts = n_distinct(patid), .groups = "drop") %>% 
    mutate(percent = round(count_of_pts / sum(count_of_pts) * 100, 2),
           result = paste0(count_of_pts, "(", percent, "%", ")")))
 
 ## Follow-up time in days ----
-(median_followup_time <- median(table_one_raw$follow_up_time))
-(iqr_followup_time <- IQR(table_one_raw$follow_up_time))
+(median_followup_time <- median(table_one_raw_visit_data$follow_up_time))
+(iqr_followup_time <- IQR(table_one_raw_visit_data$follow_up_time))
 
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
