@@ -180,12 +180,6 @@ AttritionReportCoh<- AttritionReportCoh %>%
   )  
 
 
-### Finalise attrition
-AttritionReportCoh <- AttritionReportCoh %>% 
-  dplyr::mutate(subjects_excluded = -(number_subjects-dplyr::lag(number_subjects)), records_excluded = -(number_records - dplyr::lag(number_records)))
-
-#write.xlsx(AttritionReportCoh, file = here::here(sub_output_folder, "AttritionReportCoh.xlsx"))
-
 
 ## Create unique dataset with both index and non index fractures -----
 
@@ -195,6 +189,9 @@ cohort_table_g_index_ids <- cohort_table_g_index %>% dplyr::pull(subject_id)
 cohort_table <- cohort_table %>%
   dplyr::left_join(cohort_table_g_index, by = colnames(cohort_table)) %>%
   dplyr::filter(subject_id %in% cohort_table_g_index_ids)
+
+# Run the functions script
+source(here::here("OMOP Analysis", "SRC", "Functions_OMOP.R"))
 
 cohort_table <- addIndex(cohort_table)
 
@@ -227,4 +224,50 @@ cohort_table <- addInFollowUpEndGL(cohort_table)
 
 cohort_table <- cohort_table %>% 
   dplyr:: filter(class=="index")
+
+# Remove patients that have less one month contribution
+cohort_table <- cohort_table %>% 
+  mutate(exposed_yrs = as.numeric(follow_up_end - index_date) / 360.25,
+         exposed_months = exposed_yrs * 12,  # Convert years to months
+         excluded_flag = if_else(exposed_months < 1, "Excluded", "Included"))
+  
+
+(summary_mnth_exclusion <- cohort_table %>% 
+    group_by(excluded_flag) %>% 
+    summarise(count = n()))
+
+# Count patients to be excluded
+excluded_patients <- cohort_table %>%
+  filter(excluded_flag == "Excluded") %>%
+  distinct(subject_id) %>%
+  tally() %>%
+  pull()
+
+## Attrition report
+# Update attrition report
+AttritionReportCoh <- AttritionReportCoh %>%
+  dplyr::union_all(
+    tibble(
+      number_records = cohort_table %>% 
+        filter(excluded_flag == "Included") %>%
+        nrow(),
+      number_subjects = cohort_table %>%
+        filter(excluded_flag == "Included") %>%
+        distinct(subject_id) %>%
+        tally() %>%
+        pull(),
+      reason = "Exclude patients with less than one month of exposure"
+    )
+  )
+
+
+### Finalise attrition
+AttritionReportCoh <- AttritionReportCoh %>% 
+  dplyr::mutate(subjects_excluded = -(number_subjects-dplyr::lag(number_subjects)), records_excluded = -(number_records - dplyr::lag(number_records)))
+
+
+cohort_table <- cohort_table %>% 
+  filter(excluded_flag == "Included")
+
+
 # rio::export(AttritionReportCoh, here::here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
