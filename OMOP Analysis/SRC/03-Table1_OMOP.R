@@ -95,7 +95,7 @@ specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value
 # This would make it easier to identify users/non-users as well. Bc technically, if a patient had only visits before index but not during the exposure time, that is a non-user. 
 # So it is simpler if you prepare the visit data first, with visits in the exposure time and then join back to the list of patients to identify users as those who have at last one visit during that time (and with a relevant staff) and non-users are all the others (i.e., zero visits or only non-relevant visits).
 table_one_omop_visit_data <- table_one_omop %>% 
-  left_join(visit_data, by = c("subject_id", "cohort_start_date", 
+  left_join(table_one_omop_visit_data, by = c("subject_id", "cohort_start_date", 
                                "cohort_end_date", "condition_concept_id",
                                "condition_start_date", "fracture_site", 
                                "class", "index_date", "after_index", 
@@ -110,7 +110,7 @@ table_one_omop_visit_data <- table_one_omop %>%
                                "gender_source_value", "gender_source_concept_id",
                                "race_source_value", "race_source_concept_id", 
                                "ethnicity_source_value", "ethnicity_source_concept_id", 
-                               "age_fracture"
+                               "age_fracture", "exposed_yrs", "exposed_months"
   ), copy = T) %>% 
   mutate(
     specialty = case_when(
@@ -207,7 +207,7 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
   rename("Variable" = "**Variable**",
-         "N = 23,386" = "**N = 23,386**") %>% 
+         "N = 23,957" = "**N = 23,957**") %>% 
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 rio::export(gt_summary_table_df, here::here("OMOP Analysis", "Results", "Table1_OMOP.xlsx"))
