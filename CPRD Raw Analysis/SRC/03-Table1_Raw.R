@@ -74,14 +74,14 @@ table_one_raw_visit_data <- inner_join(table_one_raw, validation_consultation,
 # Merge cohort data
 # merge back to cohort data
 table_one_raw_visit_data <- left_join(
-  cohort_table_raw, table_one_raw_visit_data,
+  table_one_raw, table_one_raw_visit_data,
   by = c(
     "patid", "gender", "yob", "death", "death_date",
     "aurum_min_accept_date", "aurum_max_accept_date", "site",
     "fx_date", "days_prior_obs", "days_after_obs", "age_fracture",
     "type", "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
     "after_index", "fracture_after_index", "follow_up_end",
-    "follow_up_reason", "follow_up_time"
+    "follow_up_reason", "follow_up_time", "exposed_yrs", "exposed_months"
   )
 )
 
@@ -129,26 +129,26 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
   distinct(patid, user_status, .keep_all = TRUE)
 
 # Summary table ----
-# Using gtsummary::tbl_summary, we can summarise the table as follows
-(gt_summary_table <- table_one_raw_visit_data %>% 
-   gtsummary::tbl_summary(
-     # select the variables of interest
-     include = c(age_fracture, site, follow_up_reason, 
-                 follow_up_time, user_status, not_users_status),
-     # rename the variable names
-     label = list(
-       age_fracture = "Age at Fracture Occurrence",
-       site = "Fracture Site", 
-       follow_up_reason = "Censoring Event",
-       follow_up_time = "Follow up Time",
-       user_status = "User Status",
-       not_users_status = "Non-user Visit Status"
-     ),
-     # indicate whether we want the missing values to be seen in the summary table
-     missing = "no"
-   ) %>%
-   gtsummary::modify_header(label = "**Variable**"))
-   
+# # Using gtsummary::tbl_summary, we can summarise the table as follows
+# (gt_summary_table <- table_one_raw_visit_data %>% 
+#    gtsummary::tbl_summary(
+#      # select the variables of interest
+#      include = c(age_fracture, site, follow_up_reason, 
+#                  follow_up_time, user_status, not_users_status),
+#      # rename the variable names
+#      label = list(
+#        age_fracture = "Age at Fracture Occurrence",
+#        site = "Fracture Site", 
+#        follow_up_reason = "Censoring Event",
+#        follow_up_time = "Follow up Time",
+#        user_status = "User Status",
+#        not_users_status = "Non-user Visit Status"
+#      ),
+#      # indicate whether we want the missing values to be seen in the summary table
+#      missing = "no"
+#    ) %>%
+#    gtsummary::modify_header(label = "**Variable**"))
+#    
 
 # Reorder factor by frequency
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
@@ -169,16 +169,6 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
     missing = "no"
   ) %>%
   gtsummary::modify_header(label = "**Variable**"))
-
-
-   # gtsummary::modify_header(label = "**Variable**") %>% 
-   # gtsummary::remove_footnote_header(stat_0) %>% 
-   
- # %>% 
- #   gtsummary::modify_header(stat_0 = "Median (Q1, Q3); n(%)") %>%  
- #   gtsummary::modify
- #   gtsummary::remove_footnote_header(stat_0)
-
 
 
 # Sense check ----
@@ -229,7 +219,7 @@ table_one_raw_pt <- table_one_raw_visit_data %>%
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
   rename("Variable" = "**Variable**",
-         "N = 25,138" = "**N = 25,138**") %>% 
+         "N = 24,740" = "**N = 24,740**") %>% 
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 rio::export(gt_summary_table_df, here::here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx"))
