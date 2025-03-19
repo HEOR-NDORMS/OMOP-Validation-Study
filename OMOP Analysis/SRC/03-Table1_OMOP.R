@@ -157,8 +157,8 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
        fracture_site = "Fracture Site", 
        follow_up_reason = "Censoring event",
        follow_up_time = "Follow up time",
-       user_status = "User Status",
-       not_users_status = "Non-user Visit Status"
+       user_status = "Heathcare Service User Status",
+       not_users_status = "Heathcare Service Non-user Visit Status"
      ),
      # indicate whether we want the missing values to be seen in the summary table
      missing = "no"
