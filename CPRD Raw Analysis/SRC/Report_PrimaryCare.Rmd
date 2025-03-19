@@ -294,9 +294,9 @@ table1_data_omop %>%
 ### Healthcare resource utilisation (HCRU)
 
 ```{r}
-all_summary_statistics_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary_statistics")
+overall_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "overall_all_visits_only")
 
-all_summary_statistics_rp_raw %>% 
+overall_all_visits_only_rp_raw %>% 
   gt() %>%
   tab_header(
     title = md("**All Patients - Visits per patient per year**"),
@@ -321,6 +321,66 @@ all_summary_statistics_rp_raw %>%
     upper_q_visits_per_year = "Upper Quartile"
   )
 ```
+
+
+```{r}
+yr1_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "yr1_all_visits_only")
+
+yr1_all_visits_only_rp_raw %>% 
+  gt() %>%
+  tab_header(
+    title = md("**All Patients - Visits per patient per year (Year 1)**"),
+    subtitle = md("*Users and non-users*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    mean_visit_per_year = "Mean",
+    min_visit_per_year = "Minimum",
+    max_visit_per_year = "Maximum",
+    sd_visit_per_year = "SD",
+    median_visit_per_year = "Median",
+    lower_q_visits_per_year = "Lower Quartile",
+    upper_q_visits_per_year = "Upper Quartile"
+  )
+```
+
+```{r}
+yr2_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "yr2_all_visits_only")
+
+yr2_all_visits_only_rp_raw %>% 
+  gt() %>%
+  tab_header(
+    title = md("**All Patients - Visits per patient per year**"),
+    subtitle = md("*Heathcare Service Users and non-users*")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    mean_visit_per_year = "Mean",
+    min_visit_per_year = "Minimum",
+    max_visit_per_year = "Maximum",
+    sd_visit_per_year = "SD",
+    median_visit_per_year = "Median",
+    lower_q_visits_per_year = "Lower Quartile",
+    upper_q_visits_per_year = "Upper Quartile"
+  )
+```
+
 
 ```{r}
 user_only_summary_statistics_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_only_summary_statistics")
