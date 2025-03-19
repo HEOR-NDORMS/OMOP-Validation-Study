@@ -44,7 +44,22 @@ library(grid)
 
 ```{r}
 attrition_report_raw <- import(here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx")) %>% 
-  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .)))
+  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>% 
+  mutate(
+    subjects_excluded = as.numeric(subjects_excluded),  
+    number_subjects = as.numeric(number_subjects),
+    subjects_excluded = as.numeric(subjects_excluded),
+    records_excluded = as.numeric(records_excluded)
+  ) %>% 
+  mutate(
+    percent_excluded = ifelse(!is.na(lag(number_subjects)) & lag(number_subjects) != 0, 
+                              round((subjects_excluded / lag(number_subjects)) * 100, 2), 
+                              0)  # Use lag(number_subjects) for previous row
+  ) %>%
+  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded) %>%
+  mutate(across(c(number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded), 
+                ~ ifelse(is.na(.), NA, .)))
+
 
 
 attrition_report_raw %>%
@@ -60,7 +75,32 @@ attrition_report_raw %>%
       #table.font.names = "Times New Roman",
       table.font.size = px(14)
     ) |> 
-  opt_stylize(style = 3) 
+  opt_stylize(style = 3) %>% 
+   fmt_number(
+    columns = c("number_records", "number_subjects", "subjects_excluded",
+                "records_excluded"), 
+    sep_mark = ",",  # Adds thousand separator
+    decimals = 0  # No decimals for integer counts
+  ) %>%  
+  fmt_number(
+    columns = "percent_excluded", 
+    sep_mark = ",",  
+    decimals = 2  # Keep two decimal places for percentages
+  ) %>% 
+  sub_missing(
+    columns = everything(), 
+    missing_text = ""  # Replace NA with an empty string
+  ) %>% 
+  cols_label(
+    reason = "Reason for exclusion",
+    number_records = "Number of records",
+    number_subjects = "Number of subjects",
+    subjects_excluded = "N subjects excluded",
+    percent_excluded = "Perc subjects excluded (%)",
+    records_excluded = "N records excluded"
+  )
+                 
+  
 ```
 
 ### OMOP

@@ -3,8 +3,8 @@
 #	Author: Njoki Njuki	
 # Do file name: Cleaning Cohort; clean the data grouped by subject_id based on 
 # the remaining conditions in the table
-# Date: 13.01.2024
-# Last date edited: 21.01.2025
+# Date: 13.01.2025
+# Last date edited: 17.03.2025
 # ****************************************************************************** #
 
 # prior obs
@@ -185,11 +185,6 @@ AttritionReportCoh <- AttritionReportCoh %>%
     )
   ) 
 
-### Finalise attrition ----
-AttritionReportCoh <- AttritionReportCoh %>% 
-  dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
-
-# rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
 ### Create unique dataset with both index and non index fractures ----
 cohort_table_g_index <-cohort_table_g_index%>% 
@@ -230,6 +225,47 @@ cohort_table <- addInFollowUpEndGL(cohort_table)
 
 cohort_table <- cohort_table %>% 
   dplyr:: filter(type=="index")
+
+# Remove patients that have less one month contribution
+cohort_table <- cohort_table %>% 
+  mutate(exposed_yrs = as.numeric(follow_up_end - index_date) / 360.25,
+         exposed_months = exposed_yrs * 12,  # Convert years to months
+         excluded_flag = if_else(exposed_months < 1, "Excluded", "Included")) %>% 
+  filter(excluded_flag == "Included")
+
+(summary_mnth_exclusion <- cohort_table %>% 
+  group_by(excluded_flag) %>% 
+  summarise(count = n()))
+
+# Count patients to be excluded
+excluded_patients <- cohort_table %>%
+  filter(excluded_flag == "Excluded") %>%
+  distinct(patid) %>%
+  tally() %>%
+  pull()
+
+## Attrition report
+# Update attrition report
+AttritionReportCoh <- AttritionReportCoh %>%
+  dplyr::union_all(
+    tibble(
+      number_records = cohort_table %>% 
+        filter(excluded_flag == "Included") %>%
+        nrow(),
+      number_subjects = cohort_table %>%
+        filter(excluded_flag == "Included") %>%
+        distinct(patid) %>%
+        tally() %>%
+        pull(),
+      reason = "Exclude patients with less than one month of exposure"
+    )
+  )
+
+### Finalise attrition ----
+AttritionReportCoh <- AttritionReportCoh %>% 
+  dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
+
+# rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
 cohort_table_raw_ids <- as.data.frame(cohort_table %>% dplyr::pull(patid))
 #rio::export(cohort_table_raw_ids, here::here("CPRD Raw Analysis", "Results", "cohort_table_raw_ids.csv"))
