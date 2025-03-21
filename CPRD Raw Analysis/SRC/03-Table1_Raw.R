@@ -163,8 +163,8 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
       site = "Fracture Site", 
       follow_up_reason = "Censoring Event",
       follow_up_time = "Follow up Time",
-      user_status = "User Status",
-      not_users_status = "Non-user Visit Status"
+      user_status = "Heathcare Service User Status",
+      not_users_status = "Heathcare Service Non-user Visit Status"
     ),
     missing = "no"
   ) %>%
