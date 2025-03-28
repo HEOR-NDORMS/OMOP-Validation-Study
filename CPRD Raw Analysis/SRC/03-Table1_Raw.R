@@ -81,7 +81,7 @@ table_one_raw_visit_data <- left_join(
     "fx_date", "days_prior_obs", "days_after_obs", "age_fracture",
     "type", "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
     "after_index", "fracture_after_index", "follow_up_end",
-    "follow_up_reason", "follow_up_time", "exposed_yrs", "exposed_months"
+    "follow_up_reason", "follow_up_time", "exposed_days", "excluded_flag"
   )
 )
 
@@ -94,7 +94,7 @@ table_one_raw_visit_data <- left_join(table_one_raw_visit_data, validation_staff
 # the costs are to be updated
 # file changed to include the specialty source values that have been grouped 
 # into 3: GP, Nurse, Nurse
-provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.3_summarised.xlsx") %>%
+provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.3.xlsx") %>%
   janitor::clean_names() %>%
   # include those with 1 which are clinically relevant
   filter(include == 1) %>%
@@ -102,6 +102,41 @@ provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.3_summarised.xl
 
 # Remove the visits that are not clinically relevant
 specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value)
+
+# Create the user_status variable
+# table_one_raw_visit_data_t <- table_one_raw_visit_data %>%
+#   rename("specialty_source_value" = "description") %>%
+#   mutate(specialty_source_value = case_when(
+#     # is.na(specialty_source_value) ~ "Unknown Specialty",  # Handle missing values
+#     specialty_source_value %in% specialty_source_value_ids ~ specialty_source_value,
+#     TRUE ~ "Not Clinically Relevant"  # Everything else falls into this category
+#   )) %>%
+#   full_join(provider_cost_inputs, by = "specialty_source_value") %>%
+#   mutate(
+#     # Sense check: 2471999720603, 6252925221538
+#     is_clinically_relevant = case_when(
+#     specialty_source_value == "Not Clinically Relevant" ~ 0, 
+#     specialty_source_value != "Not Clinically Relevant" ~ 1
+#     #   specialty_source_value !="Unknown Specialty" ~ 1,
+#     # specialty_source_value == "Unknown Specialty" ~ 2
+#       )) %>%
+#   mutate(specialty_source_value_summarised = case_when(
+#     # is.na(specialty_source_value_summarised) & is.na(consdate) ~ "Unknown Specialty",
+#     is.na(specialty_source_value_summarised) ~ "Not Clinically Relevant",
+#     TRUE ~ specialty_source_value_summarised)) %>%
+#   group_by(patid) %>%
+#   mutate(user_status = case_when(
+#     any(is_clinically_relevant == 1, na.rm = TRUE) ~ "User",
+#     is_clinically_relevant == 0 ~ "Non-User"
+#     # ,
+#     # is_clinically_relevant == 2 ~ "Unknown Visits"
+#     )) %>%
+#   mutate(not_users_status = case_when(
+#     is.na(consdate) ~ "Unknown Visits",
+#     user_status == "Non-User" ~ "Visits with Non-clinically Relevant Staff"
+#   )) %>% 
+#   ungroup() %>%
+#   distinct(patid, user_status, .keep_all = TRUE)
 
 # Create the user_status variable
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
@@ -122,13 +157,13 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
     any(is_clinically_relevant == 1, na.rm = TRUE), 
     "User", "Non-User")) %>%
   mutate(not_users_status = case_when(
-    user_status == "Non-User" & is.na(consdate) ~ "No Visits",
+    user_status == "Non-User" & is.na(consdate) ~ "Unknown Visits",
     user_status == "Non-User" ~ "Visits with Non-clinically Relevant Staff"
   )) %>% 
   ungroup() %>% 
   distinct(patid, user_status, .keep_all = TRUE)
 
-# Summary table ----
+ # Summary table ----
 # # Using gtsummary::tbl_summary, we can summarise the table as follows
 # (gt_summary_table <- table_one_raw_visit_data %>% 
 #    gtsummary::tbl_summary(
