@@ -157,7 +157,7 @@ analyse_visits <- function(visit_data) {
     pull(tot_exposed_yrs)
   
   user_only_summary <- visit_data %>%
-    filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+    # filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
     group_by(subject_id, specialty) %>%
     summarise(total_patient_visits = first(visit_count),
               total_exposed_yrs = first(exposed_yrs),
