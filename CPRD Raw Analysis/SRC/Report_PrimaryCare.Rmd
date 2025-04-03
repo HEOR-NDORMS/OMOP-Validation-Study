@@ -40,122 +40,97 @@ library(grid)
 
 ## Attrition Report {.tabset}
 
-### Raw
-
 ```{r}
+# Import and preprocess the raw attrition report
 attrition_report_raw <- import(here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx")) %>% 
   mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>% 
   mutate(
     subjects_excluded = as.numeric(subjects_excluded),  
     number_subjects = as.numeric(number_subjects),
-    subjects_excluded = as.numeric(subjects_excluded),
     records_excluded = as.numeric(records_excluded)
   ) %>% 
   mutate(
     percent_excluded = ifelse(!is.na(lag(number_subjects)) & lag(number_subjects) != 0, 
                               round((subjects_excluded / lag(number_subjects)) * 100, 2), 
-                              0)  # Use lag(number_subjects) for previous row
+                              0)
   ) %>%
-  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded) %>%
-  mutate(across(c(number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded), 
-                ~ ifelse(is.na(.), NA, .)))
+  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded)
 
-
-
-attrition_report_raw %>%
-  gt() %>%
-  tab_header(
-    title = md("**Attrition table**")
-  ) %>%
-  #opt_all_caps() %>% 
-    tab_options(
-      # table.width = px(600),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman",
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-   fmt_number(
-    columns = c("number_records", "number_subjects", "subjects_excluded",
-                "records_excluded"), 
-    sep_mark = ",",  # Adds thousand separator
-    decimals = 0  # No decimals for integer counts
-  ) %>%  
-  fmt_number(
-    columns = "percent_excluded", 
-    sep_mark = ",",  
-    decimals = 2  # Keep two decimal places for percentages
-  ) %>% 
-  sub_missing(
-    columns = everything(), 
-    missing_text = ""  # Replace NA with an empty string
-  ) %>% 
-  cols_label(
-    reason = "Reason for exclusion",
-    number_records = "Number of records",
-    number_subjects = "Number of subjects",
-    subjects_excluded = "N subjects excluded",
-    percent_excluded = "Perc subjects excluded (%)",
-    records_excluded = "N records excluded"
-  )
-                 
-  
-```
-
-### OMOP
-
-```{r}
+# Import and preprocess the OMOP attrition report
 attrition_report_omop <- import(here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx")) %>% 
   mutate(
     subjects_excluded = as.numeric(subjects_excluded),  
     number_subjects = as.numeric(number_subjects),
-    subjects_excluded = as.numeric(subjects_excluded),
     records_excluded = as.numeric(records_excluded)
   ) %>% 
   mutate(
     percent_excluded = ifelse(!is.na(lag(number_subjects)) & lag(number_subjects) != 0, 
                               round((subjects_excluded / lag(number_subjects)) * 100, 2), 
-                              0)  # Use lag(number_subjects) for previous row
+                              0)
   ) %>%
-  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded) %>%
-  mutate(across(c(number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded), 
-                ~ ifelse(is.na(.), NA, .)))
+  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded)
 
+# Merge datasets with suffixes
+merged_attrition <- full_join(attrition_report_raw, attrition_report_omop, by = "reason", suffix = c("_raw", "_omop"))
 
-
-attrition_report_omop %>%
+# Create the gt table for merged attrition data
+merged_attrition %>%
   gt() %>%
   tab_header(
-    title = md("**Attrition table**")
+    title = md("**Attrition Table**")
   ) %>%
   tab_options(
     heading.align = "left",
     table.font.size = px(14)
-  ) %>%  
-  opt_stylize(style = 3) |> 
+  ) %>%
+  opt_stylize(style = 3) %>% 
+
+  # Format number columns with thousands separator
   fmt_number(
-    columns = c("number_records", "number_subjects", "subjects_excluded",
-                "records_excluded"), 
-    sep_mark = ",",  # Adds thousand separator
-    decimals = 0  # No decimals for integer counts
-  ) %>%  
-  fmt_number(
-    columns = "percent_excluded", 
+    columns = c(contains("number_records"), contains("number_subjects"), 
+                contains("subjects_excluded"), contains("records_excluded")), 
     sep_mark = ",",  
-    decimals = 2  # Keep two decimal places for percentages
-  ) %>% 
+    decimals = 0  
+  ) %>%
+  fmt_number(
+    columns = contains("percent_excluded"),  
+    sep_mark = ",",  
+    decimals = 2  
+  ) %>%
+  
+  # Replace missing values with an empty string
   sub_missing(
     columns = everything(), 
-    missing_text = ""  # Replace NA with an empty string
+    missing_text = ""  
   ) %>% 
+  
+  # Define column labels
   cols_label(
     reason = "Reason for exclusion",
-    number_records = "Number of records",
-    number_subjects = "Number of subjects",
-    subjects_excluded = "N subjects excluded",
-    percent_excluded = "Perc subjects excluded (%)",
-    records_excluded = "N records excluded"
+    number_records_raw = "Number of Records",
+    number_subjects_raw = "Number of Subjects",
+    subjects_excluded_raw = "N Subjects Excluded",
+    percent_excluded_raw = "Perc Subjects Excluded (%)",
+    records_excluded_raw = "N Records Excluded",
+    number_records_omop = "Number of Records",
+    number_subjects_omop = "Number of Subjects",
+    subjects_excluded_omop = "N Subjects Excluded",
+    percent_excluded_omop = "Perc Subjects Excluded (%)",
+    records_excluded_omop = "N Records Excluded"
+  ) %>%
+  
+  # Create spanner headers to group raw and OMOP columns
+  tab_spanner(
+    label = "CPRD Raw Analysis",
+    columns = c(number_records_raw, number_subjects_raw, 
+                subjects_excluded_raw, percent_excluded_raw, 
+                records_excluded_raw)
+  ) %>%
+  tab_spanner(
+    label = "OMOP Analysis",
+    columns = c(number_records_omop, number_subjects_omop, 
+                subjects_excluded_omop, percent_excluded_omop, 
+                records_excluded_omop)
   )
 
 ```
@@ -163,6 +138,62 @@ attrition_report_omop %>%
 # Results 
 
 ## Table 1 {.tabset}
+
+### Merged
+
+```{r}
+# Import data
+table1_data_raw <- rio::import(here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
+
+table1_data_omop <- rio::import(here("OMOP Analysis", "Results", "Table1_OMOP.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
+
+# Define subcategories for indentation
+subcategories <- c("Hip", "Vertebra", "NHNV", 
+                   "Cancer", "Cancer, Fracture ensuing incident (index) fracture",
+                   "Death", "End of data collection period",
+                   "End of data collection period, Cancer",
+                   "End of data collection period, Fracture ensuing incident (index) fracture",
+                   "Fracture ensuing incident (index) fracture",
+                   "Max of 730 days from index date",
+                   "Max of 730 days from index date, Cancer",
+                   "Max of 730 days from index date, End of data collection period",
+                   "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
+                   "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
+                   "Paget’s disease of the bone, or other metabolic bone diseases", 
+                   "Cancer, Paget’s disease of the bone, or other metabolic bone diseases", 
+                   "Paget’s disease of the bone, or other metabolic bone diseases, Fracture ensuing incident (index) fracture", 
+                   "Non-User", "User",
+                   "No Visits", "Visits with Non-clinically Relevant Staff")
+
+# Indent subcategories
+table1_data_raw <- table1_data_raw %>%
+  mutate(Variable = ifelse(Variable %in% subcategories, paste0("   ", Variable), Variable))
+
+table1_data_omop <- table1_data_omop %>%
+  mutate(Variable = ifelse(Variable %in% subcategories, paste0("   ", Variable), Variable))
+
+# Merge datasets
+merged_data <- full_join(table1_data_raw, table1_data_omop, by = "Variable", suffix = c("_raw", "_omop"))
+
+# Create gt table with a footnote
+merged_data %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Patient Characteristics**")
+  ) %>%
+  opt_all_caps() %>% 
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  fmt_markdown(columns = "Variable") %>%  # Apply markdown formatting for indentation
+  opt_stylize(style = 3) %>%
+  tab_footnote(
+    footnote = "Median (Q1, Q3); n (%)",
+    locations = cells_title(groups = "title"))
+```
 
 ### Raw
 
@@ -324,12 +355,12 @@ overall_all_visits_only_rp_raw %>%
 
 
 ```{r}
-yr1_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "yr1_all_visits_only")
+all_summary_visits_per_yr_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary_visits_per_yr")
 
-yr1_all_visits_only_rp_raw %>% 
+all_summary_visits_per_yr_rp_raw %>% 
   gt() %>%
   tab_header(
-    title = md("**All Patients - Visits per patient per year (Year 1)**"),
+    title = md("**All Patients - Visits per patient per year (Years 1&2)**"),
     subtitle = md("*Heathcare Service Users and Non-users*")
   ) %>%
   opt_all_caps() %>% 
@@ -342,44 +373,16 @@ yr1_all_visits_only_rp_raw %>%
     ) |> 
   opt_stylize(style = 3) %>% 
   cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
+    mean_visit_count = "Mean",
+    min_visits = "Minimum",
+    max_visits = "Maximum",
+    sd_visits = "SD",
+    median_visits = "Median",
+    q1_visits = "Lower Quartile",
+    q3_visits = "Upper Quartile"
   )
 ```
 
-```{r}
-yr2_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "yr2_all_visits_only")
-
-yr2_all_visits_only_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients - Visits per patient per year (Year 2)**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
-  )
-```
 
 ```{r}
 overall_user_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "overall_user_visits_only")
@@ -412,12 +415,12 @@ overall_user_visits_only_rp_raw %>%
 
 
 ```{r}
-yr1_user_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "yr1_user_visits_only")
+user_summary_visits_per_yr_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_summary_visits_per_yr")
 
-yr1_user_visits_only_rp_raw %>% 
+user_summary_visits_per_yr_rp_raw %>% 
   gt() %>%
   tab_header(
-    title = md("**Healthcare Service Users - Visits per patient per year (Year 1)**"),
+    title = md("**Healthcare Service Users - Visits per patient per year (Years 1&2)**"),
     subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
   ) %>%
   opt_all_caps() %>% 
@@ -430,44 +433,16 @@ yr1_user_visits_only_rp_raw %>%
     ) |> 
   opt_stylize(style = 3) %>% 
   cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
+    mean_visit_count = "Mean",
+    min_visits = "Minimum",
+    max_visits = "Maximum",
+    sd_visits = "SD",
+    median_visits = "Median",
+    q1_visits = "Lower Quartile",
+    q3_visits = "Upper Quartile"
   )
 ```
 
-```{r}
-yr2_user_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "yr2_user_visits_only")
-
-yr2_user_visits_only_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Visits per patient per year (Year 2)**"),
-    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
-  )
-```
 
 ### HCRU Figures
 
@@ -478,14 +453,22 @@ Plots_Total_Visits_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", 
 grid.raster(Plots_Total_Visits_Raw)
 ```
 
-Figure 2: Mean number of primary care consultations by provider specialty, users-only.
+Figure 2: Density plot of sum of visit costs and Visit cost per year
+
+```{r fig.height=6, fig.width=6}
+Density_Plot_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Density_Plot.PNG"))
+grid.raster(Density_Plot_Raw)
+```
+
+
+Figure 3: Mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
 Mean_visits_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
 grid.raster(Mean_visits_per_specialty_unweighted_raw)
 ```
 
-Figure 3: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
+Figure 4: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
 Mean_visits_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
@@ -733,9 +716,9 @@ overall_all_only_costs_rp_raw %>%
 
 
 ```{r}
-yr1_all_only_costs_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "yr1_all_only_costs")
+all_summary_costs_per_yr_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_summary_visit_cost_per_yr")
 
-yr1_all_only_costs_rp_raw %>% 
+all_summary_costs_per_yr_rp_raw %>% 
   gt() %>%
   tab_header(
     title = md("**All Patients Costs Summary Statistics (Year 1)**"),
@@ -751,44 +734,16 @@ yr1_all_only_costs_rp_raw %>%
     ) |> 
   opt_stylize(style = 3) %>% 
   cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+    mean_cost = "Mean Visit Costs per Year",
+    min_cost = "Minimum Visit Costs per Year",
+    max_cost = "Maximum Visit Costs per Year",
+    sd_cost = "SD Visit Costs per Year",
+    median_cost = "Median Visit Costs per Year",
+    q1_cost = "Lower Quartile Visit Costs per Year",
+    q3_cost = "Upper Quartile Visit Costs per Year"
   )
 ```
 
-```{r}
-yr2_all_only_costs_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "yr1_all_only_costs")
-
-yr2_all_only_costs_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients Costs Summary Statistics (Year 2)**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
 
 ```{r}
 overall_user_only_costs_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "overall_user_only_costs")
@@ -820,63 +775,6 @@ overall_user_only_costs_rp_raw %>%
 ```
 
 
-```{r}
-yr1_user_only_costs_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "yr1_user_only_costs")
-
-yr1_user_only_costs_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Cost Summary Statistics (Year 1)**"),
-    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-   mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-```{r}
-yr2_user_only_costs_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "yr2_user_only_costs")
-
-yr2_user_only_costs_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Cost Summary Statistics (Year 2)**"),
-    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
 
 
 ### Cost Figures
