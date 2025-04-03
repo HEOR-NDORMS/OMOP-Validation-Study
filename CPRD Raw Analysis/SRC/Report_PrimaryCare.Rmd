@@ -362,14 +362,21 @@ Bar_Graph_number_of_visits_per_pt_Raw <- readPNG(here("CPRD Raw Analysis", "Resu
 grid.raster(Bar_Graph_number_of_visits_per_pt_Raw)
 ```
 
-Figure 4: Mean number of primary care consultations by provider specialty, users-only.
+Figure 4: Exposure Time
+
+```{r fig.height=6, fig.width=6}
+Exposure_Time_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Exposure_Time.PNG"))
+grid.raster(Exposure_Time_Raw)
+```
+
+Figure 5: Mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
 Mean_visits_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
 grid.raster(Mean_visits_per_specialty_unweighted_raw)
 ```
 
-Figure 4: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
+Figure 6: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
 Mean_visits_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
