@@ -17,6 +17,7 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
   specialty_reduced, follow_up_end
 )
 
+
 ### PLOT visits per month/specialty   -------
 
 # Filter for relevant specialties and compute months since index
@@ -194,6 +195,84 @@ ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_spec
        bg = "white"
        )
 
+### PLOT of number of visits and visits per year ----
+
+visit_data_MIN <- visit_data %>% select(
+  patid, index_date, consdate, user_status,visit_count,visits_per_year,
+  specialty, follow_up_end, exposed_yrs, visit_cost
+)
+
+sum_of_visits <- visit_data_MIN %>% 
+  group_by(patid, specialty) %>%
+  summarise(total_patient_visits = first(visit_count),
+            total_exposed_yrs = first(exposed_yrs),
+            visit_cost = first(visit_cost),
+            .groups = "drop") %>% 
+  group_by(patid) %>% 
+  summarise(sum_visits = sum(total_patient_visits),
+            total_exposed_yrs = first(total_exposed_yrs),
+            visits_per_year = sum_visits / total_exposed_yrs,
+            sum_visit_cost = sum(visit_cost),
+            visit_cost_per_year = sum_visit_cost / total_exposed_yrs,
+            .groups = "drop")
+
+(plot4 <- sum_of_visits %>% 
+  ggplot() +
+  geom_histogram(aes(x = sum_visit_cost, y = ..density.., 
+                     fill = "Sum Visit Cost"), alpha=0.5, bins=30) +
+  geom_histogram(aes(x = visit_cost_per_year, y = ..density.., 
+                     fill = "Visit Cost Per Year"), alpha=0.5, bins=30) +
+  geom_density(aes(x = sum_visit_cost, y = ..density.., 
+                   color = "Sum Visit Cost"), alpha=0.5) +
+  geom_density(aes(x = visit_cost_per_year, y = ..density.., 
+                   color="Visit Cost Per Year"), alpha=0.5) +
+  labs(x = "Number of Visits", y = "Density",
+       title = "") +
+  scale_fill_manual(name = "", values = c("Sum Visit Cost" = "#CD00CD",
+                                          "Visit Cost Per Year" = "#2A52A5")) +
+  scale_color_manual(name = "", values = c("Sum Visit Cost" = "#CD00CD", 
+                                           "Visit Cost Per Year" = "#2A52A5")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+    axis.title = element_text(hjust = 0.5, size = 11),
+    panel.spacing = unit(0.1, "lines"),
+    legend.position = "right"
+  ))
+
+# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Density_Plot.PNG"),
+#        plot = plot4, 
+#        width = 8, 
+#        height = 6, 
+#        bg = "white"
+# )
+
+(plot5 <- sum_of_visits %>% 
+  ggplot() +
+  geom_histogram(aes(x = sum_visit_cost, y = ..count.., 
+                     fill = "Sum Visit Cost"),
+                 alpha=0.5, bins=100) +
+  geom_histogram(aes(x = visit_cost_per_year, y = ..count..,
+                     fill = "Visit Cost Per Year"), alpha=0.5, bins=100) +
+  labs(x = "Number of Visits", y = "Count",
+       title = "") +
+  scale_fill_manual(name = "", values = c("Sum Visit Cost" = "#CD00CD", 
+                                          "Visit Cost Per Year" = "#2A52A5")) +
+  scale_color_manual(name = "", values = c("Sum Visit Cost" = "#CD00CD", 
+                                           "Visit Cost Per Year" = "#2A52A5")) +
+    theme_minimal() +
+    theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+    axis.title = element_text(hjust = 0.5, size = 11),
+    panel.spacing = unit(0.1, "lines")
+  ))
+
+# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Histogram_visits.PNG"),
+#        plot = plot3, 
+#        width = 8, 
+#        height = 6, 
+#        bg = "white"
+# )
 
 ## Cost ----
 
