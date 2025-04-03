@@ -226,20 +226,22 @@ cohort_table <- addInFollowUpEndGL(cohort_table)
 cohort_table <- cohort_table %>% 
   dplyr:: filter(type=="index")
 
-# Remove patients that have less one month contribution
+# Remove patients that have less one month contribution ----
 cohort_table <- cohort_table %>% 
-  mutate(exposed_yrs = as.numeric(follow_up_end - index_date) / 360.25,
-         exposed_months = exposed_yrs * 12,  # Convert years to months
-         excluded_flag = if_else(exposed_months < 1, "Excluded", "Included")) %>% 
-  filter(excluded_flag == "Included")
+  mutate(exposed_days = as.numeric(difftime(follow_up_end, index_date, units = "days"))) %>% 
+  mutate(
+    excluded_flag = if_else(exposed_days < 30.74, "Exclude", "Include")
+    ) %>% 
+  filter(excluded_flag == "Include")
 
+# Sense Check
 (summary_mnth_exclusion <- cohort_table %>% 
   group_by(excluded_flag) %>% 
   summarise(count = n()))
 
 # Count patients to be excluded
 excluded_patients <- cohort_table %>%
-  filter(excluded_flag == "Excluded") %>%
+  filter(excluded_flag == "Exclude") %>%
   distinct(patid) %>%
   tally() %>%
   pull()
@@ -250,16 +252,17 @@ AttritionReportCoh <- AttritionReportCoh %>%
   dplyr::union_all(
     tibble(
       number_records = cohort_table %>% 
-        filter(excluded_flag == "Included") %>%
+        filter(excluded_flag == "Include") %>%
         nrow(),
       number_subjects = cohort_table %>%
-        filter(excluded_flag == "Included") %>%
+        filter(excluded_flag == "Include") %>%
         distinct(patid) %>%
         tally() %>%
         pull(),
       reason = "Exclude patients with less than one month of exposure"
     )
   )
+
 
 ### Finalise attrition ----
 AttritionReportCoh <- AttritionReportCoh %>% 
