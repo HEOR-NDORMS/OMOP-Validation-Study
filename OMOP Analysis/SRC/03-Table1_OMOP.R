@@ -71,7 +71,8 @@ joined_visit_provider_tables <- cdm$visit_detail %>%
 # cdm[["visit_data"]] <- NULL
 cdm[["visit_data"]] <- joined_visit_provider_tables %>%
   dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include == "1"), by = "specialty_source_value", copy=TRUE) %>% # Filter for only meaningful specialties
-  dplyr::select(person_id, provider_id, specialty_source_value, specialty_source_value_summarised, visit_detail_start_date, visit_detail_id, unit_cost) %>%
+  dplyr::select(person_id, provider_id, specialty_source_value, specialty_source_value_summarised, 
+                visit_detail_start_date, visit_detail_id, unit_cost, visit_detail_concept_id) %>%
   dplyr::filter(visit_detail_start_date >= study_start_date & # include only visits in the study period
                   visit_detail_start_date <= study_end_date) %>%
   # Filter for only primary care visits
@@ -96,7 +97,7 @@ specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value
 ### Filter the data with these clinically relevant
 # This would make it easier to identify users/non-users as well. Bc technically, if a patient had only visits before index but not during the exposure time, that is a non-user. 
 # So it is simpler if you prepare the visit data first, with visits in the exposure time and then join back to the list of patients to identify users as those who have at last one visit during that time (and with a relevant staff) and non-users are all the others (i.e., zero visits or only non-relevant visits).
-table_one_omop_visit_data <- table_one_omop %>% 
+table_one_omop_visit_data.1 <- table_one_omop %>% 
   left_join(table_one_omop_visit_data, by = c("subject_id", "cohort_start_date", 
                                "cohort_end_date", "condition_concept_id",
                                "condition_start_date", "fracture_site", 
@@ -112,7 +113,7 @@ table_one_omop_visit_data <- table_one_omop %>%
                                "gender_source_value", "gender_source_concept_id",
                                "race_source_value", "race_source_concept_id", 
                                "ethnicity_source_value", "ethnicity_source_concept_id", 
-                               "age_fracture", "exposed_yrs", "exposed_months"
+                               "age_fracture", "exposed_yrs", "exposed_months", "excluded_flag"
   ), copy = T) %>% 
   mutate(
     specialty = case_when(
@@ -129,6 +130,9 @@ table_one_omop_visit_data <- table_one_omop %>%
     "Not Clinically Relevant",
     specialty_reduced)) %>%
   group_by(subject_id) %>%
+  # User is defined as patients who had >=1 visit(s) to a clinically relevant specialty
+  # Non-User is defined as (1) Not Clinically relevant visit 
+  # (2) No visits(i.e., missing visit date) (3) unknown visit (missing specialty)
   mutate(user_status = if_else(
     any(is_clinically_relevant == 1 & in_exposure_time == 1, na.rm = TRUE),
     "User", "Non-User"
@@ -140,6 +144,27 @@ table_one_omop_visit_data <- table_one_omop %>%
   ungroup() %>% 
   distinct(subject_id, user_status, .keep_all = TRUE)
 
+mutate(specialty_source_value = case_when(
+  specialty_source_value %in% specialty_source_value_ids ~ specialty_source_value,
+  TRUE ~ "Not Clinically Relevant"
+)) %>%
+  left_join(provider_cost_inputs, by = "specialty_source_value") %>%
+  mutate(is_clinically_relevant = if_else(
+    specialty_source_value == "Not Clinically Relevant", 0, 1)) %>%
+  mutate(specialty_source_value_summarised = ifelse(
+    is.na(specialty_source_value_summarised), 
+    "Not Clinically Relevant",
+    specialty_source_value_summarised)) %>%
+  group_by(patid) %>%
+  mutate(user_status = if_else(
+    any(is_clinically_relevant == 1, na.rm = TRUE), 
+    "User", "Non-User")) %>%
+  mutate(not_users_status = case_when(
+    user_status == "Non-User" & is.na(consdate) ~ "Unknown Visits",
+    user_status == "Non-User" ~ "Visits with Non-clinically Relevant Staff"
+  )) %>% 
+  ungroup() %>% 
+  distinct(patid, user_status, .keep_all = TRUE)
 
 # Summary table ----
 
