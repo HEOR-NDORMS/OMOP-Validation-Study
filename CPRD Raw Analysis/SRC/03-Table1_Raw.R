@@ -153,6 +153,9 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
     "Not Clinically Relevant",
     specialty_source_value_summarised)) %>%
   group_by(patid) %>%
+  # User is defined as patients who had >=1 visit(s) to a clinically relevant specialty
+  # Non-User is defined as (1) Not Clinically relevant visit 
+  # (2) No visits(i.e., missing visit date) (3) unknown visit (missing specialty)
   mutate(user_status = if_else(
     any(is_clinically_relevant == 1, na.rm = TRUE), 
     "User", "Non-User")) %>%
@@ -187,7 +190,8 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
 
 # Reorder factor by frequency
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
-  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason))  
+  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason)) %>% 
+  mutate(follow_up_time = as.numeric(follow_up_time))
 
 (gt_summary_table <- table_one_raw_visit_data %>% 
   gtsummary::tbl_summary(
