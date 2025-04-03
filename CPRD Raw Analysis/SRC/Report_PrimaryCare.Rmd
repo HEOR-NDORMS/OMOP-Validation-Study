@@ -137,9 +137,7 @@ merged_attrition %>%
 
 # Results 
 
-## Table 1 {.tabset}
-
-### Merged
+## Table 1
 
 ```{r}
 # Import data
@@ -150,6 +148,9 @@ table1_data_omop <- rio::import(here("OMOP Analysis", "Results", "Table1_OMOP.xl
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 # Define subcategories for indentation
+parent_vars <- c("Fracture Site", "Censoring Event",
+                 "Heathcare Service User Status", "Heathcare Service Non-user Visit Status") 
+
 subcategories <- c("Hip", "Vertebra", "NHNV", 
                    "Cancer", "Cancer, Fracture ensuing incident (index) fracture",
                    "Death", "End of data collection period",
@@ -164,20 +165,18 @@ subcategories <- c("Hip", "Vertebra", "NHNV",
                    "Paget’s disease of the bone, or other metabolic bone diseases", 
                    "Cancer, Paget’s disease of the bone, or other metabolic bone diseases", 
                    "Paget’s disease of the bone, or other metabolic bone diseases, Fracture ensuing incident (index) fracture", 
-                   "Non-User", "User",
+                   "Non-User", "User", "Unknown Visits",
                    "No Visits", "Visits with Non-clinically Relevant Staff")
 
-# Indent subcategories
-table1_data_raw <- table1_data_raw %>%
-  mutate(Variable = ifelse(Variable %in% subcategories, paste0("   ", Variable), Variable))
-
-table1_data_omop <- table1_data_omop %>%
-  mutate(Variable = ifelse(Variable %in% subcategories, paste0("   ", Variable), Variable))
 
 # Merge datasets
-merged_data <- full_join(table1_data_raw, table1_data_omop, by = "Variable", suffix = c("_raw", "_omop"))
+merged_data <- full_join(table1_data_raw, table1_data_omop, by = "Variable", suffix = c("_raw", "_omop")) %>% 
+   mutate(Variable = case_when(
+    Variable %in% subcategories ~ paste0("&nbsp;&nbsp;&nbsp;", Variable), # Indent subcategories using HTML space
+    TRUE ~ Variable
+  )) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
-# Create gt table with a footnote
 merged_data %>% 
   gt() %>%
   tab_header(
@@ -190,135 +189,31 @@ merged_data %>%
   ) %>%
   fmt_markdown(columns = "Variable") %>%  # Apply markdown formatting for indentation
   opt_stylize(style = 3) %>%
+
+  # Add spanner headers for CPRD Raw and OMOP Analysis
+  tab_spanner(
+    label = "CPRD Raw Analysis",
+    columns = c("N = 24,740")
+  ) %>%
+  tab_spanner(
+    label = "OMOP Analysis",
+    columns = c("N = 23,957")
+  ) %>%
+
+
+  # Add footnotes
   tab_footnote(
     footnote = "Median (Q1, Q3); n (%)",
-    locations = cells_title(groups = "title"))
-```
-
-### Raw
-
-```{r}
-# Import data
-# table1_data <- read_html(here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html")) %>% 
-#   html_node("table") %>%
-#   html_table()
-
-# Import data
-table1_data_raw <- rio::import(here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx")) %>% 
-  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
-
-# Define parent variables and subcategories
-parent_vars <- c("Fracture Site", "Censoring Event",
-                 "Heathcare Service User Status", "Heathcare Service Non-user Visit Status")  
-
-subcategories <- c("Hip", "Vertebra", "NHNV", 
-                   "Cancer", "Cancer, Fracture ensuing incident (index) fracture",
-                   "Death", "End of data collection period",
-                   "End of data collection period, Cancer",
-                   "End of data collection period, Fracture ensuing incident (index) fracture",
-                   "Fracture ensuing incident (index) fracture",
-                   "Max of 730 days from index date",
-                   "Max of 730 days from index date, Cancer",
-                   "Max of 730 days from index date, End of data collection period",
-                   "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
-                   "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
-                   "Paget’s disease of the bone, or other metabolic bone diseases",
-                   "Non-User", "User",
-                   "No Visits", "Visits with Non-clinically Relevant Staff")
-
-# Add indentation dynamically
-table1_data_raw <- table1_data_raw %>%
-  mutate(Variable = case_when(
-    Variable %in% subcategories ~ paste0("&nbsp;&nbsp;&nbsp;", Variable), # Indent subcategories using HTML space
-    TRUE ~ Variable
-  ))
-
-# Create gt table with a footnote
-table1_data_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Patient Characteristics**")
-  ) %>%
-  opt_all_caps() %>% 
-  tab_options(
-    heading.align = "left",
-    table.font.size = px(14)
-  ) %>%
-  fmt_markdown(columns = "Variable") %>%  # Apply markdown formatting for indentation
-  opt_stylize(style = 3) %>%
+    locations = cells_title(groups = "title")
+  ) %>% 
   tab_footnote(
-    footnote = "Median (Q1, Q3); n (%)",
-    locations = cells_title(groups = "title")) %>% 
-  tab_footnote(
-    footnote = md("*User defined as subjects with >=1 visit with a clinically relevant healthcare provider and Non-User as Subjects with no visits, or visits with non-clinically relevant healthcare provider*"),
-    locations = cells_body(columns = Variable,
-                           rows = c(21))
+    footnote = md("*User defined as subjects with >=1 visit with a clinically relevant healthcare provider and Non-User as Subjects with no visits, or visits with non-clinically relevant healthcare provider, or unknown specialty*"),
+    locations = cells_body(columns = Variable, rows = c(21))
   )
 
-```
-
-
-### OMOP
-
-```{r}
-# Import data
-# table1_data <- read_html(here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html")) %>% 
-#   html_node("table") %>%
-#   html_table()
-
-# Import data
-table1_data_omop <- rio::import(here("OMOP Analysis", "Results", "Table1_OMOP.xlsx")) %>% 
-  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
-
-# Define parent variables and subcategories
-parent_vars <- c("Fracture Site", "Censoring Event",
-                 "Heathcare Service User Status", "Heathcare Service Non-user Visit Status")  
-
-subcategories <- c("Hip", "Vertebra", "NHNV", 
-                   "Cancer", "Cancer, Fracture ensuing incident (index) fracture",
-                   "Death", "End of data collection period",
-                   "End of data collection period, Cancer",
-                   "End of data collection period, Fracture ensuing incident (index) fracture",
-                   "Fracture ensuing incident (index) fracture",
-                   "Max of 730 days from index date",
-                   "Max of 730 days from index date, Cancer",
-                   "Max of 730 days from index date, End of data collection period",
-                   "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
-                   "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
-                   "Paget’s disease of the bone, or other metabolic bone diseases", "Cancer, Paget’s disease of the bone, or other metabolic bone diseases", "Paget’s disease of the bone, or other metabolic bone diseases, Fracture ensuing incident (index) fracture", 
-                   "Non-User", "User",
-                   "No Visits", "Visits with Non-clinically Relevant Staff")
-
-# Add indentation dynamically
-table1_data_omop <- table1_data_omop %>%
-  mutate(Variable = case_when(
-    Variable %in% subcategories ~ paste0("&nbsp;&nbsp;&nbsp;", Variable), # Indent subcategories using HTML space
-    TRUE ~ Variable
-  ))
-
-# Create gt table with a footnote
-table1_data_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Patient Characteristics**")
-  ) %>%
-  opt_all_caps() %>% 
-  tab_options(
-    heading.align = "left",
-    table.font.size = px(14)
-  ) %>%
-  fmt_markdown(columns = "Variable") %>%  # Apply markdown formatting for indentation
-  opt_stylize(style = 3) %>%
-  tab_footnote(
-    footnote = "Median (Q1, Q3); n (%)",
-    locations = cells_title(groups = "title")) %>% 
-  tab_footnote(
-    footnote = md("*User defined as subjects with >=1 visit with a clinically relevant healthcare provider and Non-User as Subjects with no visits, or visits with non-clinically relevant healthcare provider*"),
-    locations = cells_body(columns = Variable,
-                           rows = c(23))
-  )
 
 ```
+
 
 ## Primary care - Raw {.tabset}
 
@@ -460,8 +355,14 @@ Density_Plot_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Densi
 grid.raster(Density_Plot_Raw)
 ```
 
+Figure 3: Number of visits
 
-Figure 3: Mean number of primary care consultations by provider specialty, users-only.
+```{r fig.height=6, fig.width=6}
+Bar_Graph_number_of_visits_per_pt_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"))
+grid.raster(Bar_Graph_number_of_visits_per_pt_Raw)
+```
+
+Figure 4: Mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
 Mean_visits_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
