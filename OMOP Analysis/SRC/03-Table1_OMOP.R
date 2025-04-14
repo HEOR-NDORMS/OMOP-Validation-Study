@@ -97,7 +97,7 @@ specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value
 ### Filter the data with these clinically relevant
 # This would make it easier to identify users/non-users as well. Bc technically, if a patient had only visits before index but not during the exposure time, that is a non-user. 
 # So it is simpler if you prepare the visit data first, with visits in the exposure time and then join back to the list of patients to identify users as those who have at last one visit during that time (and with a relevant staff) and non-users are all the others (i.e., zero visits or only non-relevant visits).
-table_one_omop_visit_data.1 <- table_one_omop %>% 
+table_one_omop_visit_data <- table_one_omop %>% 
   left_join(table_one_omop_visit_data, by = c("subject_id", "cohort_start_date", 
                                "cohort_end_date", "condition_concept_id",
                                "condition_start_date", "fracture_site", 
@@ -144,33 +144,13 @@ table_one_omop_visit_data.1 <- table_one_omop %>%
   ungroup() %>% 
   distinct(subject_id, user_status, .keep_all = TRUE)
 
-mutate(specialty_source_value = case_when(
-  specialty_source_value %in% specialty_source_value_ids ~ specialty_source_value,
-  TRUE ~ "Not Clinically Relevant"
-)) %>%
-  left_join(provider_cost_inputs, by = "specialty_source_value") %>%
-  mutate(is_clinically_relevant = if_else(
-    specialty_source_value == "Not Clinically Relevant", 0, 1)) %>%
-  mutate(specialty_source_value_summarised = ifelse(
-    is.na(specialty_source_value_summarised), 
-    "Not Clinically Relevant",
-    specialty_source_value_summarised)) %>%
-  group_by(patid) %>%
-  mutate(user_status = if_else(
-    any(is_clinically_relevant == 1, na.rm = TRUE), 
-    "User", "Non-User")) %>%
-  mutate(not_users_status = case_when(
-    user_status == "Non-User" & is.na(consdate) ~ "Unknown Visits",
-    user_status == "Non-User" ~ "Visits with Non-clinically Relevant Staff"
-  )) %>% 
-  ungroup() %>% 
-  distinct(patid, user_status, .keep_all = TRUE)
 
 # Summary table ----
 
 # Reorder factor by frequency
 table_one_omop_visit_data <- table_one_omop_visit_data %>%
-  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason))  
+  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason)) %>% 
+  mutate(follow_up_time = as.numeric(follow_up_time))
 
 # Using gtsummary::tbl_summary, we can summarise the table as follows
 (gt_summary_table <- table_one_omop_visit_data %>% 
@@ -182,7 +162,7 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
      label = list(
        age_fracture = "Age at Fracture Occurrence",
        fracture_site = "Fracture Site", 
-       follow_up_reason = "Censoring event",
+       follow_up_reason = "Censoring Event",
        follow_up_time = "Follow up time",
        user_status = "Heathcare Service User Status",
        not_users_status = "Heathcare Service Non-user Visit Status"
