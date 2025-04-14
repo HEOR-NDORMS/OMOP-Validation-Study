@@ -28,12 +28,13 @@ joined_visit_provider_tables <- cdm$visit_detail %>%
   dplyr::inner_join(cdm$provider) 
 
 ## Sub-setting the visit data ----
-# cdm[["visit_data"]] <- NULL, to remove the visit_data table from the cdm object
+# To remove the visit_data table from the cdm object
+cdm[["visit_data"]] <- NULL
 cdm[["visit_data"]] <- joined_visit_provider_tables %>%
   dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include == "1"),
                    by = "specialty_source_value", copy=TRUE) %>% # Filter for only meaningful specialties
-  dplyr::select(person_id, provider_id, specialty_source_value, specialty_source_value_summarised, 
-                visit_detail_start_date, visit_detail_id, unit_cost, visit_detail_concept_id) %>%
+  # dplyr::select(person_id, provider_id, specialty_source_value, specialty_source_value_summarised, 
+  #               visit_detail_start_date, visit_detail_id, unit_cost, visit_detail_concept_id) %>%
   dplyr::filter(visit_detail_start_date >= study_start_date & # include only visits in the study period
                   visit_detail_start_date <= study_end_date) %>%
   # Filter for only primary care visits
