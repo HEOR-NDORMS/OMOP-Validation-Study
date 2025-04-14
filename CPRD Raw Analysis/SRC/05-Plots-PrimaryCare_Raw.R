@@ -247,33 +247,76 @@ sum_of_visits <- visit_data_MIN %>%
 #        bg = "white"
 # )
 
-(plot5 <- sum_of_visits %>% 
+(plot6 <- sum_of_visits %>% 
   ggplot() +
-  geom_histogram(aes(x = sum_visit_cost, y = ..count.., 
-                     fill = "Sum Visit Cost"),
-                 alpha=0.5, bins=100) +
-  geom_histogram(aes(x = visit_cost_per_year, y = ..count..,
-                     fill = "Visit Cost Per Year"), alpha=0.5, bins=100) +
+  geom_histogram(aes(x = sum_visits, y = ..count..), 
+                     fill = "#CD2626",
+                 alpha=0.8, bins=100) +
   labs(x = "Number of Visits", y = "Count",
        title = "") +
-  scale_fill_manual(name = "", values = c("Sum Visit Cost" = "#CD00CD", 
-                                          "Visit Cost Per Year" = "#2A52A5")) +
-  scale_color_manual(name = "", values = c("Sum Visit Cost" = "#CD00CD", 
-                                           "Visit Cost Per Year" = "#2A52A5")) +
-    theme_minimal() +
+  theme_minimal() +
     theme(
     plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
     axis.title = element_text(hjust = 0.5, size = 11),
     panel.spacing = unit(0.1, "lines")
   ))
 
-# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Histogram_visits.PNG"),
-#        plot = plot3, 
-#        width = 8, 
-#        height = 6, 
-#        bg = "white"
-# )
+ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Histogram_number_of_visits.PNG"),
+       plot = plot6,
+       width = 8,
+       height = 6,
+       bg = "white"
+)
 
+pt_count_visits <- visit_data_MIN %>%
+  group_by(patid, specialty) %>%
+  summarise(total_patient_visits = first(visit_count), .groups = 'drop') %>%
+  group_by(patid) %>% 
+  summarise(total_patient_visits = sum(total_patient_visits), .groups = 'drop') %>% 
+  dplyr::group_by(total_patient_visits) %>%
+  dplyr::summarize(Subject_Count = n(), .groups = 'drop') %>%
+  dplyr::mutate(Percent_Subjects = Subject_Count / sum(Subject_Count) * 100)
+
+# plotting - target matched ----
+(plot7 <- pt_count_visits %>% 
+   ggplot(aes(x = total_patient_visits, y = Percent_Subjects)) +
+   geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
+   labs(x = "Total Number of Visits", y = "% of Subjects") +
+   # scale_y_continuous(limits = c(0, 9) , 
+   #                    breaks = seq(0, 9, by = 1))+
+   # coord_cartesian(xlim = c(0, 400)) +
+   hrbrthemes::theme_ipsum() +
+   theme(
+     plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+     axis.title = element_text(hjust = 0.5, size = 11),
+     panel.spacing = unit(0.1, "lines")
+   ))
+ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"),
+       plot = plot7,
+       width = 8,
+       height = 6,
+       bg = "white"
+)
+
+visit_data_MIN_t <- visit_data %>% 
+  select(patid, follow_up_time, follow_up_end) %>% 
+  distinct() %>% 
+  mutate(follow_up_time = as.numeric(follow_up_time))
+
+(plot8 <- visit_data_MIN_t %>% 
+  ggplot(aes(x = follow_up_time)) +
+    geom_density(colour = "#8B2500") +
+    labs(x = "Follow up time",
+         y = "Density") +
+    theme_minimal())
+
+ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Exposure_Time.PNG"),
+       plot = plot8,
+       width = 8,
+       height = 6,
+       bg = "white"
+)
+  
 ## Cost ----
 
 visit_data_reduced_MIN_c <- visit_data_reduced %>% 

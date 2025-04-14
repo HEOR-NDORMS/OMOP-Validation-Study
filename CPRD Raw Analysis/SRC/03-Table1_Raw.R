@@ -201,7 +201,7 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
       age_fracture = "Age at Fracture Occurrence",
       site = "Fracture Site", 
       follow_up_reason = "Censoring Event",
-      follow_up_time = "Follow up Time",
+      follow_up_time = "Follow up time",
       user_status = "Heathcare Service User Status",
       not_users_status = "Heathcare Service Non-user Visit Status"
     ),
