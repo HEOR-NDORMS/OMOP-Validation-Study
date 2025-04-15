@@ -217,59 +217,13 @@ merged_data %>%
 ```
 
 
-## Primary care - Raw {.tabset}
+## Primary care {.tabset}
 
 ### Histograms
 
-```{r}
-# for raw
-# for omop
-# combined
-```
+Figure 1: Exposure Time
 
-
-### Healthcare resource utilisation (HCRU) Figures
-
-Figure 1: Total number of primary care consultations
-
-```{r fig.width=12, fig.height=6}
-# Read your images
-Plots_Total_Visits_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_visits.PNG"))
-Plots_Total_Visits_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Tot_visits.PNG"))
-
-# Wrap them in rasterGrob
-Plots_Total_Visits_Raw_g <- rasterGrob(Plots_Total_Visits_Raw, interpolate = TRUE)
-Plots_Total_Visits_OMOP_g <- rasterGrob(Plots_Total_Visits_OMOP, interpolate = TRUE)
-
-# Add titles with arrangeGrob 
-Plots_Total_Visits_Raw_g_with_title <- arrangeGrob(Plots_Total_Visits_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
-Plots_Total_Visits_OMOP_g_with_title <- arrangeGrob(Plots_Total_Visits_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
-
-grid.arrange(Plots_Total_Visits_Raw_g_with_title, Plots_Total_Visits_OMOP_g_with_title, ncol = 2)
-
-```
-
-Figure 2: Number of visits
-
-```{r fig.height=6, fig.width=6}
-# Read images
-Bar_Graph_number_of_visits_per_pt_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"))
-Bar_Graph_number_of_visits_per_pt_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"))
-
-# Wrap them in rasterGrob
-Bar_Graph_number_of_visits_per_pt_Raw_g <- rasterGrob(Bar_Graph_number_of_visits_per_pt_Raw, interpolate = TRUE)
-Bar_Graph_number_of_visits_per_pt_OMOP_g <- rasterGrob(Bar_Graph_number_of_visits_per_pt_OMOP, interpolate = TRUE)
-
-# Add titles with arrangeGrob 
-Bar_Graph_number_of_visits_per_pt_Raw_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
-Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
-
-grid.arrange(Bar_Graph_number_of_visits_per_pt_Raw_g_with_title, Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title, ncol = 2)
-```
-
-Figure 4: Exposure Time
-
-```{r fig.height=6, fig.width=6}
+```{r fig.height=3, fig.width=6}
 # Read images
 Exposure_Time_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Exposure_Time.PNG"))
 Exposure_Time_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Exposure_Time.PNG"))
@@ -286,9 +240,70 @@ grid.arrange(Exposure_Time_Raw_g_with_title, Exposure_Time_OMOP_g_with_title, nc
 
 ```
 
-Figure 5: Mean number of primary care consultations by provider specialty, users-only.
+Figure 2: Total number of primary care consultations
 
-```{r fig.height=6, fig.width=6}
+```{r fig.width=12, fig.height=4}
+# Read your images
+Plots_Total_Visits_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_visits.PNG"))
+Plots_Total_Visits_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Tot_visits.PNG"))
+
+# Wrap them in rasterGrob
+Plots_Total_Visits_Raw_g <- rasterGrob(Plots_Total_Visits_Raw, interpolate = TRUE)
+Plots_Total_Visits_OMOP_g <- rasterGrob(Plots_Total_Visits_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Plots_Total_Visits_Raw_g_with_title <- arrangeGrob(Plots_Total_Visits_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 14, fontface = "bold"))) 
+Plots_Total_Visits_OMOP_g_with_title <- arrangeGrob(Plots_Total_Visits_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 14, fontface = "bold"))) 
+
+grid.arrange(Plots_Total_Visits_Raw_g_with_title, Plots_Total_Visits_OMOP_g_with_title, ncol = 2)
+
+```
+
+
+Figure 3: Total number of primary care consultation costs
+
+```{r fig.width=12, fig.height=4}
+# Read your images
+Plots_Total_Costs_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_costs.PNG"))
+Plots_Total_Costs_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Tot_costs.PNG"))
+
+# Wrap them in rasterGrob
+Plots_Total_Costs_Raw_g <- rasterGrob(Plots_Total_Costs_Raw, interpolate = TRUE)
+Plots_Total_Costs_OMOP_g <- rasterGrob(Plots_Total_Costs_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Plots_Total_Costs_Raw_g_with_title <- arrangeGrob(Plots_Total_Costs_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 14, fontface = "bold"))) 
+Plots_Total_Costs_OMOP_g_with_title <- arrangeGrob(Plots_Total_Costs_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 14, fontface = "bold"))) 
+
+grid.arrange(Plots_Total_Costs_Raw_g_with_title, Plots_Total_Costs_OMOP_g_with_title, ncol = 2)
+
+```
+
+Figure 4: Number of visits
+
+```{r fig.height=3, fig.width=6}
+# Read images
+Bar_Graph_number_of_visits_per_pt_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"))
+Bar_Graph_number_of_visits_per_pt_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"))
+
+# Wrap them in rasterGrob
+Bar_Graph_number_of_visits_per_pt_Raw_g <- rasterGrob(Bar_Graph_number_of_visits_per_pt_Raw, interpolate = TRUE)
+Bar_Graph_number_of_visits_per_pt_OMOP_g <- rasterGrob(Bar_Graph_number_of_visits_per_pt_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Bar_Graph_number_of_visits_per_pt_Raw_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
+
+grid.arrange(Bar_Graph_number_of_visits_per_pt_Raw_g_with_title, Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title, ncol = 2)
+```
+
+### Healthcare resource utilisation (HCRU)
+
+#### HCRU Figures - Monthly
+
+Figure 2: Mean number of primary care consultations by provider specialty, users-only.
+
+```{r fig.height=3, fig.width=6}
 # Read images
 Mean_visits_per_specialty_unweighted_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
 Mean_visits_per_specialty_unweighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
@@ -298,95 +313,51 @@ Mean_visits_per_specialty_unweighted_Raw_g <- rasterGrob(Mean_visits_per_special
 Mean_visits_per_specialty_unweighted_OMOP_g <- rasterGrob(Mean_visits_per_specialty_unweighted_OMOP, interpolate = TRUE)
 
 # Add titles with arrangeGrob 
-Mean_visits_per_specialty_unweighted_Raw_g_with_title <- arrangeGrob(Mean_visits_per_specialty_unweighted_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold")), padding = unit(2, "cm")) 
-Mean_visits_per_specialty_unweighted_OMOP_g_with_title <- arrangeGrob(Mean_visits_per_specialty_unweighted_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold")), padding = unit(2, "cm")) 
+Mean_visits_per_specialty_unweighted_Raw_g_with_title <- arrangeGrob(Mean_visits_per_specialty_unweighted_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Mean_visits_per_specialty_unweighted_OMOP_g_with_title <- arrangeGrob(Mean_visits_per_specialty_unweighted_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
 
 grid.arrange(Mean_visits_per_specialty_unweighted_Raw_g_with_title, Mean_visits_per_specialty_unweighted_OMOP_g_with_title, ncol = 2)
 
 ```
 
-Figure 6: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
+Figure 3: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
 
-```{r fig.height=6, fig.width=6}
-Mean_visits_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
+```{r fig.height=3, fig.width=6}
+# Read images
+Mean_visits_per_specialty_weighted_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
 Mean_visits_per_specialty_weighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
-grid.raster(Mean_visits_per_specialty_weighted_raw)
+
+# Wrap them in rasterGrob
+Mean_visits_per_specialty_weighted_Raw_g <- rasterGrob(Mean_visits_per_specialty_weighted_Raw, interpolate = TRUE)
+Mean_visits_per_specialty_weighted_OMOP_g <- rasterGrob(Mean_visits_per_specialty_weighted_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Mean_visits_per_specialty_weighted_Raw_g_with_title <- arrangeGrob(Mean_visits_per_specialty_weighted_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Mean_visits_per_specialty_weighted_OMOP_g_with_title <- arrangeGrob(Mean_visits_per_specialty_weighted_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
+
+grid.arrange(Mean_visits_per_specialty_weighted_Raw_g_with_title, Mean_visits_per_specialty_weighted_OMOP_g_with_title, ncol = 2)
+
 ```
 
-```{r}
-# for raw
-overall_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "overall_all_visits_only")
-
-overall_all_visits_only_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients - Visits per patient per year**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
-  )
-# add the omop
-overall_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "overall_all_visits_only")
-
-overall_all_visits_only_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients - Visits per patient per year**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
-  )
-```
+#### HCRU Year 1/2 Summary Tables
 
 ```{r}
 # Add a column to identify the source
-overall_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "overall_all_visits_only") %>%
+yearly_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw.xlsx"), sheet = "all_summary_visits") %>%
   mutate(Source = "Raw")
 
-overall_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "overall_all_visits_only") %>%
+yearly_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_visits_OMOP.xlsx"), sheet = "all_summary_visits") %>%
   mutate(Source = "OMOP")
 
 # Combine the data
-combined_visits_rp <- bind_rows(overall_all_visits_only_rp_raw, overall_all_visits_only_rp_omop) %>% 
+yearly_combined_visits_rp <- bind_rows(yearly_all_visits_only_rp_raw, yearly_all_visits_only_rp_omop) %>% 
   select(Source, everything())
 
 # Step 3: Create the gt table
-combined_visits_rp %>%
+yearly_combined_visits_rp %>%
   gt() %>%
   tab_header(
-    title = md("**All Patients - Visits per patient per year**"),
+    title = md("**All Patients - Visits Per Patient Per Year 1 & 2**"),
     subtitle = md("*Healthcare Service Users and Non-users*")
   ) %>%
   opt_all_caps() %>% 
@@ -398,325 +369,342 @@ combined_visits_rp %>%
   opt_stylize(style = 3) %>% 
   cols_label(
     Source = "Data Source",
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
+    mean_visit_count = "Mean Visits Per Year",
+    min_visits = "Minimum Visits Per Year",
+    max_visits = "Maximum Visits Per Year",
+    sd_visits = "SD Visits Per Year",
+    median_visits = "Median Visits Per Year",
+    q1_visits = "Lower Quartile Visits Per Year",
+    q3_visits = "Upper Quartile Visits Per Year"
   )
 
 ```
 
-
 ```{r}
-all_summary_visits_per_yr_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "all_summary_visits_per_yr")
+# Add a column to identify the source
+yearly_user_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw.xlsx"), sheet = "user_summary_visits") %>%
+  mutate(Source = "Raw")
 
-all_summary_costs_per_yr_rp_omop <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_summary_visit_cost_per_yr")
+yearly_user_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_visits_OMOP.xlsx"), sheet = "user_summary_visits") %>%
+  mutate(Source = "OMOP")
 
-all_summary_visits_per_yr_rp_raw %>% 
+# Combine the data
+yearly_user_combined_visits_rp <- bind_rows(yearly_user_visits_only_rp_raw, yearly_user_visits_only_rp_omop) %>% 
+  select(Source, everything())
+
+# Step 3: Create the gt table
+yearly_user_combined_visits_rp %>%
   gt() %>%
   tab_header(
-    title = md("**All Patients - Visits per patient per year (Years 1&2)**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_count = "Mean",
-    min_visits = "Minimum",
-    max_visits = "Maximum",
-    sd_visits = "SD",
-    median_visits = "Median",
-    q1_visits = "Lower Quartile",
-    q3_visits = "Upper Quartile"
-  )
-
-overall_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "overall_all_visits_only")
-
-overall_all_visits_only_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients - Visits per patient per year**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
-  )
-```
-
-
-```{r}
-overall_user_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "overall_user_visits_only")
-
-overall_user_visits_only_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Visits per patient per year**"),
+    title = md("**Healthcare Service Users - Visits Per Patient Per Year 1 & 2**"),
     subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
   ) %>%
   opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
+  tab_options(
+    table.width = px(800),
+    heading.align = "left",
+    table.font.size = px(14)
+  ) |> 
   opt_stylize(style = 3) %>% 
   cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
+    Source = "Data Source",
+    mean_visit_count = "Mean Visits Per Year",
+    min_visits = "Minimum Visits Per Year",
+    max_visits = "Maximum Visits Per Year",
+    sd_visits = "SD Visits Per Year",
+    median_visits = "Median Visits Per Year",
+    q1_visits = "Lower Quartile Visits Per Year",
+    q3_visits = "Upper Quartile Visits Per Year"
   )
+
 ```
 
 
-```{r}
-user_summary_visits_per_yr_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "user_summary_visits_per_yr")
+#### HCRU Overall Summary Tables
 
-user_summary_visits_per_yr_rp_raw %>% 
+```{r}
+# Add a column to identify the source
+overall_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "overall_all_visits_only") %>%
+  mutate(Source = "Raw")
+
+overall_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "overall_all_visits_only") %>%
+  mutate(Source = "OMOP")
+
+# Combine the data
+all_combined_visits_rp <- bind_rows(overall_all_visits_only_rp_raw, overall_all_visits_only_rp_omop) %>% 
+  select(Source, everything())
+
+# Step 3: Create the gt table
+all_combined_visits_rp %>%
   gt() %>%
   tab_header(
-    title = md("**Healthcare Service Users - Visits per patient per year (Years 1&2)**"),
+    title = md("**All Patients - Visits Per Patient Per Year**"),
+    subtitle = md("*Healthcare Service Users and Non-users*")
+  ) %>%
+  opt_all_caps() %>% 
+  tab_options(
+    table.width = px(800),
+    heading.align = "left",
+    table.font.size = px(14)
+  ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    Source = "Data Source",
+    mean_visit_per_year = "Mean Visits Per Year",
+    min_visit_per_year = "Minimum Visits Per Year",
+    max_visit_per_year = "Maximum Visits Per Year",
+    sd_visit_per_year = "SD Visits Per Year",
+    median_visit_per_year = "Median Visits Per Year",
+    lower_q_visits_per_year = "Lower Quartile Visits Per Year",
+    upper_q_visits_per_year = "Upper Quartile Visits Per Year"
+  )
+
+```
+
+```{r}
+# Add a column to identify the source
+overall_user_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "overall_user_visits_only") %>%
+  mutate(Source = "Raw")
+
+overall_user_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "overall_user_visits_only") %>%
+  mutate(Source = "OMOP")
+
+# Combine the data
+user_combined_visits_rp <- bind_rows(overall_user_visits_only_rp_raw, overall_user_visits_only_rp_omop) %>% 
+  select(Source, everything())
+
+# Step 3: Create the gt table
+user_combined_visits_rp %>%
+  gt() %>%
+  tab_header(
+    title = md("**Healthcare Service Users - Visits Per Patient Per Year**"),
     subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
   ) %>%
   opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
+  tab_options(
+    table.width = px(800),
+    heading.align = "left",
+    table.font.size = px(14)
+  ) |> 
   opt_stylize(style = 3) %>% 
   cols_label(
-    mean_visit_count = "Mean",
-    min_visits = "Minimum",
-    max_visits = "Maximum",
-    sd_visits = "SD",
-    median_visits = "Median",
-    q1_visits = "Lower Quartile",
-    q3_visits = "Upper Quartile"
+    Source = "Data Source",
+    mean_visit_per_year = "Mean Visits Per Year",
+    min_visit_per_year = "Minimum Visits Per Year",
+    max_visit_per_year = "Maximum Visits Per Year",
+    sd_visit_per_year = "SD Visits Per Year",
+    median_visit_per_year = "Median Visits Per Year",
+    lower_q_visits_per_year = "Lower Quartile Visits Per Year",
+    upper_q_visits_per_year = "Upper Quartile Visits Per Year"
   )
+
 ```
 
 
-### HCRU Figures
 
-Figure 1: Total number of primary care consultations
+### Costs
 
+#### Costs Figures - Monthly
 
-## Primary care - OMOP {.tabset}
+Figure 1: Mean number of primary care consultation costs by provider specialty, users-only.
 
-### Healthcare resource utilisation (HCRU)
+```{r fig.height=3, fig.width=7}
+# Read images
+Mean_costs_per_specialty_unweighted_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
+Mean_costs_per_specialty_unweighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
+
+# Wrap them in rasterGrob
+Mean_costs_per_specialty_unweighted_Raw_g <- rasterGrob(Mean_costs_per_specialty_unweighted_Raw, interpolate = TRUE)
+Mean_costs_per_specialty_unweighted_OMOP_g <- rasterGrob(Mean_costs_per_specialty_unweighted_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Mean_costs_per_specialty_unweighted_Raw_g_with_title <- arrangeGrob(Mean_costs_per_specialty_unweighted_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Mean_costs_per_specialty_unweighted_OMOP_g_with_title <- arrangeGrob(Mean_costs_per_specialty_unweighted_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
+
+grid.arrange(Mean_costs_per_specialty_unweighted_Raw_g_with_title, Mean_costs_per_specialty_unweighted_OMOP_g_with_title, ncol = 2)
+
+```
+
+Figure 2: Exposure-weighted mean number of primary care consultations costs by provider specialty, users-only.
+
+```{r fig.height=3, fig.width=7}
+# Read images
+Mean_costs_per_specialty_weighted_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
+Mean_costs_per_specialty_weighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
+
+# Wrap them in rasterGrob
+Mean_costs_per_specialty_weighted_Raw_g <- rasterGrob(Mean_costs_per_specialty_weighted_Raw, interpolate = TRUE)
+Mean_costs_per_specialty_weighted_OMOP_g <- rasterGrob(Mean_costs_per_specialty_weighted_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Mean_costs_per_specialty_weighted_Raw_g_with_title <- arrangeGrob(Mean_costs_per_specialty_weighted_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Mean_costs_per_specialty_weighted_OMOP_g_with_title <- arrangeGrob(Mean_costs_per_specialty_weighted_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
+
+grid.arrange(Mean_costs_per_specialty_weighted_Raw_g_with_title, Mean_costs_per_specialty_weighted_OMOP_g_with_title, ncol = 2)
+
+```
+
+#### Costs Year 1/2 Summary Tables
 
 ```{r}
-overall_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "overall_all_visits_only")
+# Add a column to identify the source
+yearly_all_costs_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw.xlsx"), sheet = "all_summary_costs") %>%
+  mutate(Source = "Raw")
 
-overall_all_visits_only_rp_omop %>% 
+yearly_all_costs_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_costs_OMOP.xlsx"), sheet = "all_summary_costs") %>%
+  mutate(Source = "OMOP")
+
+# Combine the data
+yearly_combined_costs_rp <- bind_rows(yearly_all_costs_only_rp_raw, yearly_all_costs_only_rp_omop) %>% 
+  select(Source, everything())
+
+# Create the gt table
+yearly_combined_costs_rp %>%
   gt() %>%
   tab_header(
-    title = md("**All Patients - Visits per patient per year**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
+    title = md("**All Patients - Visit Costs Per Patient Per Year 1 & 2**"),
+    subtitle = md("*Healthcare Service Users and Non-users*")
   ) %>%
   opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
+  tab_options(
+    table.width = px(800),
+    heading.align = "left",
+    table.font.size = px(14)
+  ) |> 
   opt_stylize(style = 3) %>% 
   cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
+    Source = "Data Source",
+    mean_visits_cost = "Mean Visit Costs per Year",
+    min_visits_cost = "Minimum Visit Costs per Year",
+    max_visits_cost = "Maximum Visit Costs per Year",
+    sd_visits_cost = "SD Visit Costs per Year",
+    median_visits_cost = "Median Visit Costs per Year",
+    q1_visits_cost = "Lower Quartile Visit Costs per Year",
+    q3_visits_cost = "Upper Quartile Visit Costs per Year"
   )
-```
 
-
-```{r}
-yr1_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "yr1_all_visits_only")
-
-yr1_all_visits_only_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients - Visits per patient per year (Year 1)**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
-  )
 ```
 
 ```{r}
-yr2_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "yr2_all_visits_only")
+# Add a column to identify the source
+yearly_user_costs_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw.xlsx"), sheet = "user_summary_costs") %>%
+  mutate(Source = "Raw")
 
-yr2_all_visits_only_rp_omop %>% 
+yearly_user_costs_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_costs_OMOP.xlsx"), sheet = "user_summary_costs") %>%
+  mutate(Source = "OMOP")
+
+# Combine the data
+yearly_user_combined_costs_rp <- bind_rows(yearly_user_costs_only_rp_raw, yearly_user_costs_only_rp_omop) %>% 
+  select(Source, everything())
+
+# Create the gt table
+yearly_user_combined_costs_rp %>%
   gt() %>%
   tab_header(
-    title = md("**All Patients - Visits per patient per year (Year 2)**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
-  )
-```
-
-```{r}
-overall_user_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "overall_user_visits_only")
-
-overall_user_visits_only_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Visits per patient per year**"),
+    title = md("**Healthcare Service Users - Visit Costs Per Patient Per Year 1 & 2**"),
     subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
   ) %>%
   opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
+  tab_options(
+    table.width = px(800),
+    heading.align = "left",
+    table.font.size = px(14)
+  ) |> 
   opt_stylize(style = 3) %>% 
   cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
+    Source = "Data Source",
+    mean_visits_cost = "Mean Visit Costs per Year",
+    min_visits_cost = "Minimum Visit Costs per Year",
+    max_visits_cost = "Maximum Visit Costs per Year",
+    sd_visits_cost = "SD Visit Costs per Year",
+    median_visits_cost = "Median Visit Costs per Year",
+    q1_visits_cost = "Lower Quartile Visit Costs per Year",
+    q3_visits_cost = "Upper Quartile Visit Costs per Year"
   )
+
 ```
 
 
-```{r}
-yr1_user_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "yr1_user_visits_only")
+#### Costs Overall Summary Tables
 
-yr1_user_visits_only_rp_omop %>% 
+```{r}
+# Add a column to identify the source
+overall_all_costs_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "overall_all_only_costs") %>%
+  mutate(Source = "Raw")
+
+overall_all_costs_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "overall_all_only_costs") %>%
+  mutate(Source = "OMOP")
+
+# Combine the data
+all_combined_costs_rp <- bind_rows(overall_all_costs_only_rp_raw, overall_all_costs_only_rp_omop) %>% 
+  select(Source, everything())
+
+# Step 3: Create the gt table
+all_combined_costs_rp %>%
   gt() %>%
   tab_header(
-    title = md("**Healthcare Service Users - Visits per patient per year (Year 1)**"),
+    title = md("**All Patients - Visit Costs Per Patient Per Year**"),
+    subtitle = md("*Healthcare Service Users and Non-users*")
+  ) %>%
+  opt_all_caps() %>% 
+  tab_options(
+    table.width = px(800),
+    heading.align = "left",
+    table.font.size = px(14)
+  ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    Source = "Data Source",
+    mean_visit_cost_per_year = "Mean Visit Costs per Year",
+    min_visit_cost_per_year = "Minimum Visit Costs per Year",
+    max_visit_cost_per_year = "Maximum Visit Costs per Year",
+    sd_visit_cost_per_year = "SD Visit Costs per Year",
+    median_visit_cost_per_year = "Median Visit Costs per Year",
+    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
+    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+  )
+
+```
+
+```{r}
+# Add a column to identify the source
+overall_user_costs_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "overall_user_only_costs") %>%
+  mutate(Source = "Raw")
+
+overall_user_costs_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "overall_user_only_costs") %>%
+  mutate(Source = "OMOP")
+
+# Combine the data
+user_combined_costs_rp <- bind_rows(overall_user_costs_only_rp_raw, overall_user_costs_only_rp_omop) %>% 
+  select(Source, everything())
+
+# Create the gt table
+user_combined_costs_rp %>%
+  gt() %>%
+  tab_header(
+    title = md("**Healthcare Service Users - Visit Costs Per Patient Per Year**"),
     subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
   ) %>%
   opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
+  tab_options(
+    table.width = px(800),
+    heading.align = "left",
+    table.font.size = px(14)
+  ) |> 
   opt_stylize(style = 3) %>% 
   cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
+    Source = "Data Source",
+    mean_visit_cost_per_year = "Mean Visit Costs per Year",
+    min_visit_cost_per_year = "Minimum Visit Costs per Year",
+    max_visit_cost_per_year = "Maximum Visit Costs per Year",
+    sd_visit_cost_per_year = "SD Visit Costs per Year",
+    median_visit_cost_per_year = "Median Visit Costs per Year",
+    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
+    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
   )
+
 ```
 
-```{r}
-yr2_user_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "yr2_user_visits_only")
-
-yr2_user_visits_only_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Visits per patient per year (Year 2)**"),
-    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_per_year = "Mean",
-    min_visit_per_year = "Minimum",
-    max_visit_per_year = "Maximum",
-    sd_visit_per_year = "SD",
-    median_visit_per_year = "Median",
-    lower_q_visits_per_year = "Lower Quartile",
-    upper_q_visits_per_year = "Upper Quartile"
-  )
-```
-
-
-
-### HCRU Figures
 
 Figure 1: Total number of primary care consultations
 
@@ -738,331 +726,6 @@ Figure 3: Exposure-weighted mean number of primary care consultations by provide
 Mean_visits_per_specialty_weighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
 grid.raster(Mean_visits_per_specialty_weighted_OMOP)
 ```
-
-
-## Costs - Raw {.tabset}
-
-### Costs Summary Results
-
-```{r}
-overall_all_only_costs_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "overall_all_only_costs")
-
-overall_all_only_costs_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients Costs Summary Statistics**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-
-```{r}
-all_summary_costs_per_yr_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "all_summary_visit_cost_per_yr")
-
-all_summary_costs_per_yr_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients Costs Summary Statistics (Year 1)**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_cost = "Mean Visit Costs per Year",
-    min_cost = "Minimum Visit Costs per Year",
-    max_cost = "Maximum Visit Costs per Year",
-    sd_cost = "SD Visit Costs per Year",
-    median_cost = "Median Visit Costs per Year",
-    q1_cost = "Lower Quartile Visit Costs per Year",
-    q3_cost = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-
-```{r}
-overall_user_only_costs_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "overall_user_only_costs")
-
-overall_user_only_costs_rp_raw %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Cost Summary Statistics**"),
-    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-
-
-
-### Cost Figures
-
-Figure 4: Total number of primary care consultation costs
-
-```{r fig.height=6, fig.width=6}
-Plots_Total_Costs_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Tot_costs.PNG"))
-grid.raster(Plots_Total_Costs_Raw)
-```
-
-Figure 5: Mean number of primary care consultation costs by provider specialty, users-only.
-
-```{r fig.height=6, fig.width=6}
-Mean_costs_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
-grid.raster(Mean_costs_per_specialty_unweighted_raw)
-```
-
-Figure 6: Exposure-weighted mean number of primary care consultations costs by provider specialty, users-only.
-
-```{r fig.height=6, fig.width=6}
-Mean_costs_per_specialty_weighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
-grid.raster(Mean_costs_per_specialty_weighted_raw)
-```
-
-
-## Costs - OMOP {.tabset}
-
-### Costs Summary Results
-
-```{r}
-overall_all_only_costs_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "overall_all_only_costs")
-
-overall_all_only_costs_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients Costs Summary Statistics**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-
-```{r}
-yr1_all_only_costs_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "yr1_all_only_costs")
-
-yr1_all_only_costs_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients Costs Summary Statistics (Year 1)**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-```{r}
-yr2_all_only_costs_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "yr2_all_only_costs")
-
-yr2_all_only_costs_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**All Patients Costs Summary Statistics (Year 2)**"),
-    subtitle = md("*Heathcare Service Users and Non-users*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-```{r}
-overall_user_only_costs_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "overall_user_only_costs")
-
-overall_user_only_costs_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Cost Summary Statistics**"),
-    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-
-```{r}
-yr1_user_only_costs_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "yr1_user_only_costs")
-
-yr1_user_only_costs_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Cost Summary Statistics (Year 1)**"),
-    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-   mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-```{r}
-yr2_user_only_costs_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "yr2_user_only_costs")
-
-yr2_user_only_costs_rp_omop %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Healthcare Service Users - Cost Summary Statistics (Year 2)**"),
-    subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-  ) %>%
-  opt_all_caps() %>% 
-    tab_options(
-      table.width = px(800),
-      #heading.title.font.weight = "bold",
-      heading.align = "left",
-      #table.font.names = "Times New Roman"
-      table.font.size = px(14)
-    ) |> 
-  opt_stylize(style = 3) %>% 
-  cols_label(
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-  )
-```
-
-### Cost Figures
-
-Figure 4: Total number of primary care consultation costs
-
-```{r fig.height=6, fig.width=6}
-Plots_Total_Costs_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Tot_costs.PNG"))
-grid.raster(Plots_Total_Costs_Raw)
-```
-
-Figure 5: Mean number of primary care consultation costs by provider specialty, users-only.
-
-```{r fig.height=6, fig.width=6}
-Mean_costs_per_specialty_unweighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
-grid.raster(Mean_costs_per_specialty_unweighted_raw)
-```
-
-Figure 6: Exposure-weighted mean number of primary care consultations costs by provider specialty, users-only.
-
-```{r fig.height=6, fig.width=6}
-Mean_costs_per_specialty_weighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
-grid.raster(Mean_costs_per_specialty_weighted_raw)
-```
-
 
 # Appendix 
 
