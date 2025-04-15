@@ -77,14 +77,14 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
     ) +
     theme_minimal())
 
-# ggsave(here::here(
-#   "CPRD Raw Analysis", "Results", "Plots", 
-#   "Mean_visits_per_specialty_unweighted.PNG"),
-#   plot = plot1, 
-#   width = 8,
-#   height = 6, 
-#   bg = "white"
-# )
+ggsave(here::here(
+  "CPRD Raw Analysis", "Results", "Plots",
+  "Mean_visits_per_specialty_unweighted.PNG"),
+  plot = plot1,
+  width = 6,
+  height = 5,
+  bg = "white"
+)
 
 ### PLOT Tot Visits ------
 
@@ -115,8 +115,8 @@ visit_data_reduced_user2 <- visit_data_reduced_MIN %>%
 # ggsave(here::here(
 #   "CPRD Raw Analysis", "Results", "Plots", "Tot_visits.PNG"),
 #   plot = plot2,
-#   width = 8, 
-#   height = 6, 
+#   width = 6,
+#   height = 5,
 #   bg = "white"
 # )
 
@@ -174,12 +174,12 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
     ) +
     theme_minimal())
 
-# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"),
-#        plot = plot3, 
-#        width = 8, 
-#        height = 6, 
-#        bg = "white"
-#        )
+ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"),
+       plot = plot3,
+       width = 6,
+       height = 5,
+       bg = "white"
+       )
 
 ### PLOT of number of visits and visits per year ----
 
@@ -273,19 +273,20 @@ pt_count_visits <- visit_data_MIN %>%
    # scale_y_continuous(limits = c(0, 9) , 
    #                    breaks = seq(0, 9, by = 1))+
    # coord_cartesian(xlim = c(0, 400)) +
-   hrbrthemes::theme_ipsum() +
+   theme_minimal() +
    theme(
      plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
      axis.title = element_text(hjust = 0.5, size = 11),
      panel.spacing = unit(0.1, "lines")
    ))
-# ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"),
-#        plot = plot7,
-#        width = 8,
-#        height = 6,
-#        bg = "white"
-# )
+ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"),
+       plot = plot7,
+       width = 6,
+       height = 5,
+       bg = "white"
+)
 
+### PLOT - Exposure Time ----
 visit_data_MIN_t <- visit_data %>% 
   select(patid, follow_up_time, follow_up_end) %>% 
   distinct() %>% 
@@ -293,15 +294,15 @@ visit_data_MIN_t <- visit_data %>%
 
 (plot8 <- visit_data_MIN_t %>% 
   ggplot(aes(x = follow_up_time)) +
-    geom_density(colour = "#8B2500") +
+    geom_histogram(bins = 30, colour = "white", fill = "#00CDCD") +
     labs(x = "Follow up time",
-         y = "Density") +
+         y = "Count") +
     theme_minimal())
 
 ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Exposure_Time.PNG"),
        plot = plot8,
-       width = 8,
-       height = 6,
+       width = 6,
+       height = 5,
        bg = "white"
 )
   
@@ -383,14 +384,14 @@ plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
     theme_minimal())
 
 
-# ggsave(here::here(
-#   "CPRD Raw Analysis", "Results", "Plots", 
-#   "Mean_costs_per_specialty_unweighted.PNG"),
-#   plot = plot_costs1, 
-#   width = 8,
-#   height = 6, 
-#   bg = "white"
-# )
+ggsave(here::here(
+  "CPRD Raw Analysis", "Results", "Plots",
+  "Mean_costs_per_specialty_unweighted.PNG"),
+  plot = plot_costs1,
+  width = 6,
+  height = 5,
+  bg = "white"
+)
 
 ### PLOT Tot Costs ------
 
@@ -423,13 +424,13 @@ visit_data_reduced_user_c2 <- visit_data_reduced_MIN_c %>%
     ) +
     theme_minimal())
 
-# ggsave(here::here(
-#   "CPRD Raw Analysis", "Results", "Plots", "Tot_costs.PNG"),
-#   plot = plot_costs2,
-#   width = 8, 
-#   height = 6, 
-#   bg = "white"
-# )
+ggsave(here::here(
+  "CPRD Raw Analysis", "Results", "Plots", "Tot_costs.PNG"),
+  plot = plot_costs2,
+  width = 6,
+  height = 5,
+  bg = "white"
+)
 
 
 ### PLOT exposure weighted ------
@@ -498,10 +499,10 @@ plots_users_mean_costs_specialty_weighted <- costs_per_specialty_month %>%
     theme_minimal())
 
 
-# ggsave(here::here(
-#   "CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"),
-#   plot = plot_costs3, 
-#   width = 8, 
-#   height = 6, 
-#   bg = "white"
-# )
+ggsave(here::here(
+  "CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"),
+  plot = plot_costs3,
+  width = 6,
+  height = 5,
+  bg = "white"
+)

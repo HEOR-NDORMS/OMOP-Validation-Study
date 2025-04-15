@@ -242,25 +242,29 @@ Plots_Total_Visits_Raw_g <- rasterGrob(Plots_Total_Visits_Raw, interpolate = TRU
 Plots_Total_Visits_OMOP_g <- rasterGrob(Plots_Total_Visits_OMOP, interpolate = TRUE)
 
 # Add titles with arrangeGrob 
-Plots_Total_Visits_Raw_g_with_title <- arrangeGrob(Plots_Total_Visits_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 14, fontface = "bold"))) 
-Plots_Total_Visits_OMOP_g_with_title <- arrangeGrob(Plots_Total_Visits_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 14, fontface = "bold"))) 
+Plots_Total_Visits_Raw_g_with_title <- arrangeGrob(Plots_Total_Visits_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Plots_Total_Visits_OMOP_g_with_title <- arrangeGrob(Plots_Total_Visits_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
 
 grid.arrange(Plots_Total_Visits_Raw_g_with_title, Plots_Total_Visits_OMOP_g_with_title, ncol = 2)
 
 ```
 
-Figure 2: Density plot of sum of visit costs and Visit cost per year
+Figure 2: Number of visits
 
 ```{r fig.height=6, fig.width=6}
-Density_Plot_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Density_Plot.PNG"))
-grid.raster(Density_Plot_Raw)
-```
-
-Figure 3: Number of visits
-
-```{r fig.height=6, fig.width=6}
+# Read your images
 Bar_Graph_number_of_visits_per_pt_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"))
-grid.raster(Bar_Graph_number_of_visits_per_pt_Raw)
+Bar_Graph_number_of_visits_per_pt_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"))
+
+# Wrap them in rasterGrob
+Bar_Graph_number_of_visits_per_pt_Raw_g <- rasterGrob(Bar_Graph_number_of_visits_per_pt_Raw, interpolate = TRUE)
+Bar_Graph_number_of_visits_per_pt_OMOP_g <- rasterGrob(Bar_Graph_number_of_visits_per_pt_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Bar_Graph_number_of_visits_per_pt_Raw_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
+
+grid.arrange(Bar_Graph_number_of_visits_per_pt_Raw_g_with_title, Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title, ncol = 2)
 ```
 
 Figure 4: Exposure Time
