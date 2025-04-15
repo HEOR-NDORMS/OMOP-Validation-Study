@@ -261,8 +261,8 @@ Bar_Graph_number_of_visits_per_pt_Raw_g <- rasterGrob(Bar_Graph_number_of_visits
 Bar_Graph_number_of_visits_per_pt_OMOP_g <- rasterGrob(Bar_Graph_number_of_visits_per_pt_OMOP, interpolate = TRUE)
 
 # Add titles with arrangeGrob 
-Bar_Graph_number_of_visits_per_pt_Raw_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold")), padding = unit(5, "cm")) 
-Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold")), padding = unit(5, "cm")) 
+Bar_Graph_number_of_visits_per_pt_Raw_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
 
 grid.arrange(Bar_Graph_number_of_visits_per_pt_Raw_g_with_title, Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title, ncol = 2)
 ```
