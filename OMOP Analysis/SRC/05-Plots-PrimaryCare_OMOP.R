@@ -198,7 +198,7 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
       x = "Month After Index",
       y = "Mean Visits per User",
       fill = "Specialty",
-      caption = "Note: Mean calculated among users contributing fully to each month."
+      caption = "Mean calculated among users contributing fully to each month."
       ) +
     theme_minimal() +
     theme(
@@ -486,7 +486,7 @@ plots_users_mean_costs_specialty_weighted <- costs_per_specialty_month %>%
       x = "Month After Index",
       y = "Mean Costs per User",
       fill = "Specialty",
-      caption = "Note: Includes only users contributing full month."
+      caption = "Includes only users contributing full month."
     ) +
     theme_minimal() +
     theme(
