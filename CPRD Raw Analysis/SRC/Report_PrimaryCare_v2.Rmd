@@ -75,8 +75,49 @@ attrition_report_omop <- import(here("OMOP Analysis", "Results", "AttritionRepor
 # Merge datasets with suffixes
 merged_attrition <- full_join(attrition_report_raw, attrition_report_omop, by = "reason", suffix = c("_raw", "_omop"))
 
-# Create the gt table for merged attrition data
-merged_attrition %>%
+# Reorder: move the last 2 rows to the top
+reordered_attrition <- merged_attrition %>%
+  {
+    top_two <- tail(., 2)
+    middle <- head(., -2)
+    bind_rows(top_two[2,], top_two[1,], middle)
+  }
+
+# Add indentation for visual grouping
+reordered_attrition <- reordered_attrition %>%
+  mutate(row_id = row_number()) %>%
+  mutate(
+    reason = case_when(
+      row_id == 1 ~ "Starting Population - Female individuals",
+      row_id == 2 ~ "Anyone With Fracture(s)",
+      TRUE ~ paste0("  ", reason)
+    )
+  )
+
+# Get eligible patient counts from the relevant row
+eligible_counts <- reordered_attrition %>%
+  filter(reason == "  Exclude patients with less than one month of exposure") %>%
+  select(number_subjects_raw, number_subjects_omop)
+
+# Add final row for eligible patients
+reordered_attrition <- reordered_attrition %>%
+  bind_rows(
+    tibble(
+      reason = "Number of eligible patients",
+      number_subjects_raw = eligible_counts$number_subjects_raw,
+      number_subjects_omop = eligible_counts$number_subjects_omop,
+      subjects_excluded_raw = NA,
+      percent_excluded_raw = NA,
+      records_excluded_raw = NA,
+      subjects_excluded_omop = NA,
+      percent_excluded_omop = NA,
+      records_excluded_omop = NA,
+      row_id = max(reordered_attrition$row_id) + 1
+    )
+  )
+
+# Create the gt table
+reordered_attrition %>%
   gt() %>%
   tab_header(
     title = md("**Attrition Table**")
@@ -85,9 +126,8 @@ merged_attrition %>%
     heading.align = "left",
     table.font.size = px(14)
   ) %>%
-  opt_stylize(style = 3) %>% 
+  opt_stylize(style = 3) %>%
 
-  # Format number columns with thousands separator
   fmt_number(
     columns = c(contains("number_records"), contains("number_subjects"), 
                 contains("subjects_excluded"), contains("records_excluded")), 
@@ -99,43 +139,54 @@ merged_attrition %>%
     sep_mark = ",",  
     decimals = 2  
   ) %>%
-  
-  # Replace missing values with an empty string
   sub_missing(
     columns = everything(), 
     missing_text = ""  
-  ) %>% 
-  
-  # Define column labels
+  ) %>%
+
   cols_label(
     reason = "Reason for exclusion",
-    number_records_raw = "Number of Records",
-    number_subjects_raw = "Number of Subjects",
+    number_records_raw = "Number of Records Included",
+    number_subjects_raw = "Number of Subjects Included",
     subjects_excluded_raw = "N Subjects Excluded",
     percent_excluded_raw = "Perc Subjects Excluded (%)",
     records_excluded_raw = "N Records Excluded",
-    number_records_omop = "Number of Records",
-    number_subjects_omop = "Number of Subjects",
+    number_records_omop = "Number of Records Included",
+    number_subjects_omop = "Number of Subjects Included",
     subjects_excluded_omop = "N Subjects Excluded",
     percent_excluded_omop = "Perc Subjects Excluded (%)",
     records_excluded_omop = "N Records Excluded"
   ) %>%
-  
-  # Create spanner headers to group raw and OMOP columns
+
   tab_spanner(
     label = "CPRD Raw Analysis",
     columns = c(number_records_raw, number_subjects_raw, 
                 subjects_excluded_raw, percent_excluded_raw, 
                 records_excluded_raw)
-  ) %>%
+    ) %>%
+  
   tab_spanner(
     label = "OMOP Analysis",
     columns = c(number_records_omop, number_subjects_omop, 
                 subjects_excluded_omop, percent_excluded_omop, 
                 records_excluded_omop)
-  )
+  ) %>%
 
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body(
+      columns = reason,
+      rows = row_id %in% c(1,19)  # Use the precomputed row_id
+    )
+  ) %>% 
+  
+  cols_hide(
+    columns = c(
+      row_id
+    )
+  )
 ```
+
 
 # Results 
 
@@ -217,11 +268,11 @@ merged_data %>%
 ```
 
 
-## Primary care {.tabset}
+## Plots {.tabset}
 
-### Histograms
+### Exposure Time
 
-Figure 1: Exposure Time
+Figure 1: Exposure time
 
 ```{r fig.height=3, fig.width=6}
 # Read images
@@ -239,6 +290,8 @@ Exposure_Time_OMOP_g_with_title <- arrangeGrob(Exposure_Time_OMOP_g, top = textG
 grid.arrange(Exposure_Time_Raw_g_with_title, Exposure_Time_OMOP_g_with_title, ncol = 2)
 
 ```
+
+### Total Number of Primary Care Consultations
 
 Figure 2: Total number of primary care consultations
 
@@ -259,6 +312,7 @@ grid.arrange(Plots_Total_Visits_Raw_g_with_title, Plots_Total_Visits_OMOP_g_with
 
 ```
 
+### Total Number of Primary Care Consultation Costs
 
 Figure 3: Total number of primary care consultation costs
 
@@ -297,9 +351,9 @@ Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title <- arrangeGrob(Bar_Graph_num
 grid.arrange(Bar_Graph_number_of_visits_per_pt_Raw_g_with_title, Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title, ncol = 2)
 ```
 
-### Healthcare resource utilisation (HCRU)
+## Healthcare resource utilisation (HCRU) {.tabset}
 
-#### HCRU Figures - Monthly
+### HCRU Figures - Monthly
 
 Figure 2: Mean number of primary care consultations by provider specialty, users-only.
 
@@ -339,7 +393,8 @@ grid.arrange(Mean_visits_per_specialty_weighted_Raw_g_with_title, Mean_visits_pe
 
 ```
 
-#### HCRU Year 1/2 Summary Tables
+
+### HCRU Year 1/2 Summary Tables
 
 ```{r}
 # Add a column to identify the source
@@ -420,7 +475,7 @@ yearly_user_combined_visits_rp %>%
 ```
 
 
-#### HCRU Overall Summary Tables
+### HCRU Overall Summary Tables
 
 ```{r}
 # Add a column to identify the source
@@ -502,9 +557,9 @@ user_combined_visits_rp %>%
 
 
 
-### Costs
+## Costs {.tabset}
 
-#### Costs Figures - Monthly
+### Costs Figures - Monthly
 
 Figure 1: Mean number of primary care consultation costs by provider specialty, users-only.
 
@@ -544,7 +599,7 @@ grid.arrange(Mean_costs_per_specialty_weighted_Raw_g_with_title, Mean_costs_per_
 
 ```
 
-#### Costs Year 1/2 Summary Tables
+### Costs Year 1/2 Summary Tables
 
 ```{r}
 # Add a column to identify the source
@@ -625,7 +680,7 @@ yearly_user_combined_costs_rp %>%
 ```
 
 
-#### Costs Overall Summary Tables
+### Costs Overall Summary Tables
 
 ```{r}
 # Add a column to identify the source
@@ -705,31 +760,79 @@ user_combined_costs_rp %>%
 
 ```
 
-
-Figure 1: Total number of primary care consultations
-
-```{r fig.height=6, fig.width=6}
-Plots_Total_Visits_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Tot_visits.PNG"))
-grid.raster(Plots_Total_Visits_OMOP)
-```
-
-Figure 2: Mean number of primary care consultations by provider specialty, users-only.
-
-```{r fig.height=6, fig.width=6}
-Mean_visits_per_specialty_unweighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
-grid.raster(Mean_visits_per_specialty_unweighted_OMOP)
-```
-
-Figure 3: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
-
-```{r fig.height=6, fig.width=6}
-Mean_visits_per_specialty_weighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
-grid.raster(Mean_visits_per_specialty_weighted_OMOP)
-```
-
 # Appendix 
 
 ## Raw {.tabset}
+
+### HCRU by Monthly (Unweighted) - Users
+
+```{r}
+monthly_visits_users_summary_rp_unweighted_raw <- import(here("CPRD Raw Analysis", "Results", "Output_monthly_visits_Raw.xlsx"), sheet = "monthly_visit_unweighted")
+```
+
+
+```{r}
+colnames(monthly_visits_users_summary_rp_unweighted_raw) <- c("Month After Index",  "Mean Visits Per Month", "Minimum Visits Per Month", "Maximum Visits Per Month", "SD Visits Per Month", "Lower Quartile Visits Per Month", "Higher Quartile Visits Per Month", "Number of Subjects")
+
+
+datatable(monthly_visits_users_summary_rp_unweighted_raw,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### HCRU by Monthly (Weighted) - Users
+
+```{r}
+monthly_visits_users_summary_rp_weighted_raw <- import(here("CPRD Raw Analysis", "Results", "Output_monthly_visits_Raw.xlsx"), sheet = "monthly_visit_weighted")
+```
+
+
+```{r}
+colnames(monthly_visits_users_summary_rp_weighted_raw) <- c("Month After Index",  "Mean Visits Per Month", "Minimum Visits Per Month", "Maximum Visits Per Month", "SD Visits Per Month", "Lower Quartile Visits Per Month", "Higher Quartile Visits Per Month", "Number of Subjects")
+
+
+datatable(monthly_visits_users_summary_rp_weighted_raw,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
 
 ### HCRU by Specialty - Users
 
@@ -739,7 +842,7 @@ user_only_summary_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_
 
 
 ```{r}
-colnames(user_only_summary_rp_raw) <- c("Specialty", "Total Visits", "Mean Visits per Year", "SD Visits per Year", "Minimum Visits per Year", "Maximum Visits per Year", "Number of Subjects")
+colnames(user_only_summary_rp_raw) <- c("Specialty", "Total Visits", "Mean Visits Per Year", "SD Visits Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
 
 
 datatable(user_only_summary_rp_raw,
@@ -778,6 +881,76 @@ all_summary_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits
 colnames(all_summary_rp_raw) <- c("Specialty", "Total Visits", "Mean Visits Per Year", "SD Visits Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
 
 datatable(all_summary_rp_raw,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Costs by Monthly (Unweighted) - Users
+
+```{r}
+monthly_costs_users_summary_rp_unweighted_raw <- import(here("CPRD Raw Analysis", "Results", "Output_monthly_costs_Raw.xlsx"), sheet = "monthly_costs_unweighted")
+```
+
+
+```{r}
+colnames(monthly_costs_users_summary_rp_unweighted_raw) <- c("Month After Index",  "Mean Visit Costs Per Month", "Minimum Visit Costs Per Month", "Maximum Visit Costs Per Month", "SD Visits Costs Per Month", "Lower Quartile Visit Costs Per Month", "Higher Quartile Visit Costs Per Month", "Number of Subjects")
+
+
+datatable(monthly_costs_users_summary_rp_unweighted_raw,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Costs by Monthly (Weighted) - Users
+
+```{r}
+monthly_costs_users_summary_rp_weighted_raw <- import(here("CPRD Raw Analysis", "Results", "Output_monthly_costs_Raw.xlsx"), sheet = "monthly_costs_weighted")
+```
+
+
+```{r}
+colnames(monthly_costs_users_summary_rp_weighted_raw) <- c("Month After Index",  "Mean Visit Costs Per Month", "Minimum Visit Costs Per Month", "Maximum Visit Costs Per Month", "SD Visits Costs Per Month", "Lower Quartile Visit Costs Per Month", "Higher Quartile Visit Costs Per Month", "Number of Subjects")
+
+
+datatable(monthly_costs_users_summary_rp_weighted_raw,
     rownames = FALSE, 
     filter = 'top', 
     options = list(
@@ -873,6 +1046,76 @@ datatable(all_cost_summary_rp_raw,
 
 ## OMOP {.tabset}
 
+### HCRU by Monthly (Unweighted) - Users
+
+```{r}
+monthly_visits_users_summary_rp_unweighted_omop <- import(here("OMOP Analysis", "Results", "Output_monthly_visits_OMOP.xlsx"), sheet = "monthly_visit_unweighted")
+```
+
+
+```{r}
+colnames(monthly_visits_users_summary_rp_unweighted_omop) <- c("Month After Index",  "Mean Visits Per Month", "Minimum Visits Per Month", "Maximum Visits Per Month", "SD Visits Per Month", "Lower Quartile Visits Per Month", "Higher Quartile Visits Per Month", "Number of Subjects")
+
+
+datatable(monthly_visits_users_summary_rp_unweighted_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### HCRU by Monthly (Weighted) - Users
+
+```{r}
+monthly_visits_users_summary_rp_weighted_omop <- import(here("OMOP Analysis", "Results", "Output_monthly_visits_OMOP.xlsx"), sheet = "monthly_visit_weighted")
+```
+
+
+```{r}
+colnames(monthly_visits_users_summary_rp_weighted_omop) <- c("Month After Index",  "Mean Visits Per Month", "Minimum Visits Per Month", "Maximum Visits Per Month", "SD Visits Per Month", "Lower Quartile Visits Per Month", "Higher Quartile Visits Per Month", "Number of Subjects")
+
+
+datatable(monthly_visits_users_summary_rp_weighted_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
 ### HCRU by Specialty - Users
 
 ```{r}
@@ -881,7 +1124,7 @@ user_only_summary_rp_omop <- import(here("OMOP Analysis", "Results", "Output_vis
 
 
 ```{r}
-colnames(user_only_summary_rp_omop) <- c("Specialty", "Total Visits", "Mean Visits per Year", "SD Visits per Year", "Minimum Visits per Year", "Maximum Visits per Year", "Number of Subjects")
+colnames(user_only_summary_rp_omop) <- c("Specialty", "Total Visits", "Mean Visits per Year", "SD Visits Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
 
 
 datatable(user_only_summary_rp_omop,
@@ -920,6 +1163,76 @@ all_summary_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OM
 colnames(all_summary_rp_omop) <- c("Specialty", "Total Visits", "Mean Visits Per Year", "SD Visits Per Year", "Minimum Visits Per Year", "Maximum Visits Per Year", "Number of Subjects")
 
 datatable(all_summary_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Costs by Monthly (Unweighted) - Users
+
+```{r}
+monthly_costs_users_summary_rp_unweighted_omop <- import(here("OMOP Analysis", "Results", "Output_monthly_costs_OMOP.xlsx"), sheet = "monthly_costs_unweighted")
+```
+
+
+```{r}
+colnames(monthly_costs_users_summary_rp_unweighted_omop) <- c("Month After Index",  "Mean Visit Costs Per Month", "Minimum Visit Costs Per Month", "Maximum Visit Costs Per Month", "SD Visits Costs Per Month", "Lower Quartile Visit Costs Per Month", "Higher Quartile Visit Costs Per Month", "Number of Subjects")
+
+
+datatable(monthly_costs_users_summary_rp_unweighted_raw,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+          list(targets = c(0, 1, 2), width = "120px"),  # Narrow columns
+            list(targets = c(3, 4), width = "300px", className = "text-wrap"), # Wider columns
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Costs by Monthly (Weighted) - Users
+
+```{r}
+monthly_costs_users_summary_rp_weighted_omop <- import(here("OMOP Analysis", "Results", "Output_monthly_costs_OMOP.xlsx"), sheet = "monthly_costs_weighted")
+```
+
+
+```{r}
+colnames(monthly_costs_users_summary_rp_weighted_omop) <- c("Month After Index",  "Mean Visit Costs Per Month", "Minimum Visit Costs Per Month", "Maximum Visit Costs Per Month", "SD Visits Costs Per Month", "Lower Quartile Visit Costs Per Month", "Higher Quartile Visit Costs Per Month", "Number of Subjects")
+
+
+datatable(monthly_costs_users_summary_rp_weighted_omop,
     rownames = FALSE, 
     filter = 'top', 
     options = list(
@@ -1016,7 +1329,7 @@ datatable(all_cost_summary_rp_omop,
 ## Assumptions Underlying Cost Calculations
 
 ```{r}
-provider_cost_inputs_rp <- rio::import(here("CPRD Raw Analysis", "SRC",  "provider_specialty_cprd_V.0.3_summarised.xlsx")) %>%
+provider_cost_inputs_rp <- rio::import(here("CPRD Raw Analysis", "SRC",  "provider_specialty_cprd_V.0.3.xlsx")) %>%
   janitor::clean_names() %>% 
   select(!include) %>% 
   select(specialty_source_value, specialty_source_value_summarised, everything())
