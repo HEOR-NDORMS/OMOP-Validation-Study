@@ -252,7 +252,7 @@ grid.arrange(Plots_Total_Visits_Raw_g_with_title, Plots_Total_Visits_OMOP_g_with
 Figure 2: Number of visits
 
 ```{r fig.height=6, fig.width=6}
-# Read your images
+# Read images
 Bar_Graph_number_of_visits_per_pt_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"))
 Bar_Graph_number_of_visits_per_pt_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"))
 
@@ -261,8 +261,8 @@ Bar_Graph_number_of_visits_per_pt_Raw_g <- rasterGrob(Bar_Graph_number_of_visits
 Bar_Graph_number_of_visits_per_pt_OMOP_g <- rasterGrob(Bar_Graph_number_of_visits_per_pt_OMOP, interpolate = TRUE)
 
 # Add titles with arrangeGrob 
-Bar_Graph_number_of_visits_per_pt_Raw_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
-Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Bar_Graph_number_of_visits_per_pt_Raw_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold")), padding = unit(5, "cm")) 
+Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title <- arrangeGrob(Bar_Graph_number_of_visits_per_pt_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold")), padding = unit(5, "cm")) 
 
 grid.arrange(Bar_Graph_number_of_visits_per_pt_Raw_g_with_title, Bar_Graph_number_of_visits_per_pt_OMOP_g_with_title, ncol = 2)
 ```
@@ -270,16 +270,39 @@ grid.arrange(Bar_Graph_number_of_visits_per_pt_Raw_g_with_title, Bar_Graph_numbe
 Figure 4: Exposure Time
 
 ```{r fig.height=6, fig.width=6}
+# Read images
 Exposure_Time_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Exposure_Time.PNG"))
-grid.raster(Exposure_Time_Raw)
+Exposure_Time_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Exposure_Time.PNG"))
+
+# Wrap them in rasterGrob
+Exposure_Time_Raw_g <- rasterGrob(Exposure_Time_Raw, interpolate = TRUE)
+Exposure_Time_OMOP_g <- rasterGrob(Exposure_Time_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Exposure_Time_Raw_g_with_title <- arrangeGrob(Exposure_Time_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Exposure_Time_OMOP_g_with_title <- arrangeGrob(Exposure_Time_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
+
+grid.arrange(Exposure_Time_Raw_g_with_title, Exposure_Time_OMOP_g_with_title, ncol = 2)
+
 ```
 
 Figure 5: Mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=6, fig.width=6}
-Mean_visits_per_specialty_unweighted_raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
+# Read images
+Mean_visits_per_specialty_unweighted_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
 Mean_visits_per_specialty_unweighted_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
-grid.raster(Mean_visits_per_specialty_unweighted_raw)
+
+# Wrap them in rasterGrob
+Mean_visits_per_specialty_unweighted_Raw_g <- rasterGrob(Mean_visits_per_specialty_unweighted_Raw, interpolate = TRUE)
+Mean_visits_per_specialty_unweighted_OMOP_g <- rasterGrob(Mean_visits_per_specialty_unweighted_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Mean_visits_per_specialty_unweighted_Raw_g_with_title <- arrangeGrob(Mean_visits_per_specialty_unweighted_Raw_g, top = textGrob("Source Raw", gp = gpar(fontsize = 12, fontface = "bold")), padding = unit(2, "cm")) 
+Mean_visits_per_specialty_unweighted_OMOP_g_with_title <- arrangeGrob(Mean_visits_per_specialty_unweighted_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold")), padding = unit(2, "cm")) 
+
+grid.arrange(Mean_visits_per_specialty_unweighted_Raw_g_with_title, Mean_visits_per_specialty_unweighted_OMOP_g_with_title, ncol = 2)
+
 ```
 
 Figure 6: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
