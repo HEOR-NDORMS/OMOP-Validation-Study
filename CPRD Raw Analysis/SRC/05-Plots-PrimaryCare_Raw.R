@@ -80,8 +80,9 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
       plot.title = element_text(face = "bold", hjust = 0.5),
       axis.title = element_text(hjust = 0.5, size = 18),
       axis.text = element_text(size = 16),
-      legend.text = element_text(size = 14),
-      legend.title = element_text(size = 15),
+      legend.text = element_text(size = 15),
+      legend.title = element_text(size = 14),
+      legend.position = "top",
       panel.spacing = unit(0, "lines")
     ))
 
@@ -89,8 +90,8 @@ ggsave(here::here(
   "CPRD Raw Analysis", "Results", "Plots",
   "Mean_visits_per_specialty_unweighted.PNG"),
   plot = plot1,
-  width = 5,
-  height = 4,
+  width = 6,
+  height = 5,
   bg = "white"
 )
 
@@ -189,11 +190,12 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
-      axis.title = element_text(hjust = 0.5, size = 12),
-      axis.text = element_text(size = 15),
-      legend.text = element_text(size = 12),
-      legend.title = element_text(size = 13),
-      plot.caption = element_text(size = 10),
+      axis.title = element_text(hjust = 0.5, size = 18),
+      axis.text = element_text(size = 16),
+      legend.text = element_text(size = 15),
+      legend.title = element_text(size = 14),
+      legend.position = "top",
+      plot.caption = element_text(size = 14),
       panel.spacing = unit(0, "lines")
     ))
 
@@ -414,10 +416,12 @@ plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
-      axis.title = element_text(hjust = 0.5, size = 12),
-      axis.text = element_text(size = 15),
-      legend.text = element_text(size = 12),
-      legend.title = element_text(size = 13),
+      axis.title = element_text(hjust = 0.5, size = 18),
+      axis.text = element_text(size = 16),
+      legend.text = element_text(size = 15),
+      legend.title = element_text(size = 14),
+      legend.position = "top",
+      plot.caption = element_text(size = 14),
       panel.spacing = unit(0, "lines")
     ))
 
@@ -543,11 +547,12 @@ plots_users_mean_costs_specialty_weighted <- costs_per_specialty_month %>%
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
-      axis.title = element_text(hjust = 0.5, size = 12),
-      axis.text = element_text(size = 15),
-      legend.text = element_text(size = 12),
-      legend.title = element_text(size = 13),
-      plot.caption = element_text(size = 10),
+      axis.title = element_text(hjust = 0.5, size = 18),
+      axis.text = element_text(size = 16),
+      legend.text = element_text(size = 15),
+      legend.title = element_text(size = 14),
+      legend.position = "top",
+      plot.caption = element_text(size = 14),
       panel.spacing = unit(0, "lines")
     ))
 
