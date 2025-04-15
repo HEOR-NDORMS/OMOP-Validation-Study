@@ -264,19 +264,23 @@ eligible_patients <- cohort_table %>%
   mutate(
     included_second_year = exposed_days > 365.25 & (exposed_days - 365.25) >= 30.44 & exposed_days <= 730
   ) %>%
-  select(patid, included_second_year)
+  select(patid, exposed_days, included_second_year)
 
 # Adjust year_after_index calculation and merge with eligible patients
 user_visits_yr <- visit_data %>%
   filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
   mutate(
     raw_interval = interval(index_date, consdate),
-    year_after_index = pmin(2, pmax(1, floor(interval(index_date, consdate) / years(1)) + 1))  # Add 1, cap at 2
+    year_after_index = interval(index_date, consdate) / years(1),
+    year_after_index_n = pmin(2, pmax(1, interval(index_date, consdate) / years(1) + 1))
   ) %>%
-  inner_join(eligible_patients, by = "patid") %>%  # Keep only eligible patients
-  filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%  # Ensure valid second-year patients
+  inner_join(eligible_patients, by = "patid") %>%  
+  # fix for patients with < 1 year of exposure as they are missing here!!
+  filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%  
   group_by(patid, year_after_index, specialty) %>%
   summarise(visit_count = n(), .groups = "drop")
+
+View(user_visits_yr %>% select(patid, raw_interval, year_after_index, year_after_index_n))
 
 # Total visits per patient per year
 user_total_visits_per_patient_yr <- user_visits_yr %>%
