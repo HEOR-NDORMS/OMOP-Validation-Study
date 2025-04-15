@@ -69,7 +69,8 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
 ) +
     geom_bar(
       stat = "identity",
-      position = "stack"
+      position = "stack",
+      width = 0.9
     ) +
     scale_fill_manual(values = c(
       "General Practitioner" = "#B4CDCD",
@@ -81,7 +82,15 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
       y = "Mean Visits per User",
       fill = "Specialty"
     ) +
-    theme_minimal())
+    theme_minimal() +
+    theme(plot.title = element_text(face = "bold", hjust = 0.5),
+          axis.title = element_text(hjust = 0.5, size = 12),
+          axis.text = element_text(size = 15),
+          legend.text = element_text(size = 12),
+          legend.title = element_text(size = 13),
+          legend.position = "top",
+          plot.caption = element_text(size = 10),
+          panel.spacing = unit(0, "lines")))
 
 ggsave(here::here(
   "OMOP Analysis", "Results", "Plots",
@@ -116,13 +125,19 @@ visit_data_reduced_user2 <- visit_data_reduced_MIN %>%
       x = "Month After Index",
       y = "Total Visits"
     ) +
-    theme_minimal())
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(hjust = 0.5, size = 18),
+      axis.text = element_text(size = 16),
+      panel.spacing = unit(0, "lines")
+    ))
 
 ggsave(here::here(
   "OMOP Analysis", "Results", "Plots", "Tot_visits.PNG"),
   plot = plot2,
-  width = 6,
-  height = 5,
+  width = 5,
+  height = 4,
   bg = "white"
 )
 
@@ -179,11 +194,21 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
     )) +
     labs(
       x = "Month After Index",
-      y = "Mean Visits per User (Fully Contributing)",
+      y = "Mean Visits per User",
       fill = "Specialty",
-      caption = "Note: Mean calculated among users contributing fully to each month. Exposure time not used."
-    ) +
-    theme_minimal())
+      caption = "Note: Mean calculated among users contributing fully to each month."
+      ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(hjust = 0.5, size = 12),
+      axis.text = element_text(size = 15),
+      legend.text = element_text(size = 12),
+      legend.title = element_text(size = 13),
+      legend.position = "top",
+      plot.caption = element_text(size = 10),
+      panel.spacing = unit(0, "lines")
+    ))
 
 ggsave(here::here("OMOP Analysis", "Results",
                   "Plots", "Mean_visits_per_specialty_weighted.PNG"),
@@ -210,22 +235,23 @@ pt_count_visits <- visit_data_MIN %>%
 
 (plot4 <- pt_count_visits %>% 
     ggplot(aes(x = total_patient_visits, y = Percent_Subjects)) +
-    geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
+    geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9, width = 1.0) +
     labs(x = "Total Number of Visits", y = "% of Subjects") +
     # scale_y_continuous(limits = c(0, 9) , 
     #                    breaks = seq(0, 9, by = 1))+
     # coord_cartesian(xlim = c(0, 400)) +
-    theme_minimal() +
+    theme_minimal(base_family = 20) +
     theme(
-      plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
-      axis.title = element_text(hjust = 0.5, size = 11),
-      panel.spacing = unit(0.1, "lines")
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(hjust = 0.5, size = 18),
+      axis.text = element_text(hjust = 0.5, size = 16),
+      panel.spacing = unit(0, "lines")
     ))
 
 ggsave(here::here("OMOP Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"),
        plot = plot4,
-       width = 6,
-       height = 5,
+       width = 5,
+       height = 4,
        bg = "white"
 )
 
@@ -240,12 +266,18 @@ visit_data_MIN_t <- visit_data %>%
     geom_histogram(bins = 30, colour = "white", fill = "#00CDCD") +
     labs(x = "Follow up time",
          y = "Count") +
-    theme_minimal())
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(hjust = 0.5, size = 16),
+      axis.text = element_text(size = 14),
+      panel.spacing = unit(0, "lines")
+    ))
 
 ggsave(here::here("OMOP Analysis", "Results", "Plots", "Exposure_Time.PNG"),
        plot = plot5,
-       width = 6,
-       height = 5,
+       width = 5,
+       height = 4,
        bg = "white"
 )
 
@@ -324,7 +356,17 @@ plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
       y = "Mean Costs per User",
       fill = "Specialty"
     ) +
-    theme_minimal())
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(hjust = 0.5, size = 12),
+      axis.text = element_text(size = 15),
+      legend.text = element_text(size = 12),
+      legend.title = element_text(size = 13),
+      legend.position = "top",
+      plot.caption = element_text(size = 10),
+      panel.spacing = unit(0, "lines")
+    ))
 
 ggsave(here::here(
   "OMOP Analysis", "Results", "Plots", 
@@ -364,13 +406,19 @@ visit_data_reduced_user_c2 <- visit_data_reduced_MIN_c %>%
       x = "Month After Index",
       y = "Total Costs"
     ) +
-    theme_minimal())
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(hjust = 0.5, size = 18),
+      axis.text = element_text(size = 16),
+      panel.spacing = unit(0, "lines")
+    ))
 
 ggsave(here::here(
   "OMOP Analysis", "Results", "Plots", "Tot_costs.PNG"),
   plot = plot_costs2,
-  width = 6,
-  height = 5,
+  width = 5,
+  height = 4,
   bg = "white"
 )
 
@@ -436,9 +484,19 @@ plots_users_mean_costs_specialty_weighted <- costs_per_specialty_month %>%
       x = "Month After Index",
       y = "Mean Costs per User",
       fill = "Specialty",
-      caption = "Note: Includes only users contributing full month (no exposure weighting)."
+      caption = "Note: Includes only users contributing full month."
     ) +
-    theme_minimal())
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(hjust = 0.5, size = 12),
+      axis.text = element_text(size = 15),
+      legend.text = element_text(size = 12),
+      legend.title = element_text(size = 13),
+      legend.position = "top",
+      plot.caption = element_text(size = 12),
+      panel.spacing = unit(0, "lines")
+    ))
 
 
 ggsave(here::here(
