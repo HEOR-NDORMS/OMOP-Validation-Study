@@ -16,6 +16,8 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
    group_by(month_after_index) %>%
    summarise(
      mean_visits = round(sum(total_visits)/n_distinct(subject_id),2),
+     min = round(min(total_visits),2),
+     max = round(max(total_visits),2),
      sd_visits = round(sd(total_visits),2),
      q1 = round(quantile(total_visits, 0.25),2),
      median = round(median(total_visits, 0.50),2),
@@ -48,6 +50,8 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
    group_by(month_after_index) %>%
    summarise(
      mean_visits = round(sum(total_visits)/n_distinct(subject_id),2),
+     min = round(min(total_visits),2),
+     max = round(max(total_visits),2),
      sd_visits = round(sd(total_visits),2),
      q1 = round(quantile(total_visits, 0.25),2),
      median = round(median(total_visits, 0.50),2),
@@ -97,6 +101,8 @@ visit_data_reduced_MIN_c <- visit_data_reduced %>%
    group_by(month_after_index) %>%
    summarise(
      mean_cost = round(sum(total_costs)/n_distinct(subject_id), 2),
+     min_cost = round(min(total_costs), 2),
+     max_cost = round(max(total_costs), 2),
      sd_cost = round(sd(total_costs), 2),
      q1_cost = round(quantile(total_costs, 0.25), 2),
      median_cost = round(median(total_costs), 4),
@@ -136,9 +142,11 @@ visit_data_reduced_MIN_c <- visit_data_reduced %>%
    group_by(month_after_index) %>%
    summarise(
      mean_cost = round(sum(total_costs)/n_distinct(subject_id), 2),
+     min_cost = round(min(total_costs), 2),
+     max_cost = round(max(total_costs), 2),
      sd_cost = round(sd(total_costs), 2),
      q1_cost = round(quantile(total_costs, 0.25), 2),
-     median_cost = round(median(total_costs), 2),
+     median_cost = round(median(total_costs), 4),
      q3_cost = round(quantile(total_costs, 0.75), 2),
      n_pts = n_distinct(subject_id),
      .groups = "drop"
