@@ -262,41 +262,53 @@ all_summary_statistics_overall <- tibble(
 eligible_patients <- cohort_table %>% 
   mutate(exposed_days = as.numeric(difftime(follow_up_end, index_date, units = "days"))) %>% 
   mutate(
-    included_second_year = exposed_days > 365.25 & (exposed_days - 365.25) >= 30.44 & exposed_days <= 730
+    exposure_days_yr1 = pmin(exposed_days, 365.25),
+    exposure_days_yr2 = pmax(0, exposed_days - 365.25)
   ) %>%
-  select(patid, included_second_year)
+  select(patid, exposed_days, exposure_days_yr1, exposure_days_yr2)
 
-# Adjust year_after_index calculation and merge with eligible patients
+# Merge and adjust year index calculation
 user_visits_yr <- visit_data %>%
   filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
   mutate(
     raw_interval = interval(index_date, consdate),
-    year_after_index = pmin(2, pmax(1, floor(interval(index_date, consdate) / years(1)) + 1))  # Add 1, cap at 2
+    year_after_index = floor(interval(index_date, consdate) / years(1)),
+    year_after_index_n = pmin(2, floor(interval(index_date, consdate) / years(1) + 1))
   ) %>%
-  inner_join(eligible_patients, by = "patid") %>%  # Keep only eligible patients
-  filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%  # Ensure valid second-year patients
-  group_by(patid, year_after_index, specialty) %>%
+  left_join(eligible_patients, by = "patid")  # <-- use LEFT JOIN to keep all visits
+
+# Remove only Year 2 visits with < 30.44 days of exposure
+user_visits_yr_summary <- user_visits_yr %>%
+  filter(!(year_after_index_n == 2 & exposure_days_yr2 < 30.44)) %>%
+  group_by(patid, year_after_index_n, specialty) %>%
   summarise(visit_count = n(), .groups = "drop")
 
+# Sense check: How many unique patients before and after?
+before_patients_users <- visit_data %>% filter(user_status == "User") %>% distinct(patid)
+after_patients_users <- user_visits_yr %>% distinct(patid)
+
+setdiff(before_patients$patid, after_patients$patid)  # Should be character(0)
+
+rm(before_patients_users); rm(after_patients_users)
+
 # Total visits per patient per year
-user_total_visits_per_patient_yr <- user_visits_yr %>%
-  group_by(patid, year_after_index) %>%
+user_total_visits_per_patient_yr <- user_visits_yr_summary %>%
+  group_by(patid, year_after_index_n) %>%
   summarise(total_visits = sum(visit_count),
-            visits_per_yr = total_visits/year_after_index,
             .groups = "drop") %>% 
   distinct()
 
 # Summary statistics for visits per year
-user_summary_visits_per_year <- user_total_visits_per_patient_yr %>%
-  group_by(year_after_index) %>%
+user_summary_visits_per_year_t <- user_total_visits_per_patient_yr %>%
+  group_by(year_after_index_n) %>%
   summarise(
-    mean_visit_count = round(sum(total_visits) /sum(year_after_index), 2),
-    min_visits = round(min(visits_per_yr), 2),
-    max_visits = round(max(visits_per_yr), 2),
-    sd_visits = round(sd(visits_per_yr), 2),
-    median_visits = round(median(visits_per_yr), 2),
-    q1_visits = round(quantile(visits_per_yr, 0.25), 2),
-    q3_visits = round(quantile(visits_per_yr, 0.75), 2),
+    mean_visit_count = round(sum(total_visits) /sum(year_after_index_n), 2),
+    min_visits = round(min(total_visits), 2),
+    max_visits = round(max(total_visits), 2),
+    sd_visits = round(sd(total_visits), 2),
+    median_visits = round(median(total_visits), 2),
+    q1_visits = round(quantile(total_visits, 0.25), 2),
+    q3_visits = round(quantile(total_visits, 0.75), 2),
     .groups = "drop"
   )
 
@@ -315,6 +327,7 @@ all_visits_yr <- visit_data %>%
     specialty == "Not Clinically Relevant", 0, visit_count
   ))
 
+# 2471999720603
 # Total visits per patient per year
 all_total_visits_per_patient_yr <- all_visits_yr %>%
   group_by(patid, year_after_index) %>%
