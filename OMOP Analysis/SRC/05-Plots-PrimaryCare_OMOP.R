@@ -193,6 +193,42 @@ ggsave(here::here("OMOP Analysis", "Results",
        bg = "white"
 )
 
+### PLOT - Total Number of Visits ----
+visit_data_MIN <- visit_data %>% select(
+  subject_id, index_date, visit_detail_start_date, user_status,visit_count,visits_per_year,
+  specialty, follow_up_end, exposed_yrs, visit_cost
+)
+
+pt_count_visits <- visit_data_MIN %>%
+  group_by(subject_id, specialty) %>%
+  summarise(total_patient_visits = first(visit_count), .groups = 'drop') %>%
+  group_by(subject_id) %>% 
+  summarise(total_patient_visits = sum(total_patient_visits), .groups = 'drop') %>% 
+  group_by(total_patient_visits) %>%
+  summarise(Subject_Count = n(), .groups = 'drop') %>%
+  mutate(Percent_Subjects = Subject_Count / sum(Subject_Count) * 100)
+
+(plot4 <- pt_count_visits %>% 
+    ggplot(aes(x = total_patient_visits, y = Percent_Subjects)) +
+    geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
+    labs(x = "Total Number of Visits", y = "% of Subjects") +
+    # scale_y_continuous(limits = c(0, 9) , 
+    #                    breaks = seq(0, 9, by = 1))+
+    # coord_cartesian(xlim = c(0, 400)) +
+    hrbrthemes::theme_ipsum() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+      axis.title = element_text(hjust = 0.5, size = 11),
+      panel.spacing = unit(0.1, "lines")
+    ))
+
+ggsave(here::here("OMOP Analysis", "Results", "Plots", "Bar_Graph_number_of_visits_per_pt.PNG"),
+       plot = plot4,
+       width = 8,
+       height = 6,
+       bg = "white"
+)
+
 ## Cost ----
 
 visit_data_reduced_MIN_c <- visit_data_reduced %>% 
