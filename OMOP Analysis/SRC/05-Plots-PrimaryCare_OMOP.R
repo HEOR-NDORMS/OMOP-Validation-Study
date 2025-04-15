@@ -83,14 +83,15 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
       fill = "Specialty"
     ) +
     theme_minimal() +
-    theme(plot.title = element_text(face = "bold", hjust = 0.5),
-          axis.title = element_text(hjust = 0.5, size = 12),
-          axis.text = element_text(size = 15),
-          legend.text = element_text(size = 12),
-          legend.title = element_text(size = 13),
-          legend.position = "top",
-          plot.caption = element_text(size = 10),
-          panel.spacing = unit(0, "lines")))
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(hjust = 0.5, size = 18),
+      axis.text = element_text(size = 16),
+      legend.text = element_text(size = 14),
+      legend.title = element_text(size = 15),
+      legend.position = "top",
+      panel.spacing = unit(0, "lines"))
+  )
 
 ggsave(here::here(
   "OMOP Analysis", "Results", "Plots",
