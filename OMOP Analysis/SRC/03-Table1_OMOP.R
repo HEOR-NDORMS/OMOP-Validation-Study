@@ -138,7 +138,7 @@ table_one_omop_visit_data <- table_one_omop %>%
     "User", "Non-User"
   )) %>%
   mutate(not_users_status = case_when(
-    user_status == "Non-User" & in_exposure_time == 0 ~ "No Visits",
+    user_status == "Non-User" & in_exposure_time == 0 ~ "Visits with Non-clinically Relevant Staff",
     user_status == "Non-User" ~ "Visits with Non-clinically Relevant Staff"
   )) %>% 
   ungroup() %>% 

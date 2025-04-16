@@ -79,9 +79,10 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
     )) +
     labs(
       x = "Month After Index",
-      y = "Mean Visits per User",
+      y = "Mean Visits per Healthcare Service User",
       fill = "Specialty"
     ) +
+    scale_y_continuous(limits = c(0, 3.5)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -125,8 +126,10 @@ visit_data_reduced_user2 <- visit_data_reduced_MIN %>%
     ) + # Blue color for the bars
     labs(
       x = "Month After Index",
-      y = "Total Visits"
+      y = "Total Visits (Healthcare Service Users)"
     ) +
+    scale_y_continuous(labels = scales::comma,
+                       limits = c(0, 60000)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -169,7 +172,7 @@ total_visits_per_patient_month <- visit_data_reduced_user %>%
 # Step 2: Compute mean number of visits per month (no weighting)
 mean_visits_per_month <- total_visits_per_patient_month %>%
   group_by(month_after_index) %>%
-  summarise(mean_visit_count = sum(total_visits) / n_distinct(patid), .groups = "drop")
+  summarise(mean_visit_count = sum(total_visits) / n_distinct(subject_id), .groups = "drop")
 
 # Step 3: Compute total visits per specialty per month
 visits_per_specialty_month <- visit_data_reduced_user %>%
@@ -196,10 +199,11 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
     )) +
     labs(
       x = "Month After Index",
-      y = "Mean Visits per User",
+      y = "Mean Visits per Health Care Service Users",
       fill = "Specialty",
-      caption = "Mean calculated among users contributing fully to each month."
+      caption = "Mean calculated among healthcare service users contributing fully to each month."
       ) +
+    scale_y_continuous(limits = c(0, 3.5)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -239,9 +243,9 @@ pt_count_visits <- visit_data_MIN %>%
     ggplot(aes(x = total_patient_visits, y = Percent_Subjects)) +
     geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9, width = 1.0) +
     labs(x = "Total Number of Visits", y = "% of Subjects") +
-    # scale_y_continuous(limits = c(0, 9) , 
-    #                    breaks = seq(0, 9, by = 1))+
-    # coord_cartesian(xlim = c(0, 400)) +
+    scale_y_continuous(limits = c(0, 4) ,
+                       breaks = seq(0, 4, by = 1))+
+    coord_cartesian(xlim = c(0, 400)) +
     theme_minimal(base_family = 20) +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -268,6 +272,8 @@ visit_data_MIN_t <- visit_data %>%
     geom_histogram(bins = 30, colour = "white", fill = "#00CDCD") +
     labs(x = "Follow up time",
          y = "Count") +
+    scale_y_continuous(labels = scales::comma,
+                       limits = c(0, 20000)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -355,9 +361,10 @@ plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
     )) +
     labs(
       x = "Month After Index",
-      y = "Mean Costs per User",
+      y = "Mean Costs per Healthcare Service User",
       fill = "Specialty"
     ) +
+    scale_y_continuous(limits = c(0, 125)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -385,19 +392,21 @@ visit_data_reduced_user_c2 <- visit_data_reduced_MIN_c %>%
   filter(specialty_reduced != "Not Clinically Relevant") %>%
   mutate(month_after_index = interval(
     index_date, visit_detail_start_date) %/% months(1)) %>%
-  group_by(month_after_index) %>%
+  group_by(subject_id, month_after_index, specialty_reduced) %>%
   summarise(visit_count = n(),
             visit_costs = visit_count * unit_cost,
             .groups = "drop") %>% 
-  distinct(month_after_index, visit_count, visit_costs, 
-           .keep_all = TRUE)
-
+  distinct(subject_id, month_after_index, specialty_reduced, visit_costs, 
+           .keep_all = TRUE) %>% 
+  group_by(month_after_index) %>% 
+  summarise(tot_costs = sum(visit_costs),
+            .groups = "drop")
 
 (plot_costs2 <- ggplot(
   visit_data_reduced_user_c2,
   aes(
     x = month_after_index,
-    y = visit_costs
+    y = tot_costs
   )
 ) +
     geom_bar(
@@ -406,15 +415,17 @@ visit_data_reduced_user_c2 <- visit_data_reduced_MIN_c %>%
     ) + # Blue color for the bars
     labs(
       x = "Month After Index",
-      y = "Total Costs"
+      y = "Total Costs (Healthcare Service Users)"
     ) +
+    scale_y_continuous(labels = scales::comma,
+                       limits = c(0, 2500000)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
       axis.title = element_text(hjust = 0.5, size = 18),
-      axis.text = element_text(size = 16),
-      panel.spacing = unit(0, "lines")
+      axis.text = element_text(size = 16)
     ))
+
 
 ggsave(here::here(
   "OMOP Analysis", "Results", "Plots", "Tot_costs.PNG"),
@@ -484,9 +495,9 @@ plots_users_mean_costs_specialty_weighted <- costs_per_specialty_month %>%
     )) +
     labs(
       x = "Month After Index",
-      y = "Mean Costs per User",
+      y = "Mean Costs per Healthcare Service User",
       fill = "Specialty",
-      caption = "Includes only users contributing full month."
+      caption = "Includes only healthcare service users contributing full month."
     ) +
     theme_minimal() +
     theme(
