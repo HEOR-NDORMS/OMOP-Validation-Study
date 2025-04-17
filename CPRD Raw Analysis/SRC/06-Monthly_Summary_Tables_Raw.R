@@ -13,6 +13,7 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
   group_by(patid, month_after_index) %>%
   summarise(total_visits = n(), .groups = "drop") %>%
   group_by(month_after_index) %>%
+   # check why we hace NA in the output??, could be in the report
   summarise(
     mean_visits = round(sum(total_visits)/n_distinct(patid),2),
     min = round(min(total_visits),2),
@@ -31,6 +32,8 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
   filter(specialty_reduced != "Not Clinically Relevant", 
          user_status == "User") %>%
   mutate(
+    # use 30.44 to indicate a full month as exposed to calendar years,
+    # say 3.5 months, get the 
     month_after_index = interval(index_date, consdate) %/% months(1),
     month_start = index_date %m+% months(month_after_index),
     month_end = ceiling_date(month_start, unit = "month") - days(1)
@@ -41,8 +44,8 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
     # they might have only contributed a few days of data in that month
     # best to calculate month_end based on calendar months, not a fixed number of days like 30.44.
     # Calendar months vary in length (28–31 days).
-    # We usually group data by calendar months (e.g., Jan, Feb, Mar), not arbitrary 30.44-day chunks.
-    # Using actual start and end dates of calendar months ensures alignment with how healthcare data (like visits or costs) is typically tracked and reported.
+    # Group data by calendar months (e.g., Jan, Feb, Mar), not arbitrary 30.44-day chunks.
+    # Using actual start and end dates of calendar months 
   filter(follow_up_end >= month_end) %>%  
   group_by(patid, month_after_index) %>%
   summarise(total_visits = n(), .groups = "drop") %>%
