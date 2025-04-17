@@ -160,13 +160,12 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
     any(is_clinically_relevant == 1, na.rm = TRUE), 
     "User", "Non-User")) %>%
   mutate(not_users_status = case_when(
-    user_status == "Non-User" & is.na(consdate) ~ "Unknown Visits",
+    user_status == "Non-User" & is.na(consdate) ~ "Visits with Non-clinically Relevant Staff",
     user_status == "Non-User" ~ "Visits with Non-clinically Relevant Staff"
   )) %>% 
   ungroup() %>% 
   distinct(patid, user_status, .keep_all = TRUE)
 
-<<<<<<< HEAD
  # Summary table ----
 # # Using gtsummary::tbl_summary, we can summarise the table as follows
 # (gt_summary_table <- table_one_raw_visit_data %>% 
@@ -193,7 +192,7 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
   mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason)) %>% 
   mutate(follow_up_time = as.numeric(follow_up_time))
-=======
+
 # Summary table ----
 # Using gtsummary::tbl_summary, we can summarise the table as follows
 (gt_summary_table <- table_one_raw_visit_data %>% 
@@ -219,7 +218,7 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
 # Reorder factor by frequency
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
   mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason))  
->>>>>>> cc42ce8 (update raw files)
+
 
 (gt_summary_table <- table_one_raw_visit_data %>% 
   gtsummary::tbl_summary(
