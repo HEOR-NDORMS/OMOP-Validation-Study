@@ -141,8 +141,8 @@ visit_data_reduced_user2 <- visit_data_reduced_MIN %>%
 ggsave(here::here(
   "OMOP Analysis", "Results", "Plots", "Tot_visits.PNG"),
   plot = plot2,
-  width = 5,
-  height = 4,
+  width = 7,
+  height = 6,
   bg = "white"
 )
 
@@ -201,7 +201,7 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
       x = "Month After Index",
       y = "Mean Visits per Health Care Service Users",
       fill = "Specialty",
-      caption = "Mean calculated among healthcare service users contributing fully to each month."
+      caption = "Mean calculated among healthcare service users \ncontributing fully to each month."
       ) +
     scale_y_continuous(limits = c(0, 3.5)) +
     theme_minimal() +
@@ -209,18 +209,18 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
       plot.title = element_text(face = "bold", hjust = 0.5),
       axis.title = element_text(hjust = 0.5, size = 18),
       axis.text = element_text(size = 16),
-      legend.text = element_text(size = 15),
-      legend.title = element_text(size = 14),
-      plot.caption = element_text(size = 13), 
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 15),
       legend.position = "top",
+      plot.caption = element_text(size = 15),
       panel.spacing = unit(0, "lines")
     ))
 
 ggsave(here::here("OMOP Analysis", "Results",
                   "Plots", "Mean_visits_per_specialty_weighted.PNG"),
        plot = plot3, 
-       width = 6, 
-       height = 5, 
+       width = 7, 
+       height = 6, 
        bg = "white"
 )
 
@@ -371,8 +371,7 @@ plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
       axis.title = element_text(hjust = 0.5, size = 18),
       axis.text = element_text(size = 16),
       legend.text = element_text(size = 15),
-      legend.title = element_text(size = 14),
-      plot.caption = element_text(size = 13), 
+      legend.title = element_text(size = 15),
       legend.position = "top",
       panel.spacing = unit(0, "lines")
     ))
@@ -381,8 +380,8 @@ ggsave(here::here(
   "OMOP Analysis", "Results", "Plots", 
   "Mean_costs_per_specialty_unweighted.PNG"),
   plot = plot_costs1, 
-  width = 6,
-  height = 5, 
+  width = 7,
+  height = 6, 
   bg = "white"
 )
 
@@ -430,8 +429,8 @@ visit_data_reduced_user_c2 <- visit_data_reduced_MIN_c %>%
 ggsave(here::here(
   "OMOP Analysis", "Results", "Plots", "Tot_costs.PNG"),
   plot = plot_costs2,
-  width = 5,
-  height = 4,
+  width = 7,
+  height = 6,
   bg = "white"
 )
 
@@ -497,17 +496,17 @@ plots_users_mean_costs_specialty_weighted <- costs_per_specialty_month %>%
       x = "Month After Index",
       y = "Mean Costs per Healthcare Service User",
       fill = "Specialty",
-      caption = "Includes only healthcare service users contributing full month."
+      caption = "Includes only healthcare service users \ncontributing full month."
     ) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
       axis.title = element_text(hjust = 0.5, size = 18),
       axis.text = element_text(size = 16),
-      legend.text = element_text(size = 15),
-      legend.title = element_text(size = 14),
-      plot.caption = element_text(size = 13), 
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 15),
       legend.position = "top",
+      plot.caption = element_text(size = 15),
       panel.spacing = unit(0, "lines")
     ))
 
@@ -516,7 +515,7 @@ ggsave(here::here(
   "OMOP Analysis", "Results", "Plots",
   "Mean_costs_per_specialty_weighted.PNG"),
   plot = plot_costs3, 
-  width = 6, 
-  height = 5, 
+  width = 7, 
+  height = 6, 
   bg = "white"
 )
