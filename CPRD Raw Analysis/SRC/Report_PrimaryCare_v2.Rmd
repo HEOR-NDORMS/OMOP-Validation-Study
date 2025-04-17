@@ -92,29 +92,30 @@ reordered_attrition <- reordered_attrition %>%
       row_id == 2 ~ "Anyone With Fracture(s)",
       TRUE ~ paste0("  ", reason)
     )
-  )
+  ) %>% 
+  slice(3:n())
 
 # Get eligible patient counts from the relevant row
 eligible_counts <- reordered_attrition %>%
   filter(reason == "  Exclude patients with less than one month of exposure") %>%
   select(number_subjects_raw, number_subjects_omop)
 
-# Add final row for eligible patients
-reordered_attrition <- reordered_attrition %>%
-  bind_rows(
-    tibble(
-      reason = "Number of eligible patients",
-      number_subjects_raw = eligible_counts$number_subjects_raw,
-      number_subjects_omop = eligible_counts$number_subjects_omop,
-      subjects_excluded_raw = NA,
-      percent_excluded_raw = NA,
-      records_excluded_raw = NA,
-      subjects_excluded_omop = NA,
-      percent_excluded_omop = NA,
-      records_excluded_omop = NA,
-      row_id = max(reordered_attrition$row_id) + 1
-    )
-  )
+# # Add final row for eligible patients
+# reordered_attrition <- reordered_attrition %>%
+#   bind_rows(
+#     tibble(
+#       reason = "Number of eligible patients",
+#       number_subjects_raw = eligible_counts$number_subjects_raw,
+#       number_subjects_omop = eligible_counts$number_subjects_omop,
+#       subjects_excluded_raw = NA,
+#       percent_excluded_raw = NA,
+#       records_excluded_raw = NA,
+#       subjects_excluded_omop = NA,
+#       percent_excluded_omop = NA,
+#       records_excluded_omop = NA,
+#       row_id = max(reordered_attrition$row_id) + 1
+#     )
+#   ) 
 
 # Create the gt table
 reordered_attrition %>%
@@ -160,29 +161,31 @@ reordered_attrition %>%
 
   tab_spanner(
     label = "CPRD Raw Analysis",
-    columns = c(number_records_raw, number_subjects_raw, 
+    columns = c(
+      # number_records_raw, number_subjects_raw, 
                 subjects_excluded_raw, percent_excluded_raw, 
                 records_excluded_raw)
     ) %>%
   
   tab_spanner(
     label = "OMOP Analysis",
-    columns = c(number_records_omop, number_subjects_omop, 
+    columns = c(
+      # number_records_omop, number_subjects_omop, 
                 subjects_excluded_omop, percent_excluded_omop, 
                 records_excluded_omop)
   ) %>%
 
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_body(
-      columns = reason,
-      rows = row_id %in% c(1,19)  # Use the precomputed row_id
-    )
-  ) %>% 
+  # tab_style(
+  #   style = cell_text(weight = "bold"),
+  #   locations = cells_body(
+  #     columns = reason,
+  #     rows = row_id %in% c(1,19)  # Use the precomputed row_id
+  #   )
+  # ) %>% 
   
   cols_hide(
     columns = c(
-      row_id
+      row_id, contains("number_records"), contains("number_subjects")
     )
   )
 ```
@@ -218,8 +221,8 @@ subcategories <- c("Hip", "Vertebra", "NHNV",
                    "Paget’s disease of the bone, or other metabolic bone diseases", 
                    "Cancer, Paget’s disease of the bone, or other metabolic bone diseases", 
                    "Paget’s disease of the bone, or other metabolic bone diseases, Fracture ensuing incident (index) fracture", 
-                   "Non-User", "User", "Unknown Visits",
-                   "No Visits", "Visits with Non-clinically Relevant Staff")
+                   "Non-User", "User", 
+                   "Visits with Non-clinically Relevant Staff")
 
 
 # Merge datasets
@@ -355,7 +358,7 @@ grid.arrange(Bar_Graph_number_of_visits_per_pt_Raw_g_with_title, Bar_Graph_numbe
 
 ### HCRU Figures - Monthly
 
-Figure 2: Mean number of primary care consultations by provider specialty, users-only.
+Figure 1: Mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=3, fig.width=6}
 # Read images
@@ -374,7 +377,7 @@ grid.arrange(Mean_visits_per_specialty_unweighted_Raw_g_with_title, Mean_visits_
 
 ```
 
-Figure 3: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
+Figure 2: Exposure-weighted mean number of primary care consultations by provider specialty, users-only.
 
 ```{r fig.height=3, fig.width=6}
 # Read images

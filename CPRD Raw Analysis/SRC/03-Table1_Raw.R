@@ -206,8 +206,8 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
        site = "Fracture Site", 
        follow_up_reason = "Censoring Event",
        follow_up_time = "Follow up Time",
-       user_status = "User Status",
-       not_users_status = "Non-user Visit Status"
+       user_status = "Heathcare Service User Status",
+       not_users_status = "Heathcare Service Non-user Visit Status"
      ),
      # indicate whether we want the missing values to be seen in the summary table
      missing = "no"
@@ -217,7 +217,8 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
 
 # Reorder factor by frequency
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
-  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason))  
+  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason)) %>% 
+  mutate(follow_up_time = as.numeric(follow_up_time))
 
 
 (gt_summary_table <- table_one_raw_visit_data %>% 
