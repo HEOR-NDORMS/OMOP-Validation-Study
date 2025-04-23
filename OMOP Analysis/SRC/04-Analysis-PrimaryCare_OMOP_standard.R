@@ -249,7 +249,7 @@ visits_list <- list(
 )
 
 # Write to an Excel file
-# write_xlsx(visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"))
+write_xlsx(visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"))
 
 ## Cost - Primary care ----
 cost_results_omop <- analyse_visits_cost(
@@ -333,10 +333,10 @@ costs_list <- list(
 )
 
 # Write to an Excel file
-# write_xlsx(costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"))
+write_xlsx(costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"))
 
 ## Cohort summary ----
 cohort_summary_omop <- cohort_summary(visit_data)
 
 # Write to an Excel file
-# rio::export(cohort_summary_omop, here::here("OMOP Analysis", "Results", "cohort_summary_OMOP.xlsx"))
+rio::export(cohort_summary_omop, here::here("OMOP Analysis", "Results", "cohort_summary_OMOP.xlsx"))
