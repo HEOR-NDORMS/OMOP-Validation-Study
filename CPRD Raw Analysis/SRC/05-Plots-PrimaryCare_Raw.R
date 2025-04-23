@@ -21,22 +21,20 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
 ### Users: PLOT visits per month/specialty   -------
 
 # Filter for relevant specialties
-visit_data_reduced_user <- visit_data_reduced_MIN %>%
+visit_data_reduced_user.1 <- visit_data_reduced_MIN %>%
   filter(specialty_reduced != "Not Clinically Relevant", 
          user_status == "User") %>%
-  mutate(month_after_index = interval(index_date, consdate) %/% months(1),
-         month_start = index_date %m+% months(month_after_index),
-         month_end = ceiling_date(month_start, unit = "month") - days(1)) %>%
+  mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
   group_by(patid, month_after_index, specialty_reduced) %>%
   summarise(visit_count = n(), .groups = "drop")
 
 # Step 1: Compute the total number of visits per patient per month
-total_visits_per_patient_month <- visit_data_reduced_user %>%
+total_visits_per_patient_month.1 <- visit_data_reduced_user.1 %>%
   group_by(patid, month_after_index) %>%
   summarise(total_visits = sum(visit_count), .groups = "drop")
 
 # Step 2: Compute the mean number of visits per month across fully contributing patients
-mean_visits_per_month <- total_visits_per_patient_month %>%
+mean_visits_per_month.1 <- total_visits_per_patient_month.1 %>%
   group_by(month_after_index) %>%
   summarise(
     mean_visit_count = sum(total_visits) / n_distinct(patid),  # Actual mean
@@ -44,22 +42,22 @@ mean_visits_per_month <- total_visits_per_patient_month %>%
   )
 
 # Step 3: Compute the total number of visits per specialty per month
-visits_per_specialty_month <- visit_data_reduced_user %>%
+visits_per_specialty_month.1 <- visit_data_reduced_user.1 %>%
   group_by(month_after_index, specialty_reduced) %>%
   summarise(total_visits_specialty = sum(visit_count), .groups = "drop")
 
 # Step 4: Merge mean visits and compute proportional contribution per specialty
-plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
-  left_join(mean_visits_per_month, by = "month_after_index") %>%
+plots_users_mean_visits_specialty.1 <- visits_per_specialty_month.1 %>%
+  left_join(mean_visits_per_month.1, by = "month_after_index") %>%
   group_by(month_after_index) %>%
   mutate(proportion = total_visits_specialty / sum(total_visits_specialty, na.rm = TRUE)) %>%
   mutate(prop_mean = mean_visit_count * proportion)
 
 # Step 5: Plot
 (plot1 <- ggplot(
-  plots_users_mean_visits_specialty,
+  plots_users_mean_visits_specialty.1,
   aes(
-    x = month_after_index,
+    x = factor(month_after_index),
     y = prop_mean,
     fill = specialty_reduced
   )
@@ -75,114 +73,113 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
       y = "Mean Visits per Healthcare Service User",
       fill = "Specialty"
     ) +
-    scale_y_continuous(limits = c(0, 3.5)) +
+    # scale_y_continuous(limits = c(0, 5)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
       axis.title = element_text(hjust = 0.5, size = 18),
-      axis.text = element_text(size = 16),
+      axis.text = element_text(size = 15),
       legend.text = element_text(size = 15),
       legend.title = element_text(size = 14),
       legend.position = "top",
-      panel.spacing = unit(0, "lines")
+      panel.spacing = unit(2, "lines")
     ))
 
 ggsave(here::here(
   "CPRD Raw Analysis", "Results", "Plots",
   "Mean_visits_per_specialty_unweighted.PNG"),
   plot = plot1,
-  width = 6,
+  width = 7.5,
   height = 5,
   bg = "white"
 )
 
 ### All: PLOT visits per month/specialty   -------
-
-# Filter for relevant specialties
-# Sense check :2471999720603
-visit_data_reduced_all <- visit_data_reduced_MIN %>%
-  mutate(month_after_index = interval(index_date, consdate) %/% months(1),
-         month_start = index_date %m+% months(month_after_index),
-         month_end = ceiling_date(month_start, unit = "month") - days(1)) %>%
-  mutate(month_after_index = replace_na(month_after_index, 0)) %>% 
-  group_by(patid, month_after_index, specialty_reduced) %>%
-  summarise(visit_count = n(), .groups = "drop") %>% 
-  mutate(visit_count = if_else(
-    specialty_reduced == "Not Clinically Relevant", 0, visit_count
-  ))
-
-# Step 1: Compute the total number of visits per patient per month
-total_visits_per_patient_month <- visit_data_reduced_all %>%
-  group_by(patid, month_after_index) %>%
-  summarise(total_visits = sum(visit_count), .groups = "drop")
-
-# Step 2: Compute the mean number of visits per month across fully contributing patients
-mean_visits_per_month <- total_visits_per_patient_month %>%
-  group_by(month_after_index) %>%
-  summarise(
-    mean_visit_count = sum(total_visits) / n_distinct(patid),  # Actual mean
-    .groups = "drop"
-  ) 
-
-# Step 3: Compute the total number of visits per specialty per month
-visits_per_specialty_month <- visit_data_reduced_all %>%
-  group_by(month_after_index, specialty_reduced) %>%
-  summarise(total_visits_specialty = sum(visit_count), .groups = "drop") 
-
-# Step 4: Merge mean visits and compute proportional contribution per specialty
-plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
-  left_join(mean_visits_per_month, by = "month_after_index") %>%
-  group_by(month_after_index) %>%
-  mutate(proportion = total_visits_specialty / sum(total_visits_specialty, na.rm = TRUE)) %>%
-  mutate(prop_mean = mean_visit_count * proportion)
-
-# Step 5: Plot
-(plot1.1 <- ggplot(
-  plots_users_mean_visits_specialty,
-  aes(
-    x = month_after_index,
-    y = prop_mean,
-    fill = specialty_reduced
-  )
-) +
-    geom_bar(stat = "identity", position = "stack", width = 0.8) +
-    scale_fill_manual(values = c(
-      "General Practitioner" = "#B4CDCD",
-      "Nurse" = "#377eb8",
-      "Other" = "#253494"
-    )) +
-    labs(
-      x = "Month After Index",
-      y = "Mean Visits per Healthcare & Non- Service User",
-      fill = "Specialty"
-    ) +
-    scale_y_continuous(limits = c(0, 2.5)) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(face = "bold", hjust = 0.5),
-      axis.title = element_text(hjust = 0.5, size = 18),
-      axis.text = element_text(size = 16),
-      legend.text = element_text(size = 15),
-      legend.title = element_text(size = 14),
-      legend.position = "top",
-      panel.spacing = unit(0, "lines")
-    ))
-
-ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "Plots",
-  "Mean_visits_per_specialty_unweighted_all.PNG"),
-  plot = plot1.1,
-  width = 6,
-  height = 5,
-  bg = "white"
-)
+# 
+# # Filter for relevant specialties
+# # Sense check :2471999720603
+# visit_data_reduced_all <- visit_data_reduced_MIN %>%
+#   mutate(month_after_index = trunc((as.numeric(difftime(
+#     consdate, index_date,units = "days"))/30.44) + 1)) %>%
+#   mutate(month_after_index = replace_na(month_after_index, 0)) %>% 
+#   group_by(patid, month_after_index, specialty_reduced) %>%
+#   summarise(visit_count = n(), .groups = "drop") %>% 
+#   mutate(visit_count = if_else(
+#     specialty_reduced == "Not Clinically Relevant", 0, visit_count
+#   ))
+# 
+# # Step 1: Compute the total number of visits per patient per month
+# total_visits_per_patient_month <- visit_data_reduced_all %>%
+#   group_by(patid, month_after_index) %>%
+#   summarise(total_visits = sum(visit_count), .groups = "drop")
+# 
+# # Step 2: Compute the mean number of visits per month across fully contributing patients
+# mean_visits_per_month <- total_visits_per_patient_month %>%
+#   group_by(month_after_index) %>%
+#   summarise(
+#     mean_visit_count = sum(total_visits) / n_distinct(patid),  # Actual mean
+#     .groups = "drop"
+#   ) 
+# 
+# # Step 3: Compute the total number of visits per specialty per month
+# visits_per_specialty_month <- visit_data_reduced_all %>%
+#   group_by(month_after_index, specialty_reduced) %>%
+#   summarise(total_visits_specialty = sum(visit_count), .groups = "drop") 
+# 
+# # Step 4: Merge mean visits and compute proportional contribution per specialty
+# plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
+#   left_join(mean_visits_per_month, by = "month_after_index") %>%
+#   group_by(month_after_index) %>%
+#   mutate(proportion = total_visits_specialty / sum(total_visits_specialty, na.rm = TRUE)) %>%
+#   mutate(prop_mean = mean_visit_count * proportion)
+# 
+# # Step 5: Plot
+# (plot1.1 <- ggplot(
+#   plots_users_mean_visits_specialty,
+#   aes(
+#     x = month_after_index,
+#     y = prop_mean,
+#     fill = specialty_reduced
+#   )
+# ) +
+#     geom_bar(stat = "identity", position = "stack", width = 0.8) +
+#     scale_fill_manual(values = c(
+#       "General Practitioner" = "#B4CDCD",
+#       "Nurse" = "#377eb8",
+#       "Other" = "#253494"
+#     )) +
+#     labs(
+#       x = "Month After Index",
+#       y = "Mean Visits per Healthcare & Non- Service User",
+#       fill = "Specialty"
+#     ) +
+#     scale_y_continuous(limits = c(0, 2.5)) +
+#     theme_minimal() +
+#     theme(
+#       plot.title = element_text(face = "bold", hjust = 0.5),
+#       axis.title = element_text(hjust = 0.5, size = 18),
+#       axis.text = element_text(size = 16),
+#       legend.text = element_text(size = 15),
+#       legend.title = element_text(size = 14),
+#       legend.position = "top",
+#       panel.spacing = unit(0, "lines")
+#     ))
+# 
+# ggsave(here::here(
+#   "CPRD Raw Analysis", "Results", "Plots",
+#   "Mean_visits_per_specialty_unweighted_all.PNG"),
+#   plot = plot1.1,
+#   width = 6,
+#   height = 5,
+#   bg = "white"
+# )
 
 ### User: PLOT Tot Visits ------
 
 visit_data_reduced_user2 <- visit_data_reduced_MIN %>%
   filter(specialty_reduced != "Not Clinically Relevant") %>%
-  mutate(month_after_index = interval(
-    index_date, consdate) %/% months(1)) %>%
+  mutate(month_after_index = trunc((as.numeric(difftime(
+    consdate, index_date,units = "days"))/30.44) + 1)) %>%
   group_by(month_after_index) %>%
   summarise(visit_count = n(), .groups = "drop")
 
@@ -268,42 +265,45 @@ ggsave(here::here(
 )
 ### PLOT exposure weighted ------
 # Prepare data (remove "Not Clinically Relevant" and compute monthly bins)
-visit_data_reduced_user <- visit_data_reduced_MIN %>%
+# Sense check: 23520018,243220018
+visit_data_reduced_user.2 <- visit_data_reduced_MIN %>%
   filter(specialty_reduced != "Not Clinically Relevant",
          user_status == "User") %>%
-  mutate(month_after_index = interval(index_date, consdate) %/% months(1),
-         month_start = index_date %m+% months(month_after_index),
-         month_end = ceiling_date(month_start, unit = "month") - days(1)) %>%
-  filter(follow_up_end >= month_end) %>%  # Fully contributing patients only
+  mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
+  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
+  group_by(patid) %>% 
+  filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
+  # removed 29,293 rows
+  ungroup() %>% 
   group_by(patid, month_after_index, specialty_reduced) %>%
   summarise(visit_count = n(), .groups = "drop")
 
 # Step 1: Compute total visits per patient per month
-total_visits_per_patient_month <- visit_data_reduced_user %>%
+total_visits_per_patient_month.2 <- visit_data_reduced_user.2 %>%
   group_by(patid, month_after_index) %>%
   summarise(total_visits = sum(visit_count), .groups = "drop")
 
 # Step 2: Compute mean number of visits per month (no weighting)
-mean_visits_per_month <- total_visits_per_patient_month %>%
+mean_visits_per_month.2 <- total_visits_per_patient_month.2 %>%
   group_by(month_after_index) %>%
   summarise(mean_visit_count = sum(total_visits) / n_distinct(patid), .groups = "drop")
 
 # Step 3: Compute total visits per specialty per month
-visits_per_specialty_month <- visit_data_reduced_user %>%
+visits_per_specialty_month.2 <- visit_data_reduced_user.2 %>%
   group_by(month_after_index, specialty_reduced) %>%
   summarise(total_visits_specialty = sum(visit_count), .groups = "drop")
 
 # Step 4: Merge and compute specialty proportions
-plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
-  left_join(mean_visits_per_month, by = "month_after_index") %>%
+plots_users_mean_visits_specialty.2 <- visits_per_specialty_month.2 %>%
+  left_join(mean_visits_per_month.2, by = "month_after_index") %>%
   group_by(month_after_index) %>%
   mutate(proportion = total_visits_specialty / sum(total_visits_specialty, na.rm = TRUE)) %>%
   mutate(prop_mean = mean_visit_count * proportion)
 
 # Step 5: Plot
 (plot3 <- ggplot(
-  plots_users_mean_visits_specialty,
-  aes(x = month_after_index, y = prop_mean, fill = specialty_reduced)
+  plots_users_mean_visits_specialty.2,
+  aes(x = factor(month_after_index), y = prop_mean, fill = specialty_reduced)
 ) +
     geom_bar(stat = "identity", position = "stack", width = 0.8) +
     scale_fill_manual(values = c(
@@ -322,17 +322,17 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
       axis.title = element_text(hjust = 0.5, size = 18),
-      axis.text = element_text(size = 16),
+      axis.text = element_text(size = 15),
       legend.text = element_text(size = 16),
       legend.title = element_text(size = 15),
       legend.position = "top",
       plot.caption = element_text(size = 15),
-      panel.spacing = unit(0, "lines")
+      panel.spacing = unit(2, "lines")
     ))
 
 ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"),
        plot = plot3,
-       width = 7,
+       width = 7.5,
        height = 6,
        bg = "white"
        )
@@ -424,11 +424,11 @@ pt_count_visits <- visit_data_MIN %>%
 
 (plot7 <- pt_count_visits %>% 
    ggplot(aes(x = total_patient_visits, y = Percent_Subjects)) +
-   geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9, width = 1.0) +
+   geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
    labs(x = "Total Number of Visits", y = "% of Subjects") +
    scale_y_continuous(limits = c(0, 4) ,
                       breaks = seq(0, 4, by = 1))+
-   coord_cartesian(xlim = c(0, 400)) +
+   coord_cartesian(xlim = c(0, 250)) +
    theme_minimal(base_family = 20) +
    theme(
      plot.title = element_text(face = "bold", hjust = 0.5),
@@ -480,16 +480,11 @@ visit_data_reduced_MIN_c <- visit_data_reduced %>%
   )
 
 ### PLOT costs per month/specialty   -------
-
 # Step 0: Filter and calculate month_end
-visit_data_reduced_user_c <- visit_data_reduced_MIN_c %>%
-  filter(specialty_reduced != "Not Clinically Relevant",
-         user_status == "User") %>%
-  mutate(
-    month_after_index = interval(index_date, consdate) %/% months(1),
-    month_start = index_date %m+% months(month_after_index),
-    month_end = ceiling_date(month_start, unit = "month") - days(1)
-  ) %>%
+visit_data_reduced_user_c.1 <- visit_data_reduced_MIN_c %>%
+  filter(specialty_reduced != "Not Clinically Relevant") %>%
+  mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
+  ungroup() %>% 
   group_by(patid, month_after_index, specialty_reduced) %>%
   summarise(
     visit_count = n(),
@@ -500,12 +495,12 @@ visit_data_reduced_user_c <- visit_data_reduced_MIN_c %>%
            .keep_all = TRUE)
 
 # Step 1: Total cost per patient per month
-total_costs_per_patient_month <- visit_data_reduced_user_c %>%
+total_costs_per_patient_month.1 <- visit_data_reduced_user_c.1 %>%
   group_by(patid, month_after_index) %>%
   summarise(total_costs = sum(visit_costs), .groups = "drop")
 
-# Step 2: Mean cost per month across all users
-mean_costs_per_month <- total_costs_per_patient_month %>%
+# Step 2: Mean cost per month
+mean_costs_per_month.1 <- total_costs_per_patient_month.1 %>%
   group_by(month_after_index) %>%
   summarise(
     mean_costs = mean(total_costs),
@@ -513,13 +508,13 @@ mean_costs_per_month <- total_costs_per_patient_month %>%
   )
 
 # Step 3: Total cost per specialty per month
-costs_per_specialty_month <- visit_data_reduced_user_c %>%
+costs_per_specialty_month.1 <- visit_data_reduced_user_c.1 %>%
   group_by(month_after_index, specialty_reduced) %>%
   summarise(total_costs_specialty = sum(visit_costs), .groups = "drop")
 
 # Step 4: Merge and calculate proportions
-plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
-  left_join(mean_costs_per_month, by = "month_after_index") %>%
+plots_users_mean_costs_specialty_weighted.1 <- costs_per_specialty_month.1 %>%
+  left_join(mean_costs_per_month.1, by = "month_after_index") %>%
   group_by(month_after_index) %>%
   mutate(
     proportion = total_costs_specialty / sum(total_costs_specialty, na.rm = TRUE),
@@ -527,15 +522,11 @@ plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
   )
 
 # Step 5: Plot
-(plot_costs1 <- ggplot(
-  plots_users_mean_costs_specialty,
-  aes(
-    x = month_after_index,
-    y = prop_mean,
-    fill = specialty_reduced
-  )
+(plot_costs2 <- ggplot(
+  plots_users_mean_costs_specialty_weighted.1,
+  aes(x = factor(month_after_index), y = prop_mean, fill = specialty_reduced)
 ) +
-    geom_bar(stat = "identity", position = "stack", width = 0.9) +
+    geom_bar(stat = "identity", position = "stack") +
     scale_fill_manual(values = c(
       "General Practitioner" = "#B4CDCD",
       "Nurse" = "#377eb8",
@@ -551,19 +542,19 @@ plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
       axis.title = element_text(hjust = 0.5, size = 18),
-      axis.text = element_text(size = 16),
-      legend.text = element_text(size = 15),
+      axis.text = element_text(size = 15),
+      legend.text = element_text(size = 16),
       legend.title = element_text(size = 15),
       legend.position = "top",
-      panel.spacing = unit(0, "lines")
+      plot.caption = element_text(size = 15),
+      panel.spacing = unit(2, "lines")
     ))
-
 
 ggsave(here::here(
   "CPRD Raw Analysis", "Results", "Plots",
   "Mean_costs_per_specialty_unweighted.PNG"),
   plot = plot_costs1,
-  width = 7,
+  width = 7.5,
   height = 6,
   bg = "white"
 )
@@ -572,8 +563,8 @@ ggsave(here::here(
 
 visit_data_reduced_user_c2 <- visit_data_reduced_MIN_c %>%
   filter(specialty_reduced != "Not Clinically Relevant") %>%
-  mutate(month_after_index = interval(
-    index_date, consdate) %/% months(1)) %>%
+  mutate(month_after_index = trunc((as.numeric(difftime(
+    consdate, index_date,units = "days"))/30.44) + 1)) %>%
   group_by(patid, month_after_index, specialty_reduced) %>%
   summarise(visit_count = n(),
             visit_costs = visit_count * unit_cost,
@@ -621,14 +612,13 @@ ggsave(here::here(
 
 ### PLOT exposure weighted ------
 # Step 0: Filter and calculate month_end
-visit_data_reduced_user_c <- visit_data_reduced_MIN_c %>%
+visit_data_reduced_user_c.2 <- visit_data_reduced_MIN_c %>%
   filter(specialty_reduced != "Not Clinically Relevant") %>%
-  mutate(
-    month_after_index = interval(index_date, consdate) %/% months(1),
-    month_start = index_date %m+% months(month_after_index),
-    month_end = ceiling_date(month_start, unit = "month") - days(1)
-  ) %>%
-  filter(follow_up_end >= month_end) %>%
+  mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
+  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
+  group_by(patid) %>% 
+  filter(full_month_after_index >= month_after_index) %>%
+  ungroup() %>% 
   group_by(patid, month_after_index, specialty_reduced) %>%
   summarise(
     visit_count = n(),
@@ -639,12 +629,12 @@ visit_data_reduced_user_c <- visit_data_reduced_MIN_c %>%
            .keep_all = TRUE)
 
 # Step 1: Total cost per patient per month
-total_costs_per_patient_month <- visit_data_reduced_user_c %>%
+total_costs_per_patient_month.2 <- visit_data_reduced_user_c.2 %>%
   group_by(patid, month_after_index) %>%
   summarise(total_costs = sum(visit_costs), .groups = "drop")
 
 # Step 2: Mean cost per month
-mean_costs_per_month <- total_costs_per_patient_month %>%
+mean_costs_per_month.2 <- total_costs_per_patient_month.2 %>%
   group_by(month_after_index) %>%
   summarise(
     mean_costs = mean(total_costs),
@@ -652,13 +642,13 @@ mean_costs_per_month <- total_costs_per_patient_month %>%
   )
 
 # Step 3: Total cost per specialty per month
-costs_per_specialty_month <- visit_data_reduced_user_c %>%
+costs_per_specialty_month.2 <- visit_data_reduced_user_c.2 %>%
   group_by(month_after_index, specialty_reduced) %>%
   summarise(total_costs_specialty = sum(visit_costs), .groups = "drop")
 
 # Step 4: Merge and calculate proportions
-plots_users_mean_costs_specialty_weighted <- costs_per_specialty_month %>%
-  left_join(mean_costs_per_month, by = "month_after_index") %>%
+plots_users_mean_costs_specialty_weighted.2 <- costs_per_specialty_month.2 %>%
+  left_join(mean_costs_per_month.2, by = "month_after_index") %>%
   group_by(month_after_index) %>%
   mutate(
     proportion = total_costs_specialty / sum(total_costs_specialty, na.rm = TRUE),
@@ -667,8 +657,8 @@ plots_users_mean_costs_specialty_weighted <- costs_per_specialty_month %>%
 
 # Step 5: Plot
 (plot_costs3 <- ggplot(
-  plots_users_mean_costs_specialty_weighted,
-  aes(x = month_after_index, y = prop_mean, fill = specialty_reduced)
+  plots_users_mean_costs_specialty_weighted.2,
+  aes(x = factor(month_after_index), y = prop_mean, fill = specialty_reduced)
 ) +
     geom_bar(stat = "identity", position = "stack") +
     scale_fill_manual(values = c(
@@ -687,19 +677,19 @@ plots_users_mean_costs_specialty_weighted <- costs_per_specialty_month %>%
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
       axis.title = element_text(hjust = 0.5, size = 18),
-      axis.text = element_text(size = 16),
+      axis.text = element_text(size = 15),
       legend.text = element_text(size = 16),
       legend.title = element_text(size = 15),
       legend.position = "top",
       plot.caption = element_text(size = 15),
-      panel.spacing = unit(0, "lines")
+      panel.spacing = unit(2, "lines")
     ))
 
 
 ggsave(here::here(
   "CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"),
   plot = plot_costs3,
-  width = 7,
+  width = 7.5,
   height = 6,
   bg = "white"
 )
