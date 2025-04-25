@@ -72,7 +72,7 @@ joined_visit_provider_tables <- cdm$visit_detail %>%
 cdm[["visit_data"]] <- joined_visit_provider_tables %>%
   dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include_standard == "1"),
                    by = "specialty_concept_id", copy=TRUE) %>% # Filter for only meaningful specialties
-  dplyr::select(person_id, provider_id, specialty_concept_id, concept_name, specialty_source_value_summarised, 
+  dplyr::select(person_id, provider_id, specialty_concept_id, concept_name, specialty_concept_summarised, 
                 visit_detail_start_date, visit_detail_id, unit_cost, visit_detail_concept_id) %>%
   dplyr::filter(visit_detail_start_date >= study_start_date & # include only visits in the study period
                   visit_detail_start_date <= study_end_date) %>%
@@ -81,7 +81,7 @@ cdm[["visit_data"]] <- joined_visit_provider_tables %>%
   dplyr::rename(subject_id=person_id) %>% # just renaming for consistency with cohort data
   dplyr::distinct(visit_detail_start_date, subject_id, specialty_concept_id, .keep_all=TRUE) %>% # Keep only distinct rows - eliminate all visits in the same day with the same specialist by the same patient
   dplyr::rename(specialty = concept_name,
-                specialty_reduced =  specialty_source_value_summarised) %>%  # renaming for consistency with other countries as this variable is used for the HCRU and costs too
+                specialty_reduced =  specialty_concept_summarised) %>%  # renaming for consistency with other countries as this variable is used for the HCRU and costs too
   computeQuery()
 
 visit_data_df <- cdm[["visit_data"]] %>% dplyr::collect()
