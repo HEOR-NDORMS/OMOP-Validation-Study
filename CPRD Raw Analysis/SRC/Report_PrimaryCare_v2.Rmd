@@ -359,7 +359,7 @@ merged_data %>%
   ) %>%
   tab_spanner(
     label = "OMOP Analysis",
-    columns = c("N = 23,957")
+    columns = c("N = 23,956")
   ) %>%
 
 
