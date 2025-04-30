@@ -98,8 +98,8 @@ ggsave(here::here(
   "OMOP Analysis", "Results", "Plots",
   "Mean_visits_per_specialty_unweighted.PNG"),
   plot = plot1,
-  width = 7.5,
-  height = 5,
+  width = 8.5,
+  height = 7,
   bg = "white"
 )
 
@@ -220,8 +220,8 @@ plots_users_mean_visits_specialty.2 <- visits_per_specialty_month.2 %>%
 ggsave(here::here("OMOP Analysis", "Results",
                   "Plots", "Mean_visits_per_specialty_weighted.PNG"),
        plot = plot3, 
-       width = 7.5, 
-       height = 5, 
+       width = 8.5, 
+       height = 7, 
        bg = "white"
 )
 
@@ -378,8 +378,8 @@ ggsave(here::here(
   "OMOP Analysis", "Results", "Plots", 
   "Mean_costs_per_specialty_unweighted.PNG"),
   plot = plot_costs1, 
-  width = 7.5,
-  height = 6, 
+  width = 8.5,
+  height = 7, 
   bg = "white"
 )
 
@@ -513,7 +513,7 @@ ggsave(here::here(
   "OMOP Analysis", "Results", "Plots",
   "Mean_costs_per_specialty_weighted.PNG"),
   plot = plot_costs3, 
-  width = 7.5, 
-  height = 6, 
+  width = 8.5, 
+  height = 7, 
   bg = "white"
 )
