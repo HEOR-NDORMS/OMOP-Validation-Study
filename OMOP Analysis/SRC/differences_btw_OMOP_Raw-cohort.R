@@ -17,13 +17,13 @@ library(tidylog)
 
 # Import data ----
 # Raw data that has been saved from the CleanCohort_Raw.R
-cohort_table_raw <- rio::import(here("CPRD Raw Analysis", "Results","cohort_table_raw.xlsx")) %>% 
+cohort_table_raw <- rio::import("H:/Projects/Validation/Data/cohort_table_raw.csv") %>% 
   mutate(patid = bit64::as.integer64(patid))
 
 glimpse(cohort_table_raw)
 
 # Load the OMOP data from the CleanCohort_OMOP.R
-cohort_table_omop <- cohort_table
+cohort_table_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_cprd.csv")
 
 glimpse(cohort_table_omop)
 
@@ -117,9 +117,9 @@ summary(overlap_df$aurum_max_accept_date)
 
 ## Assess Age ----
 # Calculate Age at Fracture date
-
+person_df_cprd <- rio::import("H:/Projects/Validation/Data/persons_df_cprd.csv")
 overlap_df.1 <- overlap_df %>% 
-  dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>% 
+  left_join(person_df_cprd, by = c("subject_id" = "person_id"), copy = T) %>%
   mutate(fracture_site = recode(fracture_site, NHNS = "NHNV")) %>% 
   mutate(site = recode(site, hip = "Hip", vert = "Vertebral", nhnv = "NHNV")) %>% 
   mutate(age_fracture_o = lubridate::year(condition_start_date) - year_of_birth) %>%
@@ -212,8 +212,8 @@ only_in_raw_df <- cohort_table_raw %>%
 # OR
 only_in_omop_df_v2 <- only_in_omop_df %>% 
   select(!c(condition_concept_id, observation_period_end_date)) %>%
-  dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>% 
-  dplyr::mutate(age_fracture = lubridate::year(condition_start_date) - year_of_birth) %>% 
+  left_join(person_df_cprd, by = c("subject_id" = "person_id"), copy = T) %>% 
+  mutate(age_fracture = lubridate::year(condition_start_date) - year_of_birth) %>% 
   select(!c(
     gender_concept_id, year_of_birth, month_of_birth,
     day_of_birth, birth_datetime, race_concept_id, ethnicity_concept_id,
