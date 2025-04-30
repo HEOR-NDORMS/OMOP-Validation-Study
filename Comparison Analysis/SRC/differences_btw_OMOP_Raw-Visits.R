@@ -65,7 +65,14 @@ colnames(presence_table) <- c("No", "Yes")
 rownames(presence_table) <- c("No", "Yes")
 print(presence_table)
 
-# export(presence_table, here("Comparison Analysis", "Results", "contigency_table_for_pts.xlsx"))
+# Convert the table to a data frame with OMOP as a column
+presence_df <- as.data.frame.matrix(presence_table)
+presence_df <- tibble::rownames_to_column(presence_df, var = "OMOP")  # Now 'OMOP' is a column
+
+# Rename the column names to reflect Raw status
+colnames(presence_df)[2:3] <- c("Raw: No", "Raw: Yes")
+
+export(presence_df, here("Comparison Analysis", "Results", "contigency_table_for_pts.xlsx"))
 
 # 2*2 for user/non-users ----
 
@@ -100,7 +107,11 @@ combined_df <- combined_df %>%
 colnames(user_table)
 row.names(user_table)
 
-# export(user_table, here("Comparison Analysis", "Results", "contigency_table_for_user_status.xlsx"))
+# Convert the table to a data frame with OMOP as a column
+user_df <- as.data.frame.matrix(user_table)
+user_df <- tibble::rownames_to_column(user_df, var = "Source")  # Now 'OMOP' is a column
+
+export(user_df, here("Comparison Analysis", "Results", "contigency_table_for_user_status.xlsx"))
 
 # Monthly  Visits plot -----
 visit_data_reduced_min_raw <- rio::import("H:/Projects/Validation/Data/visit_data_reduced_min_raw.csv")
@@ -177,10 +188,10 @@ combined_mean_visits <- bind_rows(mean_visits_raw, mean_visits_omop)
   theme_minimal() +
   theme(
     plot.title = element_text(face = "bold", hjust = 0.5),
-    axis.title = element_text(size = 16),
-    axis.text = element_text(size = 13),
-    legend.title = element_text(size = 14),
-    legend.text = element_text(size = 13)
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10)
   ))
 
 ggsave(here::here(
@@ -263,10 +274,10 @@ combined_mean_visits2 <- bind_rows(mean_visits_raw2, mean_visits_omop2)
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
-      axis.title = element_text(size = 16),
-      axis.text = element_text(size = 13),
-      legend.title = element_text(size = 14),
-      legend.text = element_text(size = 13)
+      axis.title = element_text(size = 12),
+      axis.text = element_text(size = 10),
+      legend.title = element_text(size = 11),
+      legend.text = element_text(size = 10)
     ))
 
 ggsave(here::here(
@@ -363,10 +374,10 @@ combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
   theme_minimal() +
   theme(
     plot.title = element_text(face = "bold", hjust = 0.5),
-    axis.title = element_text(size = 16),
-    axis.text = element_text(size = 13),
-    legend.title = element_text(size = 14),
-    legend.text = element_text(size = 13)
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10)
   ))
 
 ggsave(here::here(
@@ -461,10 +472,10 @@ combined_costs2 <- bind_rows(raw_costs_by_month2, omop_costs_by_month2)
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
-      axis.title = element_text(size = 16),
-      axis.text = element_text(size = 13),
-      legend.title = element_text(size = 14),
-      legend.text = element_text(size = 13)
+      axis.title = element_text(size = 12),
+      axis.text = element_text(size = 10),
+      legend.title = element_text(size = 11),
+      legend.text = element_text(size = 10)
     ))
 
 ggsave(here::here(
