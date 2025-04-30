@@ -47,26 +47,42 @@ cdm[["visit_data"]] <- joined_visit_provider_tables %>%
 visit_data_df <- cdm[["visit_data"]] %>% dplyr::collect()
 
 # merge the cohort data to this visit_data_df
-visit_data <- left_join(cohort_data_omop %>% select(subject_id, index_date,
-                                                    follow_up_end, follow_up_time),
-                        visit_data_df, 
-                        by = "subject_id") %>% 
+visit_data <- left_join(cohort_data_omop, visit_data_df, 
+                                       by = "subject_id") %>% 
   # in order to count all the visits from index date until follow-up end date
   filter(visit_detail_start_date >= index_date & visit_detail_start_date <= follow_up_end)
 
-## Clinically Relevant Consultations ----
+## Clinically Relevant Consultations
 provider_cost_inputs_relev <- provider_cost_inputs %>% 
   filter(Include_standard == 1)
 specialty_source_value_ids <- unique(provider_cost_inputs_relev$concept_name)
 
-### Filter the data with these clinically relevant ----
+
+### Filter the data with these clinically relevant
 # This would make it easier to identify users/non-users as well. Bc technically, if a patient had only visits before index but not during the exposure time, that is a non-user. 
 # So it is simpler if you prepare the visit data first, with visits in the exposure time and then join back to the list of patients to identify users as those who have at last one visit during that time (and with a relevant staff) and non-users are all the others (i.e., zero visits or only non-relevant visits).
-visit_data <- visit_data %>% 
+visit_data <- cohort_data_omop %>% 
+  left_join(visit_data, by = c("subject_id", "cohort_start_date", 
+                                              "cohort_end_date", "condition_concept_id",
+                                              "condition_start_date", "fracture_site", 
+                                              "class", "index_date", "after_index", 
+                                              "observation_period_end_date", "cancer_date", 
+                                              "mbd_date", "fracture_after_index", "death_date",
+                                              "follow_up_end", "follow_up_reason", 
+                                              "follow_up_time", "gender_concept_id", 
+                                              "year_of_birth", "month_of_birth", "day_of_birth",
+                                              "birth_datetime", "race_concept_id",
+                                              "ethnicity_concept_id", "location_id", 
+                                              "care_site_id", "person_source_value", 
+                                              "gender_source_value", "gender_source_concept_id",
+                                              "race_source_value", "race_source_concept_id", 
+                                              "ethnicity_source_value", "ethnicity_source_concept_id", 
+                                              "age_fracture", "exposed_yrs", "exposed_months", "excluded_flag"
+  ), copy = T) %>% 
   mutate(
     specialty = case_when(
       specialty %in% specialty_source_value_ids ~ specialty,
-          TRUE ~ "Not Clinically Relevant"
+      TRUE ~ "Not Clinically Relevant"
     ),
     is_clinically_relevant = if_else(specialty == "Not Clinically Relevant", 0, 1),
     in_exposure_time = if_else(
@@ -78,13 +94,18 @@ visit_data <- visit_data %>%
     "Not Clinically Relevant",
     specialty_reduced)) %>%
   group_by(subject_id) %>%
+  # User is defined as patients who had >=1 visit(s) to a clinically relevant specialty
+  # Non-User is defined as (1) Not Clinically relevant visit 
+  # (2) No visits(i.e., missing visit date) (3) unknown visit (missing specialty)
   mutate(user_status = if_else(
     any(is_clinically_relevant == 1 & in_exposure_time == 1, na.rm = TRUE),
     "User", "Non-User"
   )) %>%
+  mutate(not_users_status = case_when(
+    user_status == "Non-User" & in_exposure_time == 0 ~ "Visits with Non-clinically Relevant Staff",
+    user_status == "Non-User" ~ "Visits with Non-clinically Relevant Staff"
+  )) %>% 
   ungroup()
-
-
 
 ### Create a new df so that we can create visits based on these reduced specialty ----
 visit_data_reduced <- visit_data
@@ -241,7 +262,7 @@ library(writexl)
 
 visits_list <- list(
   overall_user_visits_only = user_only_summary_statistics_overall,
-  overall_all_visits_only = all_only_summary_statistics_overall,
+  overall_all_visits_only = all_summary_statistics_overall,
   user_only_summary = user_only_summary,
   all_summary = all_summary,
   user_only_summary_reduced = user_only_summary_reduced,
@@ -325,7 +346,7 @@ all_costs_summary_statistics_overall <- tibble(
 # List of the output of costs
 costs_list <- list(
   overall_user_only_costs = user_only_costs_summary_statistics_overall,
-  overall_all_only_costs = all_only_costs_summary_statistics_overall,
+  overall_all_only_costs = all_costs_summary_statistics_overall,
   user_only_cost_summary = user_only_cost_summary,
   all_cost_summary = all_cost_summary,
   user_only_cost_summary_reduced = user_only_cost_summary_reduced,
