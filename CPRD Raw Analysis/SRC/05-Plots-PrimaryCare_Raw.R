@@ -73,7 +73,7 @@ plots_users_mean_visits_specialty.1 <- visits_per_specialty_month.1 %>%
       y = "Mean Visits per Healthcare Service User",
       fill = "Specialty"
     ) +
-    # scale_y_continuous(limits = c(0, 5)) +
+    scale_y_continuous(limits = c(0, 4)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -199,7 +199,7 @@ visit_data_reduced_user2 <- visit_data_reduced_MIN %>%
       y = "Total Visits (Healthcare Service Users)"
     ) +
     scale_y_continuous(labels = scales::comma,
-                       limits = c(0, 60000)) +
+                       limits = c(0, 70000)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -270,7 +270,7 @@ visit_data_reduced_user.2 <- visit_data_reduced_MIN %>%
   filter(specialty_reduced != "Not Clinically Relevant",
          user_status == "User") %>%
   mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
-  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
+  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44) + 1)) %>% 
   group_by(patid) %>% 
   filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
   # removed 29,293 rows
@@ -317,7 +317,7 @@ plots_users_mean_visits_specialty.2 <- visits_per_specialty_month.2 %>%
       fill = "Specialty",
       caption = "Mean calculated among healthcare service users \ncontributing fully to each month."
     ) +
-    scale_y_continuous(limits = c(0, 3.5)) +
+    scale_y_continuous(limits = c(0, 4)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -522,7 +522,7 @@ plots_users_mean_costs_specialty_weighted.1 <- costs_per_specialty_month.1 %>%
   )
 
 # Step 5: Plot
-(plot_costs2 <- ggplot(
+(plot_costs1 <- ggplot(
   plots_users_mean_costs_specialty_weighted.1,
   aes(x = factor(month_after_index), y = prop_mean, fill = specialty_reduced)
 ) +
@@ -537,7 +537,7 @@ plots_users_mean_costs_specialty_weighted.1 <- costs_per_specialty_month.1 %>%
       y = "Mean Costs per Healthcare Service User",
       fill = "Specialty"
     ) +
-    scale_y_continuous(limits = c(0, 125)) +
+    # scale_y_continuous(limits = c(0, 125)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
