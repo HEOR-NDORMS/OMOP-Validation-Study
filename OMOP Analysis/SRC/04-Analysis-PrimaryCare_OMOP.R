@@ -60,9 +60,33 @@ provider_cost_inputs_relev <- provider_cost_inputs %>%
   filter(Include == 1)
 specialty_source_value_ids <- unique(provider_cost_inputs_relev$specialty_source_value)
 
+
+# Merge cohort data
+# merge back to cohort data, inorder to have patients have been filtered out 
+# in the previous step
+
+visit_data <- left_join(
+  cohort_table_raw, visit_data, by = c("subject_id", "cohort_start_date", 
+                                              "cohort_end_date", "condition_concept_id",
+                                              "condition_start_date", "fracture_site", 
+                                              "class", "index_date", "after_index", 
+                                              "observation_period_end_date", "cancer_date", 
+                                              "mbd_date", "fracture_after_index", "death_date",
+                                              "follow_up_end", "follow_up_reason", 
+                                              "follow_up_time", "gender_concept_id", 
+                                              "year_of_birth", "month_of_birth", "day_of_birth",
+                                              "birth_datetime", "race_concept_id",
+                                              "ethnicity_concept_id", "location_id", 
+                                              "care_site_id", "person_source_value", 
+                                              "gender_source_value", "gender_source_concept_id",
+                                              "race_source_value", "race_source_concept_id", 
+                                              "ethnicity_source_value", "ethnicity_source_concept_id", 
+                                              "age_fracture", "exposed_yrs", "exposed_months", "excluded_flag"))
+
 ### Filter the data with these clinically relevant ----
 # This would make it easier to identify users/non-users as well. Bc technically, if a patient had only visits before index but not during the exposure time, that is a non-user. 
 # So it is simpler if you prepare the visit data first, with visits in the exposure time and then join back to the list of patients to identify users as those who have at last one visit during that time (and with a relevant staff) and non-users are all the others (i.e., zero visits or only non-relevant visits).
+  
 visit_data <- visit_data %>% 
   mutate(
     specialty = case_when(
