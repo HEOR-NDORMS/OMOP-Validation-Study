@@ -257,7 +257,7 @@ AttritionReportFrac<- AttritionReportFrac %>%
 fracture_table_d <- fracture_table_c %>% # remember to revert to condition_occurrence if you want to have both primary and secondary
   anti_join(cdm[["condition_occurrence_primary"]] %>% dplyr::filter(condition_concept_id %in% trauma_condition), by = c("subject_id" = "person_id", "condition_start_date"), copy = T)
 
-fracture_table_d <- fracture_table_c %>% 
+fracture_table_d <- fracture_table_d %>% 
   dplyr::anti_join(cdm[["observation"]] %>% dplyr::filter(observation_concept_id %in% trauma_observation), by = c("subject_id" = "person_id", "condition_start_date" = "observation_date"), copy = T) 
 
 fracture_table_d <-fracture_table_d %>%

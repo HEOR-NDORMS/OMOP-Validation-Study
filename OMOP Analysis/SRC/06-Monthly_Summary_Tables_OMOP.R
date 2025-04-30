@@ -10,7 +10,7 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
 (monthly_visit_summary_unweighted <- visit_data_reduced_MIN %>%
    filter(specialty_reduced != "Not Clinically Relevant", 
           user_status == "User") %>%
-   mutate(month_after_index = interval(index_date, visit_detail_start_date) %/% months(1)) %>%
+   mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
    group_by(subject_id, month_after_index) %>%
    summarise(total_visits = n(), .groups = "drop") %>%
    group_by(month_after_index) %>%
@@ -31,20 +31,12 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
 (monthly_visit_summary_weighted <- visit_data_reduced_MIN %>%
    filter(specialty_reduced != "Not Clinically Relevant", 
           user_status == "User") %>%
-   mutate(
-     month_after_index = interval(index_date, visit_detail_start_date) %/% months(1),
-     month_start = index_date %m+% months(month_after_index),
-     month_end = ceiling_date(month_start, unit = "month") - days(1)
-   ) %>%
-   # Only fully contributing patients
-   # only include patients who were still being followed up for the entire month.
-   # If a patient left the study early (e.g., died, etc.), 
-   # they might have only contributed a few days of data in that month
-   # best to calculate month_end based on calendar months, not a fixed number of days like 30.44.
-   # Calendar months vary in length (28–31 days).
-   # We usually group data by calendar months (e.g., Jan, Feb, Mar), not arbitrary 30.44-day chunks.
-   # Using actual start and end dates of calendar months ensures alignment with how healthcare data (like visits or costs) is typically tracked and reported.
-   filter(follow_up_end >= month_end) %>%  
+   mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
+   mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
+   group_by(subject_id) %>% 
+   filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
+   # removed 29,293 rows
+   ungroup() %>% 
    group_by(subject_id, month_after_index) %>%
    summarise(total_visits = n(), .groups = "drop") %>%
    group_by(month_after_index) %>%
@@ -83,11 +75,7 @@ visit_data_reduced_MIN_c <- visit_data_reduced %>%
 (monthly_summary_costs_unweighted <- visit_data_reduced_MIN_c %>%
    filter(specialty_reduced != "Not Clinically Relevant", 
           user_status == "User") %>%
-   mutate(
-     month_after_index = interval(index_date, visit_detail_start_date) %/% months(1),
-     month_start = index_date %m+% months(month_after_index),
-     month_end = ceiling_date(month_start, unit = "month") - days(1)
-   ) %>%
+   mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
    group_by(subject_id, month_after_index, specialty_reduced) %>%
    summarise(
      visit_count = n(),
@@ -111,21 +99,16 @@ visit_data_reduced_MIN_c <- visit_data_reduced %>%
      .groups = "drop"
    ))
 
-# sense check
-# (month_12 <- (monthly_summary_costs_unweighted) %>% 
-#     filter(month_after_index ==12) %>% 
-#     summarise(median = median(total_costs)))
-
 ## Weighted ----
 # Monthly summary stats for visit costs (filtered)
 (monthly_summary_costs_weighted <- visit_data_reduced_MIN_c %>%
    filter(specialty_reduced != "Not Clinically Relevant") %>%
-   mutate(
-     month_after_index = interval(index_date, visit_detail_start_date) %/% months(1),
-     month_start = index_date %m+% months(month_after_index),
-     month_end = ceiling_date(month_start, unit = "month") - days(1)
-   ) %>%
-   filter(follow_up_end >= month_end) %>%
+   mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
+   mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
+   group_by(subject_id) %>% 
+   filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
+   # removed 29,293 rows
+   ungroup() %>%
    group_by(subject_id, month_after_index, specialty_reduced) %>%
    summarise(
      visit_count = n(),
