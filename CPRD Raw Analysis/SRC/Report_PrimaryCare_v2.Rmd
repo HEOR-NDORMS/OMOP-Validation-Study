@@ -377,6 +377,78 @@ merged_data %>%
 ```
 
 
+## Patients Comparison between Source and OMOP
+
+```{r}
+contigency_table_for_pts_rp <- import(here("Comparison Analysis", "Results", "contigency_table_for_pts.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>% 
+  mutate(Total = as.numeric(Total))
+
+contigency_table_for_pts_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Contigency Table for Patients**"),
+    subtitle = md("*Comparison between OMOP and Source*")
+  ) %>%
+  # opt_all_caps() %>% 
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  # Add spanner headers for CPRD Raw and OMOP Analysis
+  tab_spanner(
+    label = "Source",
+    columns = c("Raw: No", "Raw: Yes")
+  ) %>%
+   opt_stylize(style = 1) %>% 
+  cols_label(
+    `Raw: No` = "No",
+    `Raw: Yes` = "Yes"
+    ) %>% 
+  fmt_number(
+    columns = contains("Raw"),
+    sep_mark = ",",
+    decimals = 0
+  ) %>% 
+  fmt_number(
+    columns = c("Total"),
+    sep_mark = ",",
+    decimals = 0
+  ) %>% 
+  sub_missing(columns = everything(), missing_text = "")
+```
+
+## Healthcare Service Users Comparison between Source and OMOP
+
+```{r}
+contigency_table_for_user_status_rp <- import(here("Comparison Analysis", "Results", "contigency_table_for_user_status.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>%   mutate(Total = as.numeric(Total))
+
+contigency_table_for_user_status_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Contigency Table for Healthcare Service Users**"),
+    subtitle = md("*Comparison between OMOP and Source*")
+  ) %>%
+  # opt_all_caps() %>% 
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  # Add spanner headers for CPRD Raw and OMOP Analysis
+  tab_spanner(
+    label = "OMOP",
+    columns = c("Non-User", "Not in OMOP", "User")
+  ) %>%
+   opt_stylize(style = 1) %>% 
+  fmt_number(
+    columns = c("Non-User", "Not in OMOP", "User", "Total"),
+    sep_mark = ",",
+    decimals = 0
+  ) %>% 
+  sub_missing(columns = everything(), missing_text = "")
+```
+
 ## Plots {.tabset}
 
 ### Exposure Time
@@ -504,6 +576,21 @@ grid.arrange(Mean_visits_per_specialty_weighted_Raw_g_with_title, Mean_visits_pe
 
 ```
 
+### Comparison Plots for Visits between Source and OMOP
+
+Figure 1: Mean visits per month after index, unweighted.
+
+```{r fig.height=6, fig.width=6}
+Mean_visits_per_specialty_unweighted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_visits_per_specialty_unweighted.PNG"))
+grid.raster(Mean_visits_per_specialty_unweighted_rp)
+```
+
+Figure 2: Mean visits per month after index, weighted.
+
+```{r fig.height=6, fig.width=6}
+Mean_visits_per_specialty_weighted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"))
+grid.raster(Mean_visits_per_specialty_weighted_rp)
+```
 
 ### HCRU Year 1/2 Summary Tables
 
@@ -785,6 +872,23 @@ Mean_costs_per_specialty_weighted_OMOP_g_with_title <- arrangeGrob(Mean_costs_pe
 grid.arrange(Mean_costs_per_specialty_weighted_Raw_g_with_title, Mean_costs_per_specialty_weighted_OMOP_g_with_title, ncol = 2)
 
 ```
+
+### Comparison Plots for Visit Costs between Source and OMOP
+
+Figure 1: Mean visit costs per month after index, unweighted.
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_unweighted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
+grid.raster(Mean_costs_per_specialty_unweighted_rp)
+```
+
+Figure 2: Mean visits per month after index, weighted.
+
+```{r fig.height=6, fig.width=6}
+Mean_costs_per_specialty_weighted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"))
+grid.raster(Mean_costs_per_specialty_weighted_rp)
+```
+
 
 ### Costs Year 1/2 Summary Tables
 
