@@ -72,7 +72,7 @@ presence_df <- tibble::rownames_to_column(presence_df, var = "OMOP")  # Now 'OMO
 # Rename the column names to reflect Raw status
 colnames(presence_df)[2:3] <- c("Raw: No", "Raw: Yes")
 
-export(presence_df, here("Comparison Analysis", "Results", "contigency_table_for_pts.xlsx"))
+# export(presence_df, here("Comparison Analysis", "Results", "contigency_table_for_pts.xlsx"))
 
 # 2*2 for user/non-users ----
 
@@ -111,7 +111,7 @@ row.names(user_table)
 user_df <- as.data.frame.matrix(user_table)
 user_df <- tibble::rownames_to_column(user_df, var = "Source")  # Now 'OMOP' is a column
 
-export(user_df, here("Comparison Analysis", "Results", "contigency_table_for_user_status.xlsx"))
+# export(user_df, here("Comparison Analysis", "Results", "contigency_table_for_user_status.xlsx"))
 
 # Monthly  Visits plot -----
 visit_data_reduced_min_raw <- rio::import("H:/Projects/Validation/Data/visit_data_reduced_min_raw.csv")
@@ -144,6 +144,17 @@ mean_visits_per_month_o <- total_visits_per_patient_month_o %>%
     mean_visit_count = sum(total_visits) / n_distinct(subject_id),
     .groups = "drop"
   )
+# Step 3: Compute the total number of visits per specialty per month
+visits_per_specialty_month_o <- visit_data_reduced_user_o %>%
+  group_by(month_after_index, specialty_reduced) %>%
+  summarise(total_visits_specialty = sum(visit_count), .groups = "drop")
+
+# Step 4: Merge mean visits and compute proportional contribution per specialty
+plots_users_mean_visits_specialty_o <- visits_per_specialty_month_o %>%
+  left_join(mean_visits_per_month_o, by = "month_after_index") %>%
+  group_by(month_after_index) %>%
+  mutate(proportion = total_visits_specialty / sum(total_visits_specialty, na.rm = TRUE)) %>%
+  mutate(prop_mean = mean_visit_count * proportion)
 
 
 # Filter for relevant specialties
@@ -171,11 +182,25 @@ mean_visits_per_month_r <- total_visits_per_patient_month_r %>%
 mean_visits_raw  <- mean_visits_per_month_r  %>% mutate(source = "Source")
 mean_visits_omop <- mean_visits_per_month_o %>% mutate(source = "OMOP")
 
+
+mean_visits_diff <- mean_visits_raw %>%
+  select(month_after_index, mean_visit_count_raw = mean_visit_count) %>%
+  inner_join(mean_visits_omop %>%
+               select(month_after_index, mean_visit_count_omop = mean_visit_count),
+             by = "month_after_index") %>%
+  mutate(
+    mean_visit_count = mean_visit_count_omop - mean_visit_count_raw ,
+    source = "Difference"
+  ) %>%
+  select(month_after_index, mean_visit_count, source)
+
 # Combine into one long-format dataframe
-combined_mean_visits <- bind_rows(mean_visits_raw, mean_visits_omop)
+combined_mean_visits <- bind_rows(mean_visits_raw, mean_visits_omop, mean_visits_diff)
 
 # Plot
-(plot1 <- ggplot(combined_mean_visits, aes(x = month_after_index, y = mean_visit_count, color = source)) +
+(plot1 <- ggplot(combined_mean_visits, 
+                 aes(x = month_after_index, 
+                     y = mean_visit_count, color = source)) +
   geom_line(size = 1.2) +
   geom_point(size = 2) +
   labs(
@@ -184,8 +209,10 @@ combined_mean_visits <- bind_rows(mean_visits_raw, mean_visits_omop)
     y = "Mean Visits per Healthcare Service User",
     color = "Data Source"
   ) +
-  scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-  theme_minimal() +
+  scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c",
+                                "Difference" = "#595959")) +
+    scale_y_continuous(breaks = seq(0, 4, by = 1), limits = c(0, 4)) +
+    theme_minimal() +
   theme(
     plot.title = element_text(face = "bold", hjust = 0.5),
     axis.title = element_text(size = 12),
@@ -207,20 +234,59 @@ ggsave(here::here(
 ### PLOT exposure weighted ------
 # Prepare data (remove "Not Clinically Relevant" and compute monthly bins)
 # Sense check: 23520018,243220018
-visit_data_reduced_user_r.2 <- visit_data_reduced_min_raw %>%
+adjusted_visits_data_r <- visit_data_reduced_min_raw %>%
   filter(specialty_reduced != "Not Clinically Relevant",
          user_status == "User") %>%
-  mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
-  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44) + 1)) %>% 
-  group_by(patid) %>% 
-  filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
-  # removed 29,293 rows
-  ungroup() %>% 
+  mutate(
+    # Calculate month after index using 30.44 days/month approximation
+    month_after_index = trunc((as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1),
+    
+    # Define month start and end using as.difftime to handle decimal days
+    month_start = index_date + as.difftime((month_after_index - 1) * 30.44, units = "days"),
+    month_end = index_date + as.difftime(month_after_index * 30.44, units = "days"),
+    
+    # Calculate exposure details
+    exposure_end = as.Date(follow_up_end),
+    days_exposed_in_month = as.numeric(pmin(exposure_end, month_end) - pmax(index_date, month_start) + 1),
+    
+    # Flags for contribution and death
+    fully_contributed = days_exposed_in_month >= 30.44,
+    half_contributed = days_exposed_in_month >= 15.22,
+    died_in_month = !is.na(death_date) & death_date >= month_start & death_date <= month_end
+  ) %>%
   group_by(patid, month_after_index, specialty_reduced) %>%
-  summarise(visit_count = n(), .groups = "drop")
+  summarise(
+    visit_count = n(),
+    days_exposed_in_month = first(days_exposed_in_month),
+    fully_contributed = first(fully_contributed),
+    half_contributed = first(half_contributed),
+    died_in_month = first(died_in_month),
+    .groups = "drop"
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_in_month ~ visit_count,  # No adjustment if patient died that month
+      TRUE ~ (visit_count / days_exposed_in_month) / 30.44
+    )
+  )
+
+
+# visit_data_reduced_user_r.2 <- visit_data_reduced_min_raw %>%
+#   filter(specialty_reduced != "Not Clinically Relevant",
+#          user_status == "User") %>%
+#   mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
+#   mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44) + 1)) %>% 
+#   group_by(patid) %>% 
+#   filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
+#   # removed 29,293 rows
+#   ungroup() %>% 
+#   group_by(patid, month_after_index, specialty_reduced) %>%
+#   summarise(visit_count = n(), .groups = "drop")
 
 # Step 1: Compute total visits per patient per month
-total_visits_per_patient_month_r.2 <- visit_data_reduced_user_r.2 %>%
+total_visits_per_patient_month_r.2 <- adjusted_visits_data_r %>%
   group_by(patid, month_after_index) %>%
   summarise(total_visits = sum(visit_count), .groups = "drop")
 
@@ -230,20 +296,55 @@ mean_visits_per_month_r.2 <- total_visits_per_patient_month_r.2 %>%
   summarise(mean_visit_count = sum(total_visits) / n_distinct(patid), .groups = "drop")
 
 # Prepare data (remove "Not Clinically Relevant" and compute monthly bins)
-visit_data_reduced_user_o.2 <- visit_data_reduced_min_omop %>%
+adjusted_visits_data_o <- visit_data_reduced_min_omop %>%
   filter(specialty_reduced != "Not Clinically Relevant",
          user_status == "User") %>%
-  mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
-  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44) + 1)) %>% 
-  group_by(subject_id) %>% 
-  filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
-  # removed 29,293 rows
-  ungroup() %>% # Fully contributing patients only
+  mutate(
+    month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1),
+    
+    # Convert index_date to Date to avoid IDate + difftime issues
+    month_start = as.Date(index_date) + as.difftime((month_after_index - 1) * 30.44, units = "days"),
+    month_end = as.Date(index_date) + as.difftime(month_after_index * 30.44, units = "days"),
+    
+    exposure_end = as.Date(follow_up_end),
+    days_exposed_in_month = as.numeric(pmin(exposure_end, month_end) - pmax(as.Date(index_date), month_start) + 1),
+    
+    fully_contributed = days_exposed_in_month >= 30.44,
+    half_contributed = days_exposed_in_month >= 15.22,
+    died_in_month = !is.na(death_date) & death_date >= month_start & death_date <= month_end
+  ) %>%
   group_by(subject_id, month_after_index, specialty_reduced) %>%
-  summarise(visit_count = n(), .groups = "drop")
+  summarise(
+    visit_count = n(),
+    days_exposed_in_month = first(days_exposed_in_month),
+    fully_contributed = first(fully_contributed),
+    half_contributed = first(half_contributed),
+    died_in_month = first(died_in_month),
+    .groups = "drop"
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_in_month ~ visit_count,
+      TRUE ~ (visit_count / days_exposed_in_month) / 30.44
+    )
+  )
+
+# visit_data_reduced_user_o.2 <- visit_data_reduced_min_omop %>%
+#   filter(specialty_reduced != "Not Clinically Relevant",
+#          user_status == "User") %>%
+#   mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
+#   mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44) + 1)) %>% 
+#   group_by(subject_id) %>% 
+#   filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
+#   # removed 29,293 rows
+#   ungroup() %>% # Fully contributing patients only
+#   group_by(subject_id, month_after_index, specialty_reduced) %>%
+#   summarise(visit_count = n(), .groups = "drop")
 
 # Step 1: Compute total visits per patient per month
-total_visits_per_patient_month_o.2 <- visit_data_reduced_user_o.2 %>%
+total_visits_per_patient_month_o.2 <- adjusted_visits_data_o %>%
   group_by(subject_id, month_after_index) %>%
   summarise(total_visits = sum(visit_count), .groups = "drop")
 
@@ -256,21 +357,36 @@ mean_visits_per_month_o.2 <- total_visits_per_patient_month_o.2 %>%
 mean_visits_raw2  <- mean_visits_per_month_r.2  %>% mutate(source = "Source")
 mean_visits_omop2 <- mean_visits_per_month_o.2 %>% mutate(source = "OMOP")
 
+mean_visits_diff2 <- mean_visits_raw2 %>%
+  select(month_after_index, mean_visit_count_raw = mean_visit_count) %>%
+  inner_join(mean_visits_omop2 %>%
+               select(month_after_index, mean_visit_count_omop = mean_visit_count),
+             by = "month_after_index") %>%
+  mutate(
+    mean_visit_count = mean_visit_count_omop - mean_visit_count_raw,
+    source = "Difference"
+  ) %>%
+  select(month_after_index, mean_visit_count, source)
+
 # Combine into one long-format dataframe
-combined_mean_visits2 <- bind_rows(mean_visits_raw2, mean_visits_omop2)
+combined_mean_visits2 <- bind_rows(mean_visits_raw2, mean_visits_omop2, mean_visits_diff)
 
 # Plot
-(plot2 <- ggplot(combined_mean_visits2, aes(x = month_after_index, y = mean_visit_count, color = source)) +
+(plot2 <- ggplot(combined_mean_visits2, 
+                 aes(x = month_after_index, 
+                     y = mean_visit_count, color = source)) +
     geom_line(size = 1.2) +
     geom_point(size = 2) +
     labs(
       title = "Mean Visits per Month by Data Source",
       x = "Month After Index",
       y = "Mean Visits per Healthcare Service User",
-      caption = "Mean calculated among healthcare service users \ncontributing fully to each month.",
+      caption = "Visit counts were adjusted for partial month exposure when patients contributed ≥15.22 days. \nCounts were scaled by exposure days, except for full-month contributions or if the patient died during the month. \nRecords with <15.22 days were excluded.",
       color = "Data Source"
     ) +
-    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
+    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c",
+                                  "Difference" = "#595959")) +
+    scale_y_continuous(breaks = seq(0, 4, by = 1), limits = c(0, 4)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -284,8 +400,8 @@ ggsave(here::here(
   "Comparison Analysis", "Results", "Plots",
   "Mean_visits_per_specialty_weighted.PNG"),
   plot = plot2,
-  width = 6.5,
-  height = 5,
+  width = 7.5,
+  height = 6,
   bg = "white"
 )
 
@@ -359,20 +475,34 @@ raw_costs_by_month <- mean_costs_per_month_r |>
 omop_costs_by_month <- mean_costs_per_month_o |> 
   mutate(source = "OMOP")
 
-combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
+mean_costs_diff <- raw_costs_by_month %>%
+  select(month_after_index, mean_cost_count_raw = mean_costs) %>%
+  inner_join(omop_costs_by_month %>%
+               select(month_after_index, mean_cost_count_omop = mean_costs),
+             by = "month_after_index") %>%
+  mutate(
+    mean_costs = mean_cost_count_omop - mean_cost_count_raw,
+    source = "Difference"
+  ) %>%
+  select(month_after_index, mean_costs, source)
+
+# Combine into one long-format dataframe
+combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month, mean_costs_diff)
 
 (plot_costs1 <- ggplot(combined_costs, aes(x = month_after_index, y = mean_costs, color = source)) +
-  geom_line(size = 1.2) +
-  geom_point(size = 2) +
-  labs(
+    geom_line(size = 1.2) +
+    geom_point(size = 2) +
+    labs(
     title = "Mean Visits Cost per Month by Data Source",
     x = "Month After Index",
     y = "Mean Monthly Visits Cost Healthcare Service User",
     color = "Data Source"
   ) +
-  scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-  theme_minimal() +
-  theme(
+    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c",
+                                  "Difference" = "#595959")) +
+    scale_y_continuous(breaks = seq(0, 140, by = 20), limits = c(0, 140)) +
+    theme_minimal() +
+    theme(
     plot.title = element_text(face = "bold", hjust = 0.5),
     axis.title = element_text(size = 12),
     axis.text = element_text(size = 10),
@@ -391,24 +521,65 @@ ggsave(here::here(
 
 ### PLOT exposure weighted ------
 # Step 0: Filter and calculate month_end
-visit_data_reduced_user_c_r2 <- visit_data_reduced_min_cost_raw %>%
-  filter(specialty_reduced != "Not Clinically Relevant") %>%
-  mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
-  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
-  group_by(patid) %>% 
-  filter(full_month_after_index >= month_after_index) %>%
-  ungroup() %>% 
+# Sense check: 23520018,243220018
+adjusted_costs_data_r <- visit_data_reduced_min_cost_raw %>%
+  filter(specialty_reduced != "Not Clinically Relevant",
+         user_status == "User") %>%
+  mutate(
+    # Calculate month index
+    month_after_index = trunc((as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1),
+    
+    # Fix class conflict with as.Date()
+    month_start = as.Date(index_date) + as.difftime((month_after_index - 1) * 30.44, units = "days"),
+    month_end   = as.Date(index_date) + as.difftime(month_after_index * 30.44, units = "days"),
+    
+    # Exposure calculations
+    exposure_end = as.Date(follow_up_end),
+    days_exposed_in_month = as.numeric(pmin(exposure_end, month_end) - pmax(as.Date(index_date), month_start) + 1),
+    
+    # Contribution flags
+    fully_contributed = days_exposed_in_month >= 30.44,
+    half_contributed  = days_exposed_in_month >= 15.22,
+    died_in_month     = !is.na(death_date) & death_date >= month_start & death_date <= month_end
+  ) %>%
   group_by(patid, month_after_index, specialty_reduced) %>%
   summarise(
     visit_count = n(),
-    visit_costs = visit_count * unit_cost,
+    days_exposed_in_month = first(days_exposed_in_month),
+    fully_contributed = first(fully_contributed),
+    half_contributed  = first(half_contributed),
+    died_in_month     = first(died_in_month),
+    unit_cost         = first(unit_cost),
     .groups = "drop"
-  ) %>% 
-  distinct(patid, month_after_index, specialty_reduced, visit_costs, 
-           .keep_all = TRUE)
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_in_month     ~ visit_count,
+      TRUE              ~ (visit_count / days_exposed_in_month) / 30.44
+    ),
+    visit_costs = adjusted_visits * unit_cost
+  )
+
+# visit_data_reduced_user_c_r2 <- visit_data_reduced_min_cost_raw %>%
+#   filter(specialty_reduced != "Not Clinically Relevant") %>%
+#   mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
+#   mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
+#   group_by(patid) %>% 
+#   filter(full_month_after_index >= month_after_index) %>%
+#   ungroup() %>% 
+#   group_by(patid, month_after_index, specialty_reduced) %>%
+#   summarise(
+#     visit_count = n(),
+#     visit_costs = visit_count * unit_cost,
+#     .groups = "drop"
+#   ) %>% 
+#   distinct(patid, month_after_index, specialty_reduced, visit_costs, 
+#            .keep_all = TRUE)
 
 # Step 1: Total cost per patient per month
-total_costs_per_patient_month_r2 <- visit_data_reduced_user_c_r2 %>%
+total_costs_per_patient_month_r2 <- adjusted_costs_data_r %>%
   group_by(patid, month_after_index) %>%
   summarise(total_costs = sum(visit_costs), .groups = "drop")
 
@@ -420,25 +591,66 @@ mean_costs_per_month_r2 <- total_costs_per_patient_month_r2 %>%
     .groups = "drop"
   )
 
-visit_data_reduced_user_c_o2 <- visit_data_reduced_min_cost_omop %>%
-  filter(specialty_reduced != "Not Clinically Relevant") %>%
-  mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
-  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
-  group_by(subject_id) %>% 
-  filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
-  # removed 29,293 rows
-  ungroup() %>%
+# visit_data_reduced_user_c_r2 <- adjusted_costs_data_r %>%
+#   filter(specialty_reduced != "Not Clinically Relevant") %>%
+#   mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
+#   mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
+#   group_by(subject_id) %>% 
+#   filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
+#   # removed 29,293 rows
+#   ungroup() %>%
+#   group_by(subject_id, month_after_index, specialty_reduced) %>%
+#   summarise(
+#     visit_count = n(),
+#     visit_costs = visit_count * unit_cost,
+#     .groups = "drop"
+#   ) %>% 
+#   distinct(subject_id, month_after_index, specialty_reduced, visit_costs, 
+#            .keep_all = TRUE)
+
+# Omop
+adjusted_costs_data_o <- visit_data_reduced_min_cost_omop %>%
+  filter(specialty_reduced != "Not Clinically Relevant",
+         user_status == "User") %>%
+  mutate(
+    # Calculate month index
+    month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1),
+    
+    # Fix class conflict with as.Date()
+    month_start = as.Date(index_date) + as.difftime((month_after_index - 1) * 30.44, units = "days"),
+    month_end   = as.Date(index_date) + as.difftime(month_after_index * 30.44, units = "days"),
+    
+    # Exposure calculations
+    exposure_end = as.Date(follow_up_end),
+    days_exposed_in_month = as.numeric(pmin(exposure_end, month_end) - pmax(as.Date(index_date), month_start) + 1),
+    
+    # Contribution flags
+    fully_contributed = days_exposed_in_month >= 30.44,
+    half_contributed  = days_exposed_in_month >= 15.22,
+    died_in_month     = !is.na(death_date) & death_date >= month_start & death_date <= month_end
+  ) %>%
   group_by(subject_id, month_after_index, specialty_reduced) %>%
   summarise(
     visit_count = n(),
-    visit_costs = visit_count * unit_cost,
+    days_exposed_in_month = first(days_exposed_in_month),
+    fully_contributed = first(fully_contributed),
+    half_contributed  = first(half_contributed),
+    died_in_month     = first(died_in_month),
+    unit_cost         = first(unit_cost),
     .groups = "drop"
-  ) %>% 
-  distinct(subject_id, month_after_index, specialty_reduced, visit_costs, 
-           .keep_all = TRUE)
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_in_month     ~ visit_count,
+      TRUE              ~ (visit_count / days_exposed_in_month) / 30.44
+    ),
+    visit_costs = adjusted_visits * unit_cost
+  )
 
 # Step 1: Total cost per patient per month
-total_costs_per_patient_month_o2 <- visit_data_reduced_user_c_o2 %>%
+total_costs_per_patient_month_o2 <- adjusted_costs_data_o %>%
   group_by(subject_id, month_after_index) %>%
   summarise(total_costs = sum(visit_costs), .groups = "drop")
 
@@ -456,7 +668,19 @@ raw_costs_by_month2 <- mean_costs_per_month_r2 |>
 omop_costs_by_month2 <- mean_costs_per_month_o2 |> 
   mutate(source = "OMOP")
 
-combined_costs2 <- bind_rows(raw_costs_by_month2, omop_costs_by_month2)
+mean_costs_diff2 <- raw_costs_by_month2 %>%
+  select(month_after_index, mean_cost_count_raw = mean_costs) %>%
+  inner_join(omop_costs_by_month2 %>%
+               select(month_after_index, mean_cost_count_omop = mean_costs),
+             by = "month_after_index") %>%
+  mutate(
+    mean_costs = mean_cost_count_omop - mean_cost_count_raw,
+    source = "Difference"
+  ) %>%
+  select(month_after_index, mean_costs, source)
+
+# Combine into one long-format dataframe
+combined_costs2 <- bind_rows(raw_costs_by_month2, omop_costs_by_month2, mean_costs_diff2)
 
 (plot_costs2 <- ggplot(combined_costs2, aes(x = month_after_index, y = mean_costs, color = source)) +
     geom_line(size = 1.2) +
@@ -468,7 +692,9 @@ combined_costs2 <- bind_rows(raw_costs_by_month2, omop_costs_by_month2)
       caption = "Mean calculated among healthcare service users \ncontributing fully to each month.",
       color = "Data Source"
     ) +
-    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
+    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c",
+                                  "Difference" = "#595959")) +
+    scale_y_continuous(breaks = seq(0, 140, by = 20), limits = c(0, 140)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -484,5 +710,99 @@ ggsave(here::here(
   plot = plot_costs2,
   width = 6.5,
   height = 5,
+  bg = "white"
+)
+
+
+# Specialty count ----
+specialty_count_r <- visit_data_raw |> 
+  group_by(specialty) |> 
+  summarise(n_pts = n_distinct(patid),
+            n_rows = n(),
+            .groups = "drop") |>
+  arrange(desc(n_pts))
+
+# export
+rio::export(specialty_count_r, here("Comparison Analysis", "Results", "specialty_counts_source.xlsx"))
+
+specialty_count_o <- visit_data_omop |> 
+  group_by(specialty) |> 
+  summarise(n_pts = n_distinct(subject_id),
+            n_rows = n(),
+            .groups = "drop") |>
+  arrange(desc(n_pts))  
+rio::export(specialty_count_o, here("Comparison Analysis", "Results", "specialty_counts_omop.xlsx"))
+
+
+# Plots
+top_20_r <- specialty_count_r |> 
+  slice_head(n = 20)
+
+library(viridis)
+library(scales)
+library(patchwork)
+
+(top_20_plot_r <- ggplot(top_20_r, aes(x = reorder(specialty, n_pts), y = n_pts, fill = specialty)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = comma(n_pts)), 
+            hjust = -0.1, size = 3.2) +
+  coord_flip() +
+    labs(
+    x = "Specialty",
+    y = "Number of patients",
+    title = "Source"
+  ) +
+  scale_y_continuous(labels = comma, expand = expansion(mult = c(0, 0.15)),
+                     limits = c(0, 25000)) +
+  viridis::scale_fill_viridis(discrete = TRUE) +
+  theme_minimal(base_size = 11) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 14),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(color = "black")
+  ))
+
+
+
+# Plots
+top_20_o <- specialty_count_o |> 
+  slice_head(n = 20)
+
+(top_20_plot_o <- ggplot(top_20_o, 
+                         aes(x = reorder(specialty, n_pts), 
+                             y = n_pts, 
+                             fill = specialty)) +
+    geom_bar(stat = "identity") +
+    geom_text(aes(label = comma(n_pts)), 
+              hjust = -0.1, size = 3.2) +
+    coord_flip() +
+    labs(
+      x = "Specialty",
+      y = "Number of patients",
+      title = "OMOP"
+    ) +
+    scale_y_continuous(labels = comma, 
+                       expand = expansion(mult = c(0, 0.15)),
+                       limits = c(0, 25000)) +
+    viridis::scale_fill_viridis(discrete = TRUE) +
+    theme_minimal(base_size = 11) +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(face = "bold", hjust = 0.5, size = 14),
+      axis.title = element_text(face = "bold"),
+      axis.text = element_text(color = "black")
+    ))
+
+(top_20_plot <- top_20_plot_r + top_20_plot_o + 
+    plot_annotation('Top 20 Specialty',
+                    caption = 'Healthcare Specialties',
+                    theme=theme(plot.title=element_text(hjust=0.5))))
+ggsave(here::here(
+  "Comparison Analysis", "Results", "Plots",
+  "top_20_plot.PNG"),
+  plot = top_20_plot,
+  width = 12.5,
+  height = 7,
   bg = "white"
 )
