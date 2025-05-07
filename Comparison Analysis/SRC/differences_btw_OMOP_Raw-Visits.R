@@ -221,14 +221,14 @@ combined_mean_visits <- bind_rows(mean_visits_raw, mean_visits_omop, mean_visits
     legend.text = element_text(size = 10)
   ))
 
-ggsave(here::here(
-  "Comparison Analysis", "Results", "Plots",
-  "Mean_visits_per_specialty_unweighted.PNG"),
-  plot = plot1,
-  width = 6.5,
-  height = 5,
-  bg = "white"
-)
+# ggsave(here::here(
+#   "Comparison Analysis", "Results", "Plots",
+#   "Mean_visits_per_specialty_unweighted.PNG"),
+#   plot = plot1,
+#   width = 6.5,
+#   height = 5,
+#   bg = "white"
+# )
 
 
 ### PLOT exposure weighted ------
@@ -396,14 +396,14 @@ combined_mean_visits2 <- bind_rows(mean_visits_raw2, mean_visits_omop2, mean_vis
       legend.text = element_text(size = 10)
     ))
 
-ggsave(here::here(
-  "Comparison Analysis", "Results", "Plots",
-  "Mean_visits_per_specialty_weighted.PNG"),
-  plot = plot2,
-  width = 7.5,
-  height = 6,
-  bg = "white"
-)
+# ggsave(here::here(
+#   "Comparison Analysis", "Results", "Plots",
+#   "Mean_visits_per_specialty_weighted.PNG"),
+#   plot = plot2,
+#   width = 7.5,
+#   height = 6,
+#   bg = "white"
+# )
 
 # Monthly  Visits plot -----
 visit_data_reduced_min_cost_raw <- rio::import("H:/Projects/Validation/Data/visit_data_reduced_min_cost_raw.csv")
@@ -510,14 +510,14 @@ combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month, mean_costs_
     legend.text = element_text(size = 10)
   ))
 
-ggsave(here::here(
-  "Comparison Analysis", "Results", "Plots",
-  "Mean_costs_per_specialty_unweighted.PNG"),
-  plot = plot_costs1,
-  width = 6.5,
-  height = 5,
-  bg = "white"
-)
+# ggsave(here::here(
+#   "Comparison Analysis", "Results", "Plots",
+#   "Mean_costs_per_specialty_unweighted.PNG"),
+#   plot = plot_costs1,
+#   width = 6.5,
+#   height = 5,
+#   bg = "white"
+# )
 
 ### PLOT exposure weighted ------
 # Step 0: Filter and calculate month_end
@@ -689,7 +689,7 @@ combined_costs2 <- bind_rows(raw_costs_by_month2, omop_costs_by_month2, mean_cos
       title = "Mean Visits Cost per Month by Data Source",
       x = "Month After Index",
       y = "Mean Monthly Visits Cost Healthcare Service User",
-      caption = "Mean calculated among healthcare service users \ncontributing fully to each month.",
+      caption = "Visit counts were adjusted for partial month exposure when patients contributed ≥15.22 days. \nCounts were scaled by exposure days, except for full-month contributions or if the patient died during the month. \nRecords with <15.22 days were excluded.",
       color = "Data Source"
     ) +
     scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c",
@@ -704,14 +704,14 @@ combined_costs2 <- bind_rows(raw_costs_by_month2, omop_costs_by_month2, mean_cos
       legend.text = element_text(size = 10)
     ))
 
-ggsave(here::here(
-  "Comparison Analysis", "Results", "Plots",
-  "Mean_costs_per_specialty_weighted.PNG"),
-  plot = plot_costs2,
-  width = 6.5,
-  height = 5,
-  bg = "white"
-)
+# ggsave(here::here(
+#   "Comparison Analysis", "Results", "Plots",
+#   "Mean_costs_per_specialty_weighted.PNG"),
+#   plot = plot_costs2,
+#   width = 7.5,
+#   height = 6,
+#   bg = "white"
+# )
 
 
 # Specialty count ----
@@ -798,11 +798,11 @@ top_20_o <- specialty_count_o |>
     plot_annotation('Top 20 Specialty',
                     caption = 'Healthcare Specialties',
                     theme=theme(plot.title=element_text(hjust=0.5))))
-ggsave(here::here(
-  "Comparison Analysis", "Results", "Plots",
-  "top_20_plot.PNG"),
-  plot = top_20_plot,
-  width = 12.5,
-  height = 7,
-  bg = "white"
-)
+# ggsave(here::here(
+#   "Comparison Analysis", "Results", "Plots",
+#   "top_20_plot.PNG"),
+#   plot = top_20_plot,
+#   width = 12.5,
+#   height = 7,
+#   bg = "white"
+# )
