@@ -14,7 +14,7 @@
 
 visit_data_reduced_MIN <- visit_data_reduced %>% select(
   patid, index_date, consdate, user_status,
-  specialty_reduced, follow_up_end
+  specialty_reduced, follow_up_end, death_date
 )
 
 
@@ -265,21 +265,48 @@ ggsave(here::here(
 )
 ### PLOT exposure weighted ------
 # Prepare data (remove "Not Clinically Relevant" and compute monthly bins)
-# Sense check: 23520018,243220018
-visit_data_reduced_user.2 <- visit_data_reduced_MIN %>%
+# Sense check: 55196220200
+adjusted_visits_data_r <- visit_data_reduced %>%
   filter(specialty_reduced != "Not Clinically Relevant",
          user_status == "User") %>%
-  mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
-  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44) + 1)) %>% 
   group_by(patid) %>% 
-  filter(full_month_after_index >= month_after_index) %>%  # Fully contributing patients only
-  # removed 29,293 rows
+  mutate(
+    # Calculate month after index using 30.44 days/month approximation
+    month_after_index = trunc((as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1),
+    
+    # Define month start and end using as.difftime to handle decimal days
+    month_start = index_date + as.difftime((month_after_index - 1) * 30.44, units = "days"),
+    month_end = index_date + as.difftime(month_after_index * 30.44, units = "days"),
+    
+    # Calculate exposure details
+    exposure_end = as.Date(follow_up_end),
+    days_exposed_in_month = as.numeric(pmin(exposure_end, month_end) - pmax(index_date, month_start) + 1),
+    
+    # Flags for contribution and death
+    fully_contributed = days_exposed_in_month >= 30.44,
+    half_contributed = days_exposed_in_month >= 15.22,
+    died_in_month = !is.na(death_date) & death_date >= month_start & death_date <= month_end
+  ) %>%
   ungroup() %>% 
   group_by(patid, month_after_index, specialty_reduced) %>%
-  summarise(visit_count = n(), .groups = "drop")
-
+  summarise(
+    visit_count = n(),
+    days_exposed_in_month = first(days_exposed_in_month),
+    fully_contributed = first(fully_contributed),
+    half_contributed = first(half_contributed),
+    died_in_month = first(died_in_month),
+    .groups = "drop"
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_in_month ~ visit_count,  # No adjustment if patient died that month
+      TRUE ~ (visit_count / days_exposed_in_month) / 30.44
+    )
+  )
 # Step 1: Compute total visits per patient per month
-total_visits_per_patient_month.2 <- visit_data_reduced_user.2 %>%
+total_visits_per_patient_month.2 <- adjusted_visits_data_r %>%
   group_by(patid, month_after_index) %>%
   summarise(total_visits = sum(visit_count), .groups = "drop")
 
@@ -289,7 +316,7 @@ mean_visits_per_month.2 <- total_visits_per_patient_month.2 %>%
   summarise(mean_visit_count = sum(total_visits) / n_distinct(patid), .groups = "drop")
 
 # Step 3: Compute total visits per specialty per month
-visits_per_specialty_month.2 <- visit_data_reduced_user.2 %>%
+visits_per_specialty_month.2 <- adjusted_visits_data_r %>%
   group_by(month_after_index, specialty_reduced) %>%
   summarise(total_visits_specialty = sum(visit_count), .groups = "drop")
 
@@ -315,7 +342,7 @@ plots_users_mean_visits_specialty.2 <- visits_per_specialty_month.2 %>%
       x = "Month After Index",
       y = "Mean Visits per Healthcare Service User",
       fill = "Specialty",
-      caption = "Mean calculated among healthcare service users \ncontributing fully to each month."
+      caption = "Visit counts were adjusted for partial month exposure when patients contributed ≥15.22 days. \nCounts were scaled by exposure days, except for full-month contributions or if the patient died during the month. \nRecords with <15.22 days were excluded."
     ) +
     scale_y_continuous(limits = c(0, 4)) +
     theme_minimal() +
@@ -476,7 +503,7 @@ ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Exposure_Time.PNG"),
 visit_data_reduced_MIN_c <- visit_data_reduced %>% 
   select(
     patid, index_date, consdate, user_status,
-    specialty_reduced, follow_up_end, unit_cost
+    specialty_reduced, follow_up_end, unit_cost, death_date
   )
 
 ### PLOT costs per month/specialty   -------
@@ -612,24 +639,49 @@ ggsave(here::here(
 
 ### PLOT exposure weighted ------
 # Step 0: Filter and calculate month_end
-visit_data_reduced_user_c.2 <- visit_data_reduced_MIN_c %>%
-  filter(specialty_reduced != "Not Clinically Relevant") %>%
-  mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) %>%
-  mutate(full_month_after_index = trunc((as.numeric(difftime(follow_up_end, index_date,units = "days"))/30.44))) %>% 
-  group_by(patid) %>% 
-  filter(full_month_after_index >= month_after_index) %>%
-  ungroup() %>% 
+# Sense check: 23520018,243220018
+adjusted_costs_data_r <- visit_data_reduced_MIN_c %>%
+  filter(specialty_reduced != "Not Clinically Relevant",
+         user_status == "User") %>%
+  mutate(
+    # Calculate month index
+    month_after_index = trunc((as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1),
+    
+    # Fix class conflict with as.Date()
+    month_start = as.Date(index_date) + as.difftime((month_after_index - 1) * 30.44, units = "days"),
+    month_end   = as.Date(index_date) + as.difftime(month_after_index * 30.44, units = "days"),
+    
+    # Exposure calculations
+    exposure_end = as.Date(follow_up_end),
+    days_exposed_in_month = as.numeric(pmin(exposure_end, month_end) - pmax(as.Date(index_date), month_start) + 1),
+    
+    # Contribution flags
+    fully_contributed = days_exposed_in_month >= 30.44,
+    half_contributed  = days_exposed_in_month >= 15.22,
+    died_in_month     = !is.na(death_date) & death_date >= month_start & death_date <= month_end
+  ) %>%
   group_by(patid, month_after_index, specialty_reduced) %>%
   summarise(
     visit_count = n(),
-    visit_costs = visit_count * unit_cost,
+    days_exposed_in_month = first(days_exposed_in_month),
+    fully_contributed = first(fully_contributed),
+    half_contributed  = first(half_contributed),
+    died_in_month     = first(died_in_month),
+    unit_cost         = first(unit_cost),
     .groups = "drop"
-  ) %>% 
-  distinct(patid, month_after_index, specialty_reduced, visit_costs, 
-           .keep_all = TRUE)
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_in_month     ~ visit_count,
+      TRUE              ~ (visit_count / days_exposed_in_month) / 30.44
+    ),
+    visit_costs = adjusted_visits * unit_cost
+  )
 
 # Step 1: Total cost per patient per month
-total_costs_per_patient_month.2 <- visit_data_reduced_user_c.2 %>%
+total_costs_per_patient_month.2 <- adjusted_costs_data_r %>%
   group_by(patid, month_after_index) %>%
   summarise(total_costs = sum(visit_costs), .groups = "drop")
 
@@ -642,7 +694,7 @@ mean_costs_per_month.2 <- total_costs_per_patient_month.2 %>%
   )
 
 # Step 3: Total cost per specialty per month
-costs_per_specialty_month.2 <- visit_data_reduced_user_c.2 %>%
+costs_per_specialty_month.2 <- adjusted_costs_data_r %>%
   group_by(month_after_index, specialty_reduced) %>%
   summarise(total_costs_specialty = sum(visit_costs), .groups = "drop")
 
@@ -670,7 +722,7 @@ plots_users_mean_costs_specialty_weighted.2 <- costs_per_specialty_month.2 %>%
       x = "Month After Index",
       y = "Mean Costs per Healthcare Service User",
       fill = "Specialty",
-      caption = "Includes only healthcare service users \ncontributing full month."
+      caption = "Visit counts were adjusted for partial month exposure when patients contributed ≥15.22 days. \nCounts were scaled by exposure days, except for full-month contributions or if the patient died during the month. \nRecords with <15.22 days were excluded."
     ) +
     scale_y_continuous(limits = c(0, 135)) +
     theme_minimal() +
@@ -693,3 +745,5 @@ ggsave(here::here(
   height = 7,
   bg = "white"
 )
+
+
