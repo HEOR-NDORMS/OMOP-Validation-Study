@@ -499,3 +499,4 @@ unadjusted_all_summary_costs_per_year <- unadjusted_all_costs_final_df %>%
     mutate(n_percent = round(n_counts/ sum(n_counts) * 100, 4)))
 sum(visits_per_specialty$n_percent)
 
+export(visits_per_specialty, here::here("CPRD Raw Analysis", "Results", "Output_visits_per_specialty_Raw.xlsx"))
