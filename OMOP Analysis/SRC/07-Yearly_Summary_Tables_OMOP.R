@@ -381,6 +381,13 @@ unadjusted_user_summary_costs_per_year <- unadjusted_user_costs_final_df %>%
     .groups = "drop"
   )
 
+some_costs_df <- unadjusted_user_costs_final_df %>% 
+  group_by(subject_id) %>% 
+  summarise(tot_visits = sum(total_costs), .groups = "drop") %>% 
+  ungroup() %>% 
+  left_join(unadjusted_user_yearly_costs, by = "subject_id") %>% 
+  mutate(check = total_patient_visits_cost - tot_visits)
+
 # All Pts
 unadjusted_all_costs_yr <- visit_data %>%
   mutate(
@@ -424,7 +431,7 @@ unadjusted_all_costs_final_df$total_costs[is.na(unadjusted_all_costs_final_df$to
 unadjusted_all_summary_costs_per_year <- unadjusted_all_costs_final_df %>%
   group_by(year_after_index) %>%
   summarise(
-    mean_visits_cost = round(mean(total_costs, na.rm = TRUE), 2),
+    mean_visits_cost = round(mean(total_costs, na.rm = TRUE), 4),
     min_visits_cost = round(min(total_costs, na.rm = TRUE), 2),
     max_visits_cost = round(max(total_costs, na.rm = TRUE), 2),
     sd_visits_cost = round(sd(total_costs, na.rm = TRUE), 2),
