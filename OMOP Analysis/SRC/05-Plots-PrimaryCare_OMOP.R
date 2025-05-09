@@ -17,7 +17,7 @@ library(tidylog)
 
 visit_data_reduced_MIN <- visit_data_reduced %>% select(
   subject_id, index_date, visit_detail_start_date, user_status,
-  specialty_reduced, follow_up_end
+  specialty_reduced, follow_up_end, death_date
 )
 
 ### PLOT visits per month/specialty   -------
@@ -295,7 +295,7 @@ ggsave(here::here("OMOP Analysis", "Results", "Plots", "Exposure_Time.PNG"),
 visit_data_reduced_MIN_c <- visit_data_reduced %>% 
   select(
     subject_id, index_date, visit_detail_start_date, user_status,
-    specialty_reduced, follow_up_end, unit_cost
+    specialty_reduced, follow_up_end, unit_cost, death_date
   )
 
 ### PLOT costs per month/specialty   -------
