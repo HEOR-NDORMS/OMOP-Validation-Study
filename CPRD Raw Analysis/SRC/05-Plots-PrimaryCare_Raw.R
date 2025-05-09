@@ -526,7 +526,7 @@ plots_users_mean_costs_specialty_weighted.1 <- costs_per_specialty_month.1 %>%
   plots_users_mean_costs_specialty_weighted.1,
   aes(x = factor(month_after_index), y = prop_mean, fill = specialty_reduced)
 ) +
-    geom_bar(stat = "identity", position = "stack") +
+    geom_bar(stat = "identity", position = "stack", width = 0.8) +
     scale_fill_manual(values = c(
       "General Practitioner" = "#B4CDCD",
       "Nurse" = "#377eb8",
@@ -537,7 +537,7 @@ plots_users_mean_costs_specialty_weighted.1 <- costs_per_specialty_month.1 %>%
       y = "Mean Costs per Healthcare Service User",
       fill = "Specialty"
     ) +
-    # scale_y_continuous(limits = c(0, 125)) +
+    scale_y_continuous(limits = c(0, 140)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -660,7 +660,7 @@ plots_users_mean_costs_specialty_weighted.2 <- costs_per_specialty_month.2 %>%
   plots_users_mean_costs_specialty_weighted.2,
   aes(x = factor(month_after_index), y = prop_mean, fill = specialty_reduced)
 ) +
-    geom_bar(stat = "identity", position = "stack") +
+    geom_bar(stat = "identity", position = "stack", width = 0.8) +
     scale_fill_manual(values = c(
       "General Practitioner" = "#B4CDCD",
       "Nurse" = "#377eb8",
@@ -672,7 +672,7 @@ plots_users_mean_costs_specialty_weighted.2 <- costs_per_specialty_month.2 %>%
       fill = "Specialty",
       caption = "Includes only healthcare service users \ncontributing full month."
     ) +
-    scale_y_continuous(limits = c(0, 125)) +
+    scale_y_continuous(limits = c(0, 135)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
