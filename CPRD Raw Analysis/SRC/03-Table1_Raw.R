@@ -239,6 +239,10 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
 
 
 # Sense check ----
+# mean of follow-up time
+(mean_follow_up_time <- mean(table_one_raw_visit_data$follow_up_time))
+(sd_follow_up_time <- sd(table_one_raw_visit_data$follow_up_time))
+
 ## Number of patients ----
 (number_of_patients <- n_distinct(table_one_raw_visit_data$patid))
 
