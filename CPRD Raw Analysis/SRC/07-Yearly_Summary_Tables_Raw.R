@@ -610,7 +610,7 @@ boot_costs_list_per_year <- list(
 write_xlsx(boot_costs_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw-Unadjusted_Boot.xlsx"))
 
 
-# Visits per specialty
+## Visits per specialty ----
 (visits_per_specialty <- visit_data %>% 
     filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
     group_by(specialty_reduced) %>% 
