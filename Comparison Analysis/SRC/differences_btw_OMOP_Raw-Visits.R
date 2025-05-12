@@ -144,17 +144,17 @@ mean_visits_per_month_o <- total_visits_per_patient_month_o %>%
     mean_visit_count = sum(total_visits) / n_distinct(subject_id),
     .groups = "drop"
   )
-# Step 3: Compute the total number of visits per specialty per month
-visits_per_specialty_month_o <- visit_data_reduced_user_o %>%
-  group_by(month_after_index, specialty_reduced) %>%
-  summarise(total_visits_specialty = sum(visit_count), .groups = "drop")
-
-# Step 4: Merge mean visits and compute proportional contribution per specialty
-plots_users_mean_visits_specialty_o <- visits_per_specialty_month_o %>%
-  left_join(mean_visits_per_month_o, by = "month_after_index") %>%
-  group_by(month_after_index) %>%
-  mutate(proportion = total_visits_specialty / sum(total_visits_specialty, na.rm = TRUE)) %>%
-  mutate(prop_mean = mean_visit_count * proportion)
+# # Step 3: Compute the total number of visits per specialty per month
+# visits_per_specialty_month_o <- visit_data_reduced_user_o %>%
+#   group_by(month_after_index, specialty_reduced) %>%
+#   summarise(total_visits_specialty = sum(visit_count), .groups = "drop")
+# 
+# # Step 4: Merge mean visits and compute proportional contribution per specialty
+# plots_users_mean_visits_specialty_o <- visits_per_specialty_month_o %>%
+#   left_join(mean_visits_per_month_o, by = "month_after_index") %>%
+#   group_by(month_after_index) %>%
+#   mutate(proportion = total_visits_specialty / sum(total_visits_specialty, na.rm = TRUE)) %>%
+#   mutate(prop_mean = mean_visit_count * proportion)
 
 
 # Filter for relevant specialties
@@ -806,3 +806,93 @@ top_20_o <- specialty_count_o |>
 #   height = 7,
 #   bg = "white"
 # )
+
+# Unadjusted plots ----
+## Visits ----
+# Add a source label to each
+mean_visits_raw  <- mean_visits_per_month_r  %>% mutate(source = "Source")
+mean_visits_omop <- mean_visits_per_month_o %>% mutate(source = "OMOP")
+
+# Combine into one long-format dataframe
+combined_mean_visits <- bind_rows(mean_visits_raw, mean_visits_omop)
+
+library(ggplot2)
+
+# Plot
+(plot1 <- ggplot(combined_mean_visits, 
+                 aes(x = month_after_index, 
+                     y = mean_visits, color = source)) +
+    geom_line(size = 0.8) +
+    geom_point(size = 0.8) +
+    geom_errorbar(aes(ymin=lower,
+                    ymax=upper), width = 0.4)+
+    labs(
+      title = "Mean Primary Care Visits by Data Source",
+      x = "Month After Index Fracture",
+      y = "Mean Primary Care Visits (Service Users)",
+      color = "Data Source"
+    ) +
+    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
+    scale_y_continuous(breaks = seq(0, 4, by = 1), limits = c(0, 4)) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(size = 12),
+      axis.text = element_text(size = 10),
+      legend.title = element_text(size = 11),
+      legend.text = element_text(size = 10)
+    ))
+
+ggsave(here::here(
+  "Comparison Analysis", "Results", "Plots",
+  "Mean_visits_per_data_source_unadjusted.PNG"),
+  plot = plot1,
+  width = 6.5,
+  height = 5,
+  dpi = 300,
+  bg = "white"
+)
+
+## Costs ----
+raw_costs_by_month <- mean_costs_per_month_r |> 
+  mutate(source = "Source")
+
+omop_costs_by_month <- mean_costs_per_month_o |> 
+  mutate(source = "OMOP")
+
+# Combine into one long-format dataframe
+combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
+
+(plot_costs1 <- ggplot(combined_costs, 
+                       aes(x = month_after_index, 
+                           y = mean_costs, color = source)) +
+    geom_line(size = 0.8) +
+    geom_point(size = 0.8) +
+    geom_errorbar(aes(ymin=lower,
+                      ymax=upper), width = 0.4)+
+    labs(
+      title = "Mean Costs of Primary Care Visit by Data Source",
+      x = "Month After Index Fracture",
+      y = "Mean Costs of Primary Care Visits, Service Users (£)",
+      color = "Data Source"
+    ) +
+    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
+    scale_y_continuous(breaks = seq(0, 140, by = 20), limits = c(0, 140)) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(size = 12),
+      axis.text = element_text(size = 10),
+      legend.title = element_text(size = 11),
+      legend.text = element_text(size = 10)
+    ))
+
+ggsave(here::here(
+  "Comparison Analysis", "Results", "Plots",
+  "Mean_costs_per_data_source_unadjusted.PNG"),
+  plot = plot_costs1,
+  width = 6.5,
+  height = 5,
+  dpi = 300,
+  bg = "white"
+)
