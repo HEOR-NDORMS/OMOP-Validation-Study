@@ -147,32 +147,6 @@ unadjusted_user_visits_yr <- visit_data %>%
 # for the patient with the no exposure in year two, then the visits should be 0
 # same applied in months
 
-# # Step 1: Get the full list of users and the years you want to analyze
-# all_users <- visit_data %>%
-#   filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
-#   distinct(patid)
-# 
-# # Define the years you care about (e.g., 1 and 2)
-# years <- tibble(year_after_index = 1:2)
-# 
-# # Create full combination
-# user_years <- crossing(all_users, years)
-# 
-# # Step 2: Your current summary
-# visit_summary <- visit_data %>%
-#   filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
-#   mutate(
-#     visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")),
-#     year_after_index = trunc(visit_yr_from_index / 365.25 + 1)
-#   ) %>% 
-#   group_by(patid, year_after_index) %>%
-#   summarise(total_visits = n(), .groups = "drop")
-# 
-# # Step 3: Merge and fill missing visits with 0
-# unadjusted_user_visits_yr <- user_years %>%
-#   left_join(visit_summary, by = c("patid", "year_after_index")) %>%
-#   mutate(total_visits = replace_na(total_visits, 0))
-
 
 # Create a complete dataset with all combinations of patient_id and year (1, 2)
 unadjusted_all_combinations <- expand.grid(
@@ -187,35 +161,28 @@ unadjusted_final_df <- merge(unadjusted_all_combinations, unadjusted_user_visits
 # Replace NA visits_per_year with 0
 unadjusted_final_df$total_visits[is.na(unadjusted_final_df$total_visits)] <- 0
 
-# %>% 
-#   group_by(patid) %>% 
-#   mutate(total_visits = if_else(
-#     year_after_index == 1 & year_after_index != 2, 0, total_visits
-#   )) %>% 
-#   mutate(year_after_index = if_else(
-#     total_visits == 0, 2, year_after_index
-#   )) %>% 
-#   ungroup()
-
-# Step 3: Total visits per patient per year
-# unadjusted_user_total_visits_per_patient_yr <- unadjusted_user_visits_yr %>%
-#   group_by(patid, year_after_index) %>%
-#   summarise(total_visits = sum(visit_count), .groups = "drop") 
 
 # Step 4: Summary statistics for visits per year
-unadjusted_user_summary_visits_per_year <-  unadjusted_final_df %>%
+unadjusted_user_summary_visits_per_year <- unadjusted_final_df %>%
   group_by(year_after_index) %>%
   summarise(
-    sum_visits =  sum(total_visits),
-    mean_visit_count = round(mean(total_visits, na.rm = TRUE), 2),
-    min_visits = round(min(total_visits, na.rm = TRUE), 2),
-    max_visits = round(max(total_visits, na.rm = TRUE), 2),
-    sd_visits = round(sd(total_visits, na.rm = TRUE), 2),
-    median_visits = round(median(total_visits, na.rm = TRUE), 2),
-    q1_visits = round(quantile(total_visits, 0.25, na.rm = TRUE), 2),
-    q3_visits = round(quantile(total_visits, 0.75, na.rm = TRUE), 2),
-    .groups = "drop"
-  )
+    mean_visit_per_year = mean(total_visits),
+    min_visit_per_year = min(total_visits),
+    max_visit_per_year = max(total_visits),
+    sd_visit_per_year = sd(total_visits),
+    median_visit_per_year = quantile(total_visits, 0.5),
+    lower_q_visits_per_year = quantile(total_visits, 0.25),
+    upper_q_visits_per_year = quantile(total_visits, 0.75),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visit_per_year / sqrt(n),
+    lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+    upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+# All
 
 # Assign year per visit and join with exposure info
 unadjusted_all_visits_yr <- visit_data %>%
@@ -251,16 +218,22 @@ unadjusted_all_pts_final_df$total_visits[is.na(unadjusted_all_pts_final_df$total
 unadjusted_all_summary_visits_per_year <- unadjusted_all_pts_final_df %>%
   group_by(year_after_index) %>%
   summarise(
-    sum_visits = sum(total_visits),
-    mean_visit_count = round(mean(total_visits, na.rm = TRUE), 2),
-    min_visits = round(min(total_visits, na.rm = TRUE), 2),
-    max_visits = round(max(total_visits, na.rm = TRUE), 2),
-    sd_visits = round(sd(total_visits, na.rm = TRUE), 2),
-    median_visits = round(median(total_visits, na.rm = TRUE), 2),
-    q1_visits = round(quantile(total_visits, 0.25, na.rm = TRUE), 2),
-    q3_visits = round(quantile(total_visits, 0.75, na.rm = TRUE), 2),
-    .groups = "drop"
-  )
+    mean_visit_per_year = mean(total_visits),
+    min_visit_per_year = min(total_visits),
+    max_visit_per_year = max(total_visits),
+    sd_visit_per_year = sd(total_visits),
+    median_visit_per_year = quantile(total_visits, 0.5),
+    lower_q_visits_per_year = quantile(total_visits, 0.25),
+    upper_q_visits_per_year = quantile(total_visits, 0.75),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visit_per_year / sqrt(n),
+    lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+    upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
 
 
 unadjusted_yearly_visits_list <- list(
@@ -269,6 +242,75 @@ unadjusted_yearly_visits_list <- list(
 )
 # Write to an Excel file
 write_xlsx(unadjusted_yearly_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Unadjusted.xlsx"))
+
+
+
+
+##### Boostrap ----
+###### Unadjusted User ----
+# Define the bootstrap function
+fc_grouped <- function(d, i) {
+  sampled <- d[i, ]
+  mean(sampled$total_visits)
+}
+
+set.seed(626)
+
+# Group by year and perform bootstrap per group
+boot_user_summary_statistics_per_year <- unadjusted_final_df %>%
+  group_by(year_after_index) %>%
+  group_split() %>%
+  map_df(function(df_group) {
+    # Run bootstrap
+    boot_result <- boot(df_group, statistic = fc_grouped, R = 1000)
+    boot_ci <- boot.ci(boot.out = boot_result, type = "perc")
+    
+    # Extract year value
+    year_val <- unique(df_group$year_after_index)
+    
+    # Assemble the results
+    tibble(
+      year_after_index = year_val,
+      mean_boot_visits = round(as.numeric(boot_result$t0), 3),
+      lower_ci = round(as.numeric(boot_ci$percent[4]), 3),
+      upper_ci = round(as.numeric(boot_ci$percent[5]), 3)
+    )
+  })
+
+###### Unadjusted All ----
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+
+# Set a seed for reproducibility
+set.seed(42)
+
+# Group by year and perform bootstrap per group
+boot_all_summary_statistics_per_year <- unadjusted_all_pts_final_df %>%
+  group_by(year_after_index) %>%
+  group_split() %>%
+  map_df(function(df_group) {
+    # Run bootstrap
+    boot_result <- boot(df_group, statistic = fc_grouped, R = 1000)
+    boot_ci <- boot.ci(boot.out = boot_result, type = "perc")
+    
+    # Extract year value
+    year_val <- unique(df_group$year_after_index)
+    
+    # Assemble the results
+    tibble(
+      year_after_index = year_val,
+      mean_boot_visits = round(as.numeric(boot_result$t0), 3),
+      lower_ci = round(as.numeric(boot_ci$percent[4]), 3),
+      upper_ci = round(as.numeric(boot_ci$percent[5]), 3)
+    )
+  })
+
+boot_visits_list_per_year <- list(
+  boot_all_summary_stats = boot_all_summary_statistics_per_year,
+  boot_user_summary_stats = boot_user_summary_statistics_per_year
+)
+
+write_xlsx(boot_visits_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Unadjusted_Boot.xlsx"))
 
 
 # Costs ----
@@ -431,8 +473,13 @@ unadjusted_user_summary_costs_per_year <- unadjusted_user_costs_final_df %>%
     median_visits_cost = round(median(total_costs, na.rm = TRUE), 2),
     q1_visits_cost = round(quantile(total_costs, 0.25, na.rm = TRUE), 2),
     q3_visits_cost = round(quantile(total_costs, 0.75, na.rm = TRUE), 2),
-    .groups = "drop"
-  )
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  ) 
 
 # All Pts
 unadjusted_all_costs_yr <- visit_data %>%
@@ -488,10 +535,82 @@ unadjusted_all_summary_costs_per_year <- unadjusted_all_costs_final_df %>%
     median_visits_cost = round(median(total_costs, na.rm = TRUE), 2),
     q1_visits_cost = round(quantile(total_costs, 0.25, na.rm = TRUE), 2),
     q3_visits_cost = round(quantile(total_costs, 0.75, na.rm = TRUE), 2),
-    .groups = "drop"
-  )
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  ) 
 
-# Visits per specialty
+##### Boostrap ----
+###### Unadjusted User ----
+# Define the bootstrap function
+fc_grouped_c <- function(d, i) {
+  sampled <- d[i, ]
+  mean(sampled$total_costs)
+}
+
+set.seed(626)
+
+# Group by year and perform bootstrap per group
+boot_user_summary_statistics_costs_per_year <- unadjusted_user_costs_final_df %>%
+  group_by(year_after_index) %>%
+  group_split() %>%
+  map_df(function(df_group) {
+    # Run bootstrap
+    boot_result <- boot(df_group, statistic = fc_grouped_c, R = 1000)
+    boot_ci <- boot.ci(boot.out = boot_result, type = "perc")
+    
+    # Extract year value
+    year_val <- unique(df_group$year_after_index)
+    
+    # Assemble the results
+    tibble(
+      year_after_index = year_val,
+      mean_boot_visits = round(as.numeric(boot_result$t0), 3),
+      lower_ci = round(as.numeric(boot_ci$percent[4]), 3),
+      upper_ci = round(as.numeric(boot_ci$percent[5]), 3)
+    )
+  })
+
+###### Unadjusted All ----
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+
+# Set a seed for reproducibility
+set.seed(42)
+
+# Group by year and perform bootstrap per group
+boot_all_summary_statistics_costs_per_year <- unadjusted_all_costs_final_df %>%
+  group_by(year_after_index) %>%
+  group_split() %>%
+  map_df(function(df_group) {
+    # Run bootstrap
+    boot_result <- boot(df_group, statistic = fc_grouped_c, R = 1000)
+    boot_ci <- boot.ci(boot.out = boot_result, type = "perc")
+    
+    # Extract year value
+    year_val <- unique(df_group$year_after_index)
+    
+    # Assemble the results
+    tibble(
+      year_after_index = year_val,
+      mean_boot_visits = round(as.numeric(boot_result$t0), 3),
+      lower_ci = round(as.numeric(boot_ci$percent[4]), 3),
+      upper_ci = round(as.numeric(boot_ci$percent[5]), 3)
+    )
+  })
+
+boot_costs_list_per_year <- list(
+  boot_all_summary_stats = boot_all_summary_statistics_costs_per_year,
+  boot_user_summary_stats = boot_user_summary_statistics_costs_per_year
+)
+
+write_xlsx(boot_costs_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw-Unadjusted_Boot.xlsx"))
+
+
+## Visits per specialty ----
 (visits_per_specialty <- visit_data %>% 
     filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
     group_by(specialty_reduced) %>% 
