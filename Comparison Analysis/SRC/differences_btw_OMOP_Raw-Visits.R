@@ -810,8 +810,8 @@ top_20_o <- specialty_count_o |>
 # Unadjusted plots ----
 ## Visits ----
 # Add a source label to each
-mean_visits_raw  <- mean_visits_per_month_r  %>% mutate(source = "Source")
-mean_visits_omop <- mean_visits_per_month_o %>% mutate(source = "OMOP")
+mean_visits_raw  <- mean_visits_combined_r  %>% mutate(source = "Source")
+mean_visits_omop <- mean_visits_combined_o %>% mutate(source = "OMOP")
 
 # Combine into one long-format dataframe
 combined_mean_visits <- bind_rows(mean_visits_raw, mean_visits_omop)
@@ -821,11 +821,11 @@ library(ggplot2)
 # Plot
 (plot1 <- ggplot(combined_mean_visits, 
                  aes(x = month_after_index, 
-                     y = mean_visits, color = source)) +
+                     y = mean_visits_boot, color = source)) +
     geom_line(size = 0.8) +
     geom_point(size = 0.8) +
-    geom_errorbar(aes(ymin=lower,
-                    ymax=upper), width = 0.4)+
+    geom_errorbar(aes(ymin=lower_ci,
+                    ymax=upper_ci), width = 0.4)+
     labs(
       title = "Mean Primary Care Visits by Data Source",
       x = "Month After Index Fracture",
@@ -833,7 +833,7 @@ library(ggplot2)
       color = "Data Source"
     ) +
     scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-    scale_y_continuous(breaks = seq(0, 4, by = 1), limits = c(0, 4)) +
+    scale_y_continuous(breaks = seq(0, 3, by = 1), limits = c(0, 3)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -854,10 +854,10 @@ ggsave(here::here(
 )
 
 ## Costs ----
-raw_costs_by_month <- mean_costs_per_month_r |> 
+raw_costs_by_month <- mean_costs_combined_r |> 
   mutate(source = "Source")
 
-omop_costs_by_month <- mean_costs_per_month_o |> 
+omop_costs_by_month <- mean_costs_combined_o |> 
   mutate(source = "OMOP")
 
 # Combine into one long-format dataframe
@@ -868,8 +868,8 @@ combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
                            y = mean_costs, color = source)) +
     geom_line(size = 0.8) +
     geom_point(size = 0.8) +
-    geom_errorbar(aes(ymin=lower,
-                      ymax=upper), width = 0.4)+
+    geom_errorbar(aes(ymin=lower_ci,
+                      ymax=upper_ci), width = 0.4)+
     labs(
       title = "Mean Costs of Primary Care Visit by Data Source",
       x = "Month After Index Fracture",
@@ -877,7 +877,7 @@ combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
       color = "Data Source"
     ) +
     scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-    scale_y_continuous(breaks = seq(0, 140, by = 20), limits = c(0, 140)) +
+    scale_y_continuous(breaks = seq(0, 120, by = 20), limits = c(0, 120)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
