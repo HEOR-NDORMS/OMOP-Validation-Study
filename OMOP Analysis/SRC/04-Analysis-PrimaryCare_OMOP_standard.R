@@ -368,11 +368,11 @@ set.seed(626)
 boot_result_user <- boot(unadjusted_yearly_visits, fc_user, R = 1000)
 
 # Compute 95% percentile-based confidence interval
-boot_ci_user <- boot.ci(boot.out = boot_result_user, type = "perc")
+boot_ci_user <- boot.ci(boot.out = boot_result_user, type = "norm")
 
 mean_boot_visits_user <-round(as.numeric(boot_result_user$t0),3)
-lower_ci_boot_visits_user <-round(as.numeric(boot_ci_user$percent[4]),3)
-upper_ci_boot_visits_user <-round(as.numeric(boot_ci_user$percent[5]),3)
+lower_ci_boot_visits_user <-round(as.numeric(boot_ci_user$normal[2]), 3)
+upper_ci_boot_visits_user <-round(as.numeric(boot_ci_user$normal[3]), 3)
 
 boot_user_summary_statistics_overall <- tibble(
   mean_boot_visits_user = mean_boot_visits_user,
@@ -396,12 +396,11 @@ set.seed(42)
 boot_result_all <- boot(unadjusted_all_yearly_visits, fc_all, R = 1000)
 
 # Compute 95% percentile-based confidence interval
-boot_ci_all <- boot.ci(boot.out = boot_result_all, type = "perc")
+boot_ci_all <- boot.ci(boot.out = boot_result_all, type = "norm")
 
 mean_boot_visits_all <-round(as.numeric(boot_result_all$t0),3)
-lower_ci_boot_visits_all <-round(as.numeric(boot_ci_all$percent[4]),3)
-upper_ci_boot_visits_all <-round(as.numeric(boot_ci_all$percent[5]),3)
-
+lower_ci_boot_visits_all <-round(as.numeric(boot_ci_all$normal[2]), 3)
+upper_ci_boot_visits_all <-round(as.numeric(boot_ci_all$normal[3]), 3)
 boot_all_summary_statistics_overall <- tibble(
   mean_boot_visits_all = mean_boot_visits_all,
   lower_ci_boot_visits_all = lower_ci_boot_visits_all,
@@ -602,11 +601,11 @@ set.seed(626)
 boot_result_user_costs <- boot(unadjusted_user_yearly_costs, fc_user_costs, R = 1000)
 
 # Compute 95% percentile-based confidence interval
-boot_ci_user_costs <- boot.ci(boot.out = boot_result_user_costs, type = "perc")
+boot_ci_user_costs <- boot.ci(boot.out = boot_result_user_costs, type = "norm")
 
 mean_boot_visits_user_costs <-round(as.numeric(boot_result_user_costs$t0),3)
-lower_ci_boot_visits_user_costs <- round(as.numeric(boot_ci_user_costs$percent[4]), 3)
-upper_ci_boot_visits_user_costs <- round(as.numeric(boot_ci_user_costs$percent[5]), 3)
+lower_ci_boot_visits_user_costs <- round(as.numeric(boot_ci_user_costs$normal[2]), 3)
+upper_ci_boot_visits_user_costs <- round(as.numeric(boot_ci_user_costs$normal[3]), 3)
 
 
 boot_user_costs_summary_statistics_overall <- tibble(
@@ -631,11 +630,11 @@ set.seed(42)
 boot_result_all_costs <- boot(unadjusted_all_yearly_costs, fc_all_costs, R = 1000)
 
 # Compute 95% percentile-based confidence interval
-boot_ci_all_costs <- boot.ci(boot.out = boot_result_all_costs, type = "perc")
+boot_ci_all_costs <- boot.ci(boot.out = boot_result_all_costs, type = "norm")
 
 mean_boot_visits_all_costs <-round(as.numeric(boot_result_all_costs$t0),3)
-lower_ci_boot_visits_all_costs <-round(as.numeric(boot_ci_all_costs$percent[4]),3)
-upper_ci_boot_visits_all_costs <-round(as.numeric(boot_ci_all_costs$percent[5]),3)
+lower_ci_boot_visits_all_costs <-round(as.numeric(boot_ci_all_costs$normal[2]), 3)
+upper_ci_boot_visits_all_costs <-round(as.numeric(boot_ci_all_costs$normal[3]), 3)
 
 boot_all_costs_summary_statistics_overall <- tibble(
   mean_boot_visits_all_costs = mean_boot_visits_all_costs,

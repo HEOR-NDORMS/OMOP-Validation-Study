@@ -247,7 +247,7 @@ boot_user_summary_statistics_per_year <- unadjusted_users_final_df %>%
   map_df(function(df_group) {
     # Run bootstrap
     boot_result <- boot(df_group, statistic = fc_grouped, R = 1000)
-    boot_ci <- boot.ci(boot.out = boot_result, type = "perc")
+    boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
     
     # Extract year value
     year_val <- unique(df_group$year_after_index)
@@ -256,8 +256,8 @@ boot_user_summary_statistics_per_year <- unadjusted_users_final_df %>%
     tibble(
       year_after_index = year_val,
       mean_boot_visits = round(as.numeric(boot_result$t0), 3),
-      lower_ci = round(as.numeric(boot_ci$percent[4]), 3),
-      upper_ci = round(as.numeric(boot_ci$percent[5]), 3)
+      lower_ci = round(as.numeric(boot_ci$normal[2]), 3),
+      upper_ci = round(as.numeric(boot_ci$normal[3]), 3)
     )
   })
 
@@ -275,7 +275,7 @@ boot_all_summary_statistics_per_year <- unadjusted_all_pts_final_df %>%
   map_df(function(df_group) {
     # Run bootstrap
     boot_result <- boot(df_group, statistic = fc_grouped, R = 1000)
-    boot_ci <- boot.ci(boot.out = boot_result, type = "perc")
+    boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
     
     # Extract year value
     year_val <- unique(df_group$year_after_index)
@@ -284,8 +284,8 @@ boot_all_summary_statistics_per_year <- unadjusted_all_pts_final_df %>%
     tibble(
       year_after_index = year_val,
       mean_boot_visits = round(as.numeric(boot_result$t0), 3),
-      lower_ci = round(as.numeric(boot_ci$percent[4]), 3),
-      upper_ci = round(as.numeric(boot_ci$percent[5]), 3)
+      lower_ci = round(as.numeric(boot_ci$normal[2]), 3),
+      upper_ci = round(as.numeric(boot_ci$normal[3]), 3)
     )
   })
 
@@ -540,7 +540,7 @@ boot_user_summary_statistics_costs_per_year <- unadjusted_user_costs_final_df %>
   map_df(function(df_group) {
     # Run bootstrap
     boot_result <- boot(df_group, statistic = fc_grouped_c, R = 1000)
-    boot_ci <- boot.ci(boot.out = boot_result, type = "perc")
+    boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
     
     # Extract year value
     year_val <- unique(df_group$year_after_index)
@@ -549,8 +549,8 @@ boot_user_summary_statistics_costs_per_year <- unadjusted_user_costs_final_df %>
     tibble(
       year_after_index = year_val,
       mean_boot_visits = round(as.numeric(boot_result$t0), 3),
-      lower_ci = round(as.numeric(boot_ci$percent[4]), 3),
-      upper_ci = round(as.numeric(boot_ci$percent[5]), 3)
+      lower_ci = round(as.numeric(boot_ci$normal[2]), 3),
+      upper_ci = round(as.numeric(boot_ci$normal[3]), 3)
     )
   })
 
@@ -568,7 +568,7 @@ boot_all_summary_statistics_costs_per_year <- unadjusted_all_costs_final_df %>%
   map_df(function(df_group) {
     # Run bootstrap
     boot_result <- boot(df_group, statistic = fc_grouped_c, R = 1000)
-    boot_ci <- boot.ci(boot.out = boot_result, type = "perc")
+    boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
     
     # Extract year value
     year_val <- unique(df_group$year_after_index)
@@ -577,8 +577,8 @@ boot_all_summary_statistics_costs_per_year <- unadjusted_all_costs_final_df %>%
     tibble(
       year_after_index = year_val,
       mean_boot_visits = round(as.numeric(boot_result$t0), 3),
-      lower_ci = round(as.numeric(boot_ci$percent[4]), 3),
-      upper_ci = round(as.numeric(boot_ci$percent[5]), 3)
+      lower_ci = round(as.numeric(boot_ci$normal[2]), 3),
+      upper_ci = round(as.numeric(boot_ci$normal[3]), 3)
     )
   })
 
