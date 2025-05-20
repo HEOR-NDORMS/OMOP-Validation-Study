@@ -79,7 +79,7 @@ visit_data <- cohort_data_omop %>%
                                               "gender_source_value", "gender_source_concept_id",
                                               "race_source_value", "race_source_concept_id", 
                                               "ethnicity_source_value", "ethnicity_source_concept_id", 
-                                              "age_fracture", "exposed_yrs", "exposed_months", "excluded_flag"
+                                              "age_fracture", "excluded_flag"
   ), copy = T) %>% 
   mutate(
     specialty = case_when(
@@ -203,6 +203,8 @@ all_summary_reduced <- visits_results_omop_reduced$all_summary_reduced
 # Filter user visits and relevant specialties
 user_visits <- visit_data %>%
   filter(user_status == "User", specialty != "Not Clinically Relevant")
+# non_user_v <- visit_data %>%
+#   filter(user_status == "Non-User") %>% group_by(subject_id) %>% slice(1)
 
 # We then compute visits per year per patient
 user_yearly_visits <- user_visits %>%
@@ -340,9 +342,10 @@ unadjusted_all_summary_statistics_overall <- unadjusted_all_yearly_visits %>%
     upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
   ) %>%
   mutate(across(everything(), round, 2))
+
 unadjusted_visits_list <- list(
   unadjusted_all_summary = unadjusted_all_summary_statistics_overall,
-  unadjusted_user_only_summary = unadjusted_user_only_summary_statistics_overall
+  unadjusted_user_only_summary = unadjusted_user_summary_statistics_overall
 )
 
 # Write to an Excel file
@@ -522,15 +525,25 @@ unadjusted_user_yearly_costs <- user_costs %>%
     .groups = "drop"
   )
 
-unadjusted_user_only_costs_summary_statistics_overall <- tibble(
-  mean_visit_cost = round(mean(unadjusted_user_yearly_costs$total_patient_visits_cost), 2),
-  min_visit_cost = round(min(unadjusted_user_yearly_costs$total_patient_visits_cost), 2),
-  max_visit_cost = round(max(unadjusted_user_yearly_costs$total_patient_visits_cost), 2),
-  sd_visit_cost = round(sd(unadjusted_user_yearly_costs$total_patient_visits_cost), 2),
-  median_visit_cost = round(quantile(unadjusted_user_yearly_costs$total_patient_visits_cost, probs = (.5)), 2),
-  lower_q_visits_cost = round(quantile(unadjusted_user_yearly_costs$total_patient_visits_cost, probs = (.25)), 2),
-  upper_q_visits_cost = round(quantile(unadjusted_user_yearly_costs$total_patient_visits_cost, probs = (.75)), 2)
-)
+
+# Summary stats for user cost per year
+unadjusted_user_only_costs_summary_statistics_overall <- unadjusted_user_yearly_costs %>%
+  # group_by(year_after_index) %>%
+  summarise(
+    mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 2),
+    min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 2),
+    max_visits_cost = round(max(total_patient_visits_cost, na.rm = TRUE), 2),
+    sd_visits_cost = round(sd(total_patient_visits_cost, na.rm = TRUE), 2),
+    median_visits_cost = round(median(total_patient_visits_cost, na.rm = TRUE), 2),
+    q1_visits_cost = round(quantile(total_patient_visits_cost, 0.25, na.rm = TRUE), 2),
+    q3_visits_cost = round(quantile(total_patient_visits_cost, 0.75, na.rm = TRUE), 2),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  )
 
 unadjusted_all_yearly_costs <- visit_data %>%
   group_by(subject_id, specialty) %>%
@@ -549,23 +562,9 @@ unadjusted_all_yearly_costs <- visit_data %>%
     .groups = "drop"
   )
 
-unadjusted_all_costs_summary_statistics_overall <- tibble(
-  mean_visit_cost_per_year = round(mean(unadjusted_all_yearly_costs$total_patient_visits_cost), 4),
-  min_visit_cost_per_year = round(min(unadjusted_all_yearly_costs$total_patient_visits_cost), 2),
-  max_visit_cost_per_year = round(max(unadjusted_all_yearly_costs$total_patient_visits_cost), 2),
-  sd_visit_cost_per_year = round(sd(unadjusted_all_yearly_costs$total_patient_visits_cost), 2),
-  median_visit_cost_per_year = round(quantile(unadjusted_all_yearly_costs$total_patient_visits_cost, probs = (.5)), 2),
-  lower_q_visits_cost_per_year = round(quantile(unadjusted_all_yearly_costs$total_patient_visits_cost, probs = (.25)), 2),
-  upper_q_visits_cost_per_year = round(quantile(unadjusted_all_yearly_costs$total_patient_visits_cost, probs = (.75)), 2)
-)
 
-unadjusted_costs_list <- list(
-  unadjusted_all_costs_summary = unadjusted_all_costs_summary_statistics_overall,
-  unadjusted_user_only_costs = unadjusted_user_only_costs_summary_statistics_overall
-)
 
 unadjusted_all_costs_summary_statistics_overall <- unadjusted_all_yearly_costs %>%
-  # group_by(year_after_index) %>%
   summarise(
     mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 2),
     min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 2),
@@ -581,6 +580,12 @@ unadjusted_all_costs_summary_statistics_overall <- unadjusted_all_yearly_costs %
     lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
     upper = mean_visits_cost + qt(0.975, df = n - 1) * se
   )
+
+unadjusted_costs_list <- list(
+  unadjusted_all_costs_summary = unadjusted_all_costs_summary_statistics_overall,
+  unadjusted_user_only_costs = unadjusted_user_only_costs_summary_statistics_overall
+)
+
 
 write_xlsx(unadjusted_costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP-Unadjusted.xlsx"))
 
