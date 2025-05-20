@@ -347,6 +347,122 @@ unadjusted_visits_list <- list(
 
 # write_xlsx(unadjusted_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_visits_Raw-Unadjusted.xlsx"))
 
+#### Adjusted ----
+adjusted_users_yearly_visits <- user_visits %>%
+  group_by(patid, specialty) %>%
+  summarise(
+    visit_count = n(),  # Total visits for this patient-specialty
+    index_date = first(index_date),
+    follow_up_end = first(follow_up_end),
+    death_date = first(death_date),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    # Compute follow-up duration in days and years
+    follow_up_end = as.Date(follow_up_end),
+    exposed_days = as.numeric(follow_up_end - index_date + 1),
+    exposed_yrs = exposed_days / 365.25,
+    
+    # Define contribution flags
+    fully_contributed = exposed_yrs >= 1,
+    half_contributed = exposed_yrs >= 0.5,
+    died_during_year = !is.na(death_date) & (death_date >= index_date & death_date <= follow_up_end)
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    # Adjust visits if follow-up was partial (unless death occurred)
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_during_year ~ visit_count,
+      TRUE ~ (visit_count / exposed_days) * 365.25
+    )
+  ) %>%
+  group_by(patid) %>%
+  summarise(
+    total_patient_visits = sum(adjusted_visits, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+adjusted_user_only_summary_statistics_overall <- adjusted_users_yearly_visits %>%
+  summarise(
+    mean_visit_per_year = mean(total_patient_visits),
+    min_visit_per_year = min(total_patient_visits),
+    max_visit_per_year = max(total_patient_visits),
+    sd_visit_per_year = sd(total_patient_visits),
+    median_visit_per_year = quantile(total_patient_visits, 0.5),
+    lower_q_visits_per_year = quantile(total_patient_visits, 0.25),
+    upper_q_visits_per_year = quantile(total_patient_visits, 0.75),
+    n = n(),
+    se = sd_visit_per_year / sqrt(n),
+    lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+    upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+# All patients
+adjusted_all_yearly_visits <- visit_data %>%
+  group_by(patid, specialty) %>%
+  summarise(
+    visit_count = n(),  # Total visits for this patient-specialty
+    index_date = first(index_date),
+    follow_up_end = first(follow_up_end),
+    death_date = first(death_date),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    visit_count = if_else(specialty == "Not Clinically Relevant", 0L, visit_count)
+  ) %>% 
+  mutate(
+    # Compute follow-up duration in days and years
+    follow_up_end = as.Date(follow_up_end),
+    exposed_days = as.numeric(follow_up_end - index_date + 1),
+    exposed_yrs = exposed_days / 365.25,
+    
+    # Define contribution flags
+    fully_contributed = exposed_yrs >= 1,
+    half_contributed = exposed_yrs >= 0.5,
+    died_during_year = !is.na(death_date) & (death_date >= index_date & death_date <= follow_up_end)
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    # Adjust visits if follow-up was partial (unless death occurred)
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_during_year ~ visit_count,
+      TRUE ~ (visit_count / exposed_days) * 365.25
+    )
+  ) %>%
+  group_by(patid) %>%
+  summarise(
+    total_patient_visits = sum(adjusted_visits, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+adjusted_all_only_summary_statistics_overall <- adjusted_all_yearly_visits %>%
+  summarise(
+    mean_visit_per_year = mean(total_patient_visits),
+    min_visit_per_year = min(total_patient_visits),
+    max_visit_per_year = max(total_patient_visits),
+    sd_visit_per_year = sd(total_patient_visits),
+    median_visit_per_year = quantile(total_patient_visits, 0.5),
+    lower_q_visits_per_year = quantile(total_patient_visits, 0.25),
+    upper_q_visits_per_year = quantile(total_patient_visits, 0.75),
+    n = n(),
+    se = sd_visit_per_year / sqrt(n),
+    lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+    upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+adjusted_visits_list <- list(
+  adjusted_all_summary = adjusted_all_only_summary_statistics_overall,
+  adjusted_user_only_summary = adjusted_user_only_summary_statistics_overall
+)
+
+# write_xlsx(adjusted_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_visits_Raw-Adjusted.xlsx"))
+
+
+
 ##### Boostrap ----
 ###### Unadjusted User ----
 # Load the boot package
@@ -378,6 +494,33 @@ boot_user_summary_statistics_overall <- tibble(
   upper_ci_boot_visits_user = upper_ci_boot_visits_user
 )
 
+###### Adjusted User ----
+
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+fc_user_adj <- function(d, i){
+  adjusted_users_yearly_visits <- d[i, ]               # Sample the data with replacement
+  return(mean(adjusted_users_yearly_visits$total_patient_visits))   # This is your variable of interest (e.g., visits, or costs)
+}
+
+# Set a seed for reproducibility
+set.seed(626)
+
+# Run bootstrap with 1000 resamples
+boot_result_user_adj <- boot(adjusted_users_yearly_visits, fc_user_adj, R = 1000)
+
+# Compute 95% percentile-based confidence interval
+boot_ci_user_adj <- boot.ci(boot.out = boot_result_user_adj, type = "norm")
+
+mean_boot_visits_user_adj <-round(as.numeric(boot_result_user_adj$t0),3)
+lower_ci_boot_visits_user_adj <-round(as.numeric(boot_ci_user_adj$normal[2]), 3)
+upper_ci_boot_visits_user_adj <-round(as.numeric(boot_ci_user_adj$normal[3]), 3)
+
+adj_boot_user_summary_statistics_overall <- tibble(
+  mean_boot_visits_user_adj = mean_boot_visits_user_adj,
+  lower_ci_boot_visits_user_adj = lower_ci_boot_visits_user_adj,
+  upper_ci_boot_visits_user_adj = upper_ci_boot_visits_user_adj
+)
 
 ###### Unadjusted All ----
 # Define the statistic function
@@ -406,12 +549,40 @@ boot_all_summary_statistics_overall <- tibble(
   upper_ci_boot_visits_all = upper_ci_boot_visits_all
 )
 
-boot_visits_list <- list(
-  boot_all_summary_stats = boot_all_summary_statistics_overall,
-  boot_user_summary_stats = boot_user_summary_statistics_overall
+###### Adjusted All ----
+fc_all_adj <- function(d, i){
+  adjusted_all_yearly_visits <- d[i, ]               # Sample the data with replacement
+  return(mean(adjusted_all_yearly_visits$total_patient_visits))   # This is your variable of interest (e.g., visits, or costs)
+}
+
+# Set a seed for reproducibility
+set.seed(42)
+
+# Run bootstrap with 1000 resamples
+boot_result_all_adj <- boot(adjusted_all_yearly_visits, fc_all_adj, R = 1000)
+
+# Compute 95% percentile-based confidence interval
+boot_ci_all_adj <- boot.ci(boot.out = boot_result_all_adj, type = "norm")
+
+mean_boot_visits_all_adj <-round(as.numeric(boot_result_all_adj$t0),3)
+lower_ci_boot_visits_all_adj <-round(as.numeric(boot_ci_all_adj$normal[2]), 3)
+upper_ci_boot_visits_all_adj <-round(as.numeric(boot_ci_all_adj$normal[3]), 3)
+
+adj_boot_all_summary_statistics_overall <- tibble(
+  mean_boot_visits_all_adj = mean_boot_visits_all_adj,
+  lower_ci_boot_visits_all_adj = lower_ci_boot_visits_all_adj,
+  upper_ci_boot_visits_all_adj = upper_ci_boot_visits_all_adj
 )
 
-write_xlsx(boot_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_visits_Raw-Unadjusted_Boot.xlsx"))
+
+boot_visits_list <- list(
+  unadj_boot_all_summary_stats = boot_all_summary_statistics_overall,
+  unadj_boot_user_summary_stats = boot_user_summary_statistics_overall,
+  adj_boot_all_summary_stats = adj_boot_all_summary_statistics_overall,
+  adj_boot_user_summary_stats = adj_boot_user_summary_statistics_overall
+)
+
+write_xlsx(boot_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_visits_Raw-Boot.xlsx"))
 
 ## Cost - Primary care ----
 cost_results_raw <- analyse_visits_cost(
@@ -573,6 +744,136 @@ unadjusted_costs_list <- list(
 )
 write_xlsx(unadjusted_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_costs_Raw-Unadjusted.xlsx"))
 
+#### Adjusted ----
+adjusted_user_yearly_costs <- user_costs %>%
+  group_by(patid, specialty) %>%
+  summarise(
+    visit_count = n(),  # Total visits for this patient-specialty
+    index_date = first(index_date),
+    follow_up_end = first(follow_up_end),
+    death_date = first(death_date),
+    unit_cost = unit_cost,
+    .groups = "drop"
+  ) %>%
+  distinct() %>% 
+  mutate(
+    # Compute follow-up duration in days and years
+    follow_up_end = as.Date(follow_up_end),
+    exposed_days = as.numeric(follow_up_end - index_date + 1),
+    exposed_yrs = exposed_days / 365.25,
+    
+    # Define contribution flags
+    fully_contributed = exposed_yrs >= 1,
+    half_contributed = exposed_yrs >= 0.5,
+    died_during_year = !is.na(death_date) & (death_date >= index_date & death_date <= follow_up_end)
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    # Adjust visits if follow-up was partial (unless death occurred)
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_during_year ~ visit_count,
+      TRUE ~ (visit_count / exposed_days) * 365.25
+    )
+  ) %>%
+  group_by(patid) %>%
+  summarise(
+    adjusted_costs = adjusted_visits * unit_cost,
+       .groups = "drop"
+  ) %>% 
+  group_by(patid) %>% 
+  summarise(
+    total_patient_visits_cost = sum(adjusted_costs),
+    .groups = "drop"
+  )
+
+adjusted_user_only_costs_summary_statistics_overall <- adjusted_user_yearly_costs %>%
+   summarise(
+    mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 2),
+    min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 2),
+    max_visits_cost = round(max(total_patient_visits_cost, na.rm = TRUE), 2),
+    sd_visits_cost = round(sd(total_patient_visits_cost, na.rm = TRUE), 2),
+    median_visits_cost = round(median(total_patient_visits_cost, na.rm = TRUE), 2),
+    q1_visits_cost = round(quantile(total_patient_visits_cost, 0.25, na.rm = TRUE), 2),
+    q3_visits_cost = round(quantile(total_patient_visits_cost, 0.75, na.rm = TRUE), 2),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  )
+
+# All
+adjusted_all_yearly_costs <- visit_data %>%
+  group_by(patid, specialty) %>%
+  summarise(
+    visit_count = n(),  # Total visits for this patient-specialty
+    index_date = first(index_date),
+    follow_up_end = first(follow_up_end),
+    death_date = first(death_date),
+    unit_cost = unit_cost,
+    .groups = "drop"
+  ) %>%
+  distinct() %>% 
+  mutate(
+    visit_count = if_else(specialty == "Not Clinically Relevant", 0L, visit_count)
+  ) %>% 
+  mutate(
+    # Compute follow-up duration in days and years
+    follow_up_end = as.Date(follow_up_end),
+    exposed_days = as.numeric(follow_up_end - index_date + 1),
+    exposed_yrs = exposed_days / 365.25,
+    
+    # Define contribution flags
+    fully_contributed = exposed_yrs >= 1,
+    half_contributed = exposed_yrs >= 0.5,
+    died_during_year = !is.na(death_date) & (death_date >= index_date & death_date <= follow_up_end)
+  ) %>%
+  filter(half_contributed == TRUE) %>%
+  mutate(
+    # Adjust visits if follow-up was partial (unless death occurred)
+    adjusted_visits = case_when(
+      fully_contributed ~ visit_count,
+      died_during_year ~ visit_count,
+      TRUE ~ (visit_count / exposed_days) * 365.25
+    )
+  ) %>%
+  group_by(patid) %>%
+  summarise(
+    adjusted_costs = adjusted_visits * unit_cost,
+    .groups = "drop"
+  ) %>% 
+  group_by(patid) %>% 
+  summarise(
+    total_patient_visits_cost = sum(adjusted_costs),
+    .groups = "drop"
+  )
+
+adjusted_all_only_costs_summary_statistics_overall <- adjusted_all_yearly_costs %>%
+  summarise(
+    mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 2),
+    min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 2),
+    max_visits_cost = round(max(total_patient_visits_cost, na.rm = TRUE), 2),
+    sd_visits_cost = round(sd(total_patient_visits_cost, na.rm = TRUE), 2),
+    median_visits_cost = round(median(total_patient_visits_cost, na.rm = TRUE), 2),
+    q1_visits_cost = round(quantile(total_patient_visits_cost, 0.25, na.rm = TRUE), 2),
+    q3_visits_cost = round(quantile(total_patient_visits_cost, 0.75, na.rm = TRUE), 2),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  )
+
+adjusted_costs_list <- list(
+  adjusted_all_costs_summary = adjusted_all_only_costs_summary_statistics_overall,
+  adjusted_user_only_costs = adjusted_user_only_costs_summary_statistics_overall
+)
+# write_xlsx(adjusted_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_costs_Raw-Adjusted.xlsx"))
+
+
 #### Boostrap ----
 ###### Unadjusted User ----
 
@@ -603,6 +904,34 @@ boot_user_costs_summary_statistics_overall <- tibble(
   upper_ci_boot_visits_user_costs = upper_ci_boot_visits_user_costs
 )
 
+###### Adjusted User ----
+
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+fc_user_costs_adj <- function(d, i){
+  adjusted_user_yearly_costs <- d[i, ]               # Sample the data with replacement
+  return(mean(adjusted_user_yearly_costs$total_patient_visits_cost))   # This is your variable of interest (e.g., visits, or costs)
+}
+
+# Set a seed for reproducibility
+set.seed(626)
+
+# Run bootstrap with 1000 resamples
+boot_result_user_costs_adj <- boot(adjusted_user_yearly_costs, fc_user_costs_adj, R = 1000)
+
+# Compute 95% percentile-based confidence interval
+boot_ci_user_costs_adj <- boot.ci(boot.out = boot_result_user_costs_adj, type = "norm")
+
+mean_boot_visits_user_costs_adj <-round(as.numeric(boot_result_user_costs_adj$t0),3)
+lower_ci_boot_visits_user_costs_adj <- round(as.numeric(boot_ci_user_costs_adj$normal[2]), 3)
+upper_ci_boot_visits_user_costs_adj <- round(as.numeric(boot_ci_user_costs_adj$normal[3]), 3)
+
+
+adj_boot_user_costs_summary_statistics_overall <- tibble(
+  mean_boot_visits_user_costs_adj = mean_boot_visits_user_costs_adj,
+  lower_ci_boot_visits_user_costs_adj = lower_ci_boot_visits_user_costs_adj,
+  upper_ci_boot_visits_user_costs_adj = upper_ci_boot_visits_user_costs_adj
+)
 
 ###### Unadjusted All ----
 # Define the statistic function
@@ -631,12 +960,41 @@ boot_all_costs_summary_statistics_overall <- tibble(
   upper_ci_boot_visits_all_costs = upper_ci_boot_visits_all_costs
 )
 
-boot_costs_list <- list(
-  boot_all_summary_stats = boot_all_costs_summary_statistics_overall,
-  boot_user_summary_stats = boot_user_costs_summary_statistics_overall
+###### Adjusted All ----
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+fc_all_costs_adj <- function(d, i){
+  adjusted_all_yearly_costs <- d[i, ]               # Sample the data with replacement
+  return(mean(adjusted_all_yearly_costs$total_patient_visits_cost))   # This is your variable of interest (e.g., visits, or costs)
+}
+
+# Set a seed for reproducibility
+set.seed(42)
+
+# Run bootstrap with 1000 resamples
+boot_result_all_costs_adj <- boot(adjusted_all_yearly_costs, fc_all_costs_adj, R = 1000)
+
+# Compute 95% percentile-based confidence interval
+boot_ci_all_costs_adj <- boot.ci(boot.out = boot_result_all_costs_adj, type = "norm")
+
+mean_boot_visits_all_costs_adj <-round(as.numeric(boot_result_all_costs_adj$t0),3)
+lower_ci_boot_visits_all_costs_adj <-round(as.numeric(boot_ci_all_costs_adj$normal[2]), 3)
+upper_ci_boot_visits_all_costs_adj <-round(as.numeric(boot_ci_all_costs_adj$normal[3]), 3)
+
+adj_boot_all_costs_summary_statistics_overall <- tibble(
+  mean_boot_visits_all_costs_adj = mean_boot_visits_all_costs_adj,
+  lower_ci_boot_visits_all_costs_adj = lower_ci_boot_visits_all_costs_adj,
+  upper_ci_boot_visits_all_costs_adj = upper_ci_boot_visits_all_costs_adj
 )
 
-write_xlsx(boot_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_costs_Raw-Unadjusted_Boot.xlsx"))
+boot_costs_list <- list(
+  unadj_boot_all_stats = boot_all_costs_summary_statistics_overall,
+  unadj_boot_user_stats = boot_user_costs_summary_statistics_overall, 
+  adj_boot_all_costs_stats = adj_boot_all_costs_summary_statistics_overall,
+  adj_boot_user_costs_stats = adj_boot_user_costs_summary_statistics_overall
+)
+
+write_xlsx(boot_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_costs_Raw-Boot.xlsx"))
 
 
 ## Cohort summary ----

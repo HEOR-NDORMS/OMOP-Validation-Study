@@ -243,7 +243,160 @@ unadjusted_yearly_visits_list <- list(
 # Write to an Excel file
 write_xlsx(unadjusted_yearly_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Unadjusted.xlsx"))
 
+## Adjusted ----
 
+# Calculate visits, exposure, and apply rules
+# If a patient died during the year → Do not adjust visits.
+# If a patient was censored for other reasons (e.g., end of follow-up, other events) → Adjust visits based on the number of days they were exposed.
+# If a patient was followed up for less than half a year and did not die → Exclude that year.
+
+# Sense check: 23520018 - dropped, less than 6 months of exposed days
+adjusted_user_visits_yr <- visit_data %>%
+  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  mutate(
+    year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)
+  ) %>%
+  group_by(patid, year_after_index) %>%
+  summarise(
+    total_visits = n(),
+    index_date = first(index_date),
+    follow_up_end = as.Date(first(follow_up_end)),
+    death_date = as.Date(first(death_date)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    year_start = index_date + years(year_after_index - 1),
+    year_end = index_date + years(year_after_index),
+    
+    # How many days were they observed during this year?
+    exposed_days = as.numeric(pmin(follow_up_end, year_end) - pmax(index_date, year_start) + 1),
+    
+    # Logic flags
+    died_in_year = !is.na(death_date) & death_date >= year_start & death_date <= year_end,
+    fully_contributed = exposed_days >= 365.25,
+    half_contributed = exposed_days >= 182.6
+  ) %>%
+  filter(died_in_year | half_contributed) %>%
+  mutate(
+    adjusted_visits = case_when(
+      died_in_year ~ total_visits,  # Rule 1: no adjustment if died
+      fully_contributed ~ total_visits,  # Full follow-up: no adjustment needed
+      TRUE ~ (total_visits / exposed_days) * 365.25  # Rule 2: adjust for other censoring
+    )
+  )
+
+# Include missing year combinations (set adjusted visits = 0)
+adjusted_combinations_users <- expand.grid(
+  patid = unique(adjusted_user_visits_yr$patid),
+  year_after_index = 1:2
+)
+
+adjusted_final_df_users <- merge(adjusted_combinations_users, adjusted_user_visits_yr, by = c("patid", "year_after_index"), all.x = TRUE)
+adjusted_final_df_users$adjusted_visits[is.na(adjusted_final_df_users$adjusted_visits)] <- 0
+
+# Summary statistics on adjusted visits per year
+adjusted_user_summary_visits_per_year <- adjusted_final_df_users %>%
+  group_by(year_after_index) %>%
+  summarise(
+    mean_visit_per_year = mean(adjusted_visits),
+    min_visit_per_year = min(adjusted_visits),
+    max_visit_per_year = max(adjusted_visits),
+    sd_visit_per_year = sd(adjusted_visits),
+    median_visit_per_year = quantile(adjusted_visits, 0.5),
+    lower_q_visits_per_year = quantile(adjusted_visits, 0.25),
+    upper_q_visits_per_year = quantile(adjusted_visits, 0.75),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visit_per_year / sqrt(n),
+    lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+    upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+# All
+adjusted_all_visits_yr <- visit_data %>%
+  # Assign consultation year relative to index
+  mutate(
+    year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1),
+    
+    # Set visit count to 0 if specialty is Not Clinically Relevant
+    visit_flag = if_else(specialty == "Not Clinically Relevant", 0L, 1L)
+  ) %>%
+  
+  # Sum visits per patient per year
+  group_by(patid, year_after_index) %>%
+  summarise(
+    total_visits = sum(visit_flag),  # total relevant visits; NCR visits = 0
+    index_date = first(index_date),
+    follow_up_end = as.Date(first(follow_up_end)),
+    death_date = as.Date(first(death_date)),
+    .groups = "drop"
+  ) %>%
+  
+  # Define calendar boundaries for year N post index
+  mutate(
+    year_start = index_date + years(year_after_index - 1),
+    year_end = index_date + years(year_after_index),
+    
+    # How many days patient was observed in this year window
+    exposed_days = as.numeric(pmin(follow_up_end, year_end) - pmax(index_date, year_start) + 1),
+    
+    # Rules
+    died_in_year = !is.na(death_date) & death_date >= year_start & death_date <= year_end,
+    fully_contributed = exposed_days >= 365.25,
+    half_contributed = exposed_days >= 182.6
+  ) %>%
+  
+  # Drop patients with <6 months follow-up unless they died
+  filter(died_in_year | half_contributed) %>%
+  
+  # Apply adjustment logic
+  mutate(
+    adjusted_visits = case_when(
+      died_in_year ~ total_visits,  # Rule 1: No adjustment if death
+      fully_contributed ~ total_visits,  # Rule 2: Full follow-up, no change
+      TRUE ~ (total_visits / exposed_days) * 365.25  # Rule 3: Adjust for partial
+    )
+  )
+
+
+# Include missing year combinations (set adjusted visits = 0)
+adjusted_combinations_all <- expand.grid(
+  patid = unique(adjusted_all_visits_yr$patid),
+  year_after_index = 1:2
+)
+
+adjusted_final_df_all <- merge(adjusted_combinations_all, adjusted_all_visits_yr, by = c("patid", "year_after_index"), all.x = TRUE)
+adjusted_final_df_all$adjusted_visits[is.na(adjusted_final_df_all$adjusted_visits)] <- 0
+
+# Summary statistics on adjusted visits per year
+adjusted_all_summary_visits_per_year <- adjusted_final_df_all %>%
+  group_by(year_after_index) %>%
+  summarise(
+    mean_visit_per_year = mean(adjusted_visits),
+    min_visit_per_year = min(adjusted_visits),
+    max_visit_per_year = max(adjusted_visits),
+    sd_visit_per_year = sd(adjusted_visits),
+    median_visit_per_year = quantile(adjusted_visits, 0.5),
+    lower_q_visits_per_year = quantile(adjusted_visits, 0.25),
+    upper_q_visits_per_year = quantile(adjusted_visits, 0.75),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visit_per_year / sqrt(n),
+    lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+    upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+adjusted_yearly_visits_list <- list(
+  adjusted_user_summary = adjusted_user_summary_visits_per_year,
+  adjusted_all_summary = adjusted_all_summary_visits_per_year
+)
+
+# Write to an Excel file
+write_xlsx(adjusted_yearly_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Adjusted.xlsx"))
 
 
 ##### Boostrap ----
@@ -263,6 +416,36 @@ boot_user_summary_statistics_per_year <- unadjusted_final_df %>%
   map_df(function(df_group) {
     # Run bootstrap
     boot_result <- boot(df_group, statistic = fc_grouped, R = 1000)
+    boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
+    
+    # Extract year value
+    year_val <- unique(df_group$year_after_index)
+    
+    # Assemble the results
+    tibble(
+      year_after_index = year_val,
+      mean_boot_visits = round(as.numeric(boot_result$t0), 3),
+      lower_ci = round(as.numeric(boot_ci$normal[2]), 3),
+      upper_ci = round(as.numeric(boot_ci$normal[3]), 3)
+    )
+  })
+
+###### Adjusted User ----
+# Define the bootstrap function
+fc_grouped_adj <- function(d, i) {
+  sampled <- d[i, ]
+  mean(sampled$adjusted_visits)
+}
+
+set.seed(626)
+
+# Group by year and perform bootstrap per group
+adj_boot_user_summary_statistics_per_year <- adjusted_final_df_users %>%
+  group_by(year_after_index) %>%
+  group_split() %>%
+  map_df(function(df_group) {
+    # Run bootstrap
+    boot_result <- boot(df_group, statistic = fc_grouped_adj, R = 1000)
     boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
     
     # Extract year value
@@ -305,12 +488,42 @@ boot_all_summary_statistics_per_year <- unadjusted_all_pts_final_df %>%
     )
   })
 
+###### Adjusted All ----
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+
+# Set a seed for reproducibility
+set.seed(42)
+
+# Group by year and perform bootstrap per group
+adj_boot_all_summary_statistics_per_year <- adjusted_final_df_all %>%
+  group_by(year_after_index) %>%
+  group_split() %>%
+  map_df(function(df_group) {
+    # Run bootstrap
+    boot_result <- boot(df_group, statistic = fc_grouped_adj, R = 1000)
+    boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
+    
+    # Extract year value
+    year_val <- unique(df_group$year_after_index)
+    
+    # Assemble the results
+    tibble(
+      year_after_index = year_val,
+      mean_boot_visits = round(as.numeric(boot_result$t0), 3),
+      lower_ci = round(as.numeric(boot_ci$normal[2]), 3),
+      upper_ci = round(as.numeric(boot_ci$normal[3]), 3)
+    )
+  })
+
 boot_visits_list_per_year <- list(
-  boot_all_summary_stats = boot_all_summary_statistics_per_year,
-  boot_user_summary_stats = boot_user_summary_statistics_per_year
+  unadj_boot_all_summary = boot_all_summary_statistics_per_year,
+  unadj_boot_user_summary = boot_user_summary_statistics_per_year,
+  adj_boot_all_summary = adj_boot_all_summary_statistics_per_year,
+  adj_boot_user_summary = adj_boot_user_summary_statistics_per_year
 )
 
-write_xlsx(boot_visits_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Unadjusted_Boot.xlsx"))
+write_xlsx(boot_visits_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Boot.xlsx"))
 
 
 # Costs ----
@@ -543,6 +756,183 @@ unadjusted_all_summary_costs_per_year <- unadjusted_all_costs_final_df %>%
     upper = mean_visits_cost + qt(0.975, df = n - 1) * se
   ) 
 
+unadjusted_yearly_costs_list <- list(
+  unadjusted_user_summary = unadjusted_user_summary_costs_per_year,
+  unadjusted_all_summary = unadjusted_all_summary_costs_per_year
+)
+# Write to an Excel file
+write_xlsx(unadjusted_yearly_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw-Unadjusted.xlsx"))
+
+
+## Adjusted ----
+adjusted_user_costs_yr <- visit_data %>%
+  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  
+  # Assign year
+  mutate(
+    year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)
+  ) %>%
+  
+  # Group per patient-year-specialty
+  group_by(patid, year_after_index, specialty) %>%
+  summarise(
+    total_visits = n(),
+    unit_cost = first(unit_cost),
+    index_date = first(index_date),
+    follow_up_end = first(follow_up_end),
+    death_date = first(death_date),
+    .groups = "drop"
+  ) %>%
+  
+  # Time window per year after index
+  mutate(
+    year_start = index_date + years(year_after_index - 1),
+    year_end = index_date + years(year_after_index),
+    exposed_days = as.numeric(pmin(follow_up_end, year_end) - pmax(index_date, year_start) + 1),
+    
+    # Adjustment logic
+    died_in_year = !is.na(death_date) & death_date >= year_start & death_date <= year_end,
+    fully_contributed = exposed_days >= 365.25,
+    half_contributed = exposed_days >= 182.6
+  ) %>%
+  
+  # Apply rules
+  filter(died_in_year | half_contributed) %>%
+  mutate(
+    adjusted_visits = case_when(
+      died_in_year ~ total_visits,
+      fully_contributed ~ total_visits,
+      TRUE ~ (total_visits / exposed_days) * 365.25
+    ),
+    
+    # Specialty-specific cost
+    adjusted_costs = adjusted_visits * unit_cost
+  ) %>% 
+  group_by(patid, year_after_index) %>% 
+  summarise(adjusted_costs = sum(adjusted_costs),
+            .groups = "drop")
+
+# Create a complete dataset with all combinations of patient_id and year (1, 2)
+adjusted_user_costs_combinations <- expand.grid(
+  patid = unique(adjusted_user_costs_yr$patid),
+  year_after_index = 1:2
+)
+# Explanation: This creates a new data frame (all_combinations) containing every combination of each unique patient_id and the years 1 and 2. So, even if a patient is missing Year 2 in the original data, this ensures they appear in both years.
+
+# Merge with the original data
+adjusted_user_costs_final_df <- merge(adjusted_user_costs_combinations, adjusted_user_costs_yr, by = c("patid", "year_after_index"), all.x = TRUE)
+# Explanation: This merges all_combinations with the original df on both patient_id and year. The all.x = TRUE makes it a left join, meaning all rows from all_combinations will be kept, even if they don’t exist in the original data (with missing values filled as NA).
+# Replace NA visits_per_year with 0
+adjusted_user_costs_final_df$adjusted_costs[is.na(adjusted_user_costs_final_df$adjusted_costs)] <- 0
+
+
+# Summary stats for user cost per year
+adjusted_user_summary_costs_per_year <- adjusted_user_costs_final_df %>%
+  group_by(year_after_index) %>%
+  summarise(
+    mean_visits_cost = round(mean(adjusted_costs, na.rm = TRUE), 2),
+    min_visits_cost = round(min(adjusted_costs, na.rm = TRUE), 2),
+    max_visits_cost = round(max(adjusted_costs, na.rm = TRUE), 2),
+    sd_visits_cost = round(sd(adjusted_costs, na.rm = TRUE), 2),
+    median_visits_cost = round(median(adjusted_costs, na.rm = TRUE), 2),
+    q1_visits_cost = round(quantile(adjusted_costs, 0.25, na.rm = TRUE), 2),
+    q3_visits_cost = round(quantile(adjusted_costs, 0.75, na.rm = TRUE), 2),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  ) 
+
+# All patients
+adjusted_all_costs_yr <- visit_data %>%
+  
+  # Assign year
+  mutate(
+    year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)
+  ) %>%
+  
+  # Group per patient-year-specialty
+  group_by(patid, year_after_index, specialty) %>%
+  summarise(
+    total_visits = n(),
+    unit_cost = first(unit_cost),
+    index_date = first(index_date),
+    follow_up_end = first(follow_up_end),
+    death_date = first(death_date),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    total_visits = if_else(specialty == "Not Clinically Relevant", 0L, total_visits)
+  ) %>% 
+  # Time window per year after index
+  mutate(
+    year_start = index_date + years(year_after_index - 1),
+    year_end = index_date + years(year_after_index),
+    exposed_days = as.numeric(pmin(follow_up_end, year_end) - pmax(index_date, year_start) + 1),
+    
+    # Adjustment logic
+    died_in_year = !is.na(death_date) & death_date >= year_start & death_date <= year_end,
+    fully_contributed = exposed_days >= 365.25,
+    half_contributed = exposed_days >= 182.6
+  ) %>%
+  
+  # Apply rules
+  filter(died_in_year | half_contributed) %>%
+  mutate(
+    adjusted_visits = case_when(
+      died_in_year ~ total_visits,
+      fully_contributed ~ total_visits,
+      TRUE ~ (total_visits / exposed_days) * 365.25
+    ),
+    
+    # Specialty-specific cost
+    adjusted_costs = adjusted_visits * unit_cost
+  ) %>% 
+  group_by(patid, year_after_index) %>% 
+  summarise(adjusted_costs = sum(adjusted_costs),
+            .groups = "drop")
+
+# Create a complete dataset with all combinations of patient_id and year (1, 2)
+adjusted_all_costs_combinations <- expand.grid(
+  patid = unique(adjusted_all_costs_yr$patid),
+  year_after_index = 1:2
+)
+# Explanation: This creates a new data frame (all_combinations) containing every combination of each unique patient_id and the years 1 and 2. So, even if a patient is missing Year 2 in the original data, this ensures they appear in both years.
+
+# Merge with the original data
+adjusted_all_costs_final_df <- merge(adjusted_all_costs_combinations, adjusted_all_costs_yr, by = c("patid", "year_after_index"), all.x = TRUE)
+# Explanation: This merges all_combinations with the original df on both patient_id and year. The all.x = TRUE makes it a left join, meaning all rows from all_combinations will be kept, even if they don’t exist in the original data (with missing values filled as NA).
+# Replace NA visits_per_year with 0
+adjusted_all_costs_final_df$adjusted_costs[is.na(adjusted_all_costs_final_df$adjusted_costs)] <- 0
+
+
+# Summary stats for all cost per year
+adjusted_all_summary_costs_per_year <- adjusted_all_costs_final_df %>%
+  group_by(year_after_index) %>%
+  summarise(
+    mean_visits_cost = round(mean(adjusted_costs, na.rm = TRUE), 2),
+    min_visits_cost = round(min(adjusted_costs, na.rm = TRUE), 2),
+    max_visits_cost = round(max(adjusted_costs, na.rm = TRUE), 2),
+    sd_visits_cost = round(sd(adjusted_costs, na.rm = TRUE), 2),
+    median_visits_cost = round(median(adjusted_costs, na.rm = TRUE), 2),
+    q1_visits_cost = round(quantile(adjusted_costs, 0.25, na.rm = TRUE), 2),
+    q3_visits_cost = round(quantile(adjusted_costs, 0.75, na.rm = TRUE), 2),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  ) 
+adjusted_yearly_costs_list <- list(
+  adjusted_user_summary = adjusted_all_summary_costs_per_year,
+  adjusted_all_summary = adjusted_user_summary_costs_per_year
+)
+# Write to an Excel file
+write_xlsx(adjusted_yearly_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw-Adjusted.xlsx"))
+
 ##### Boostrap ----
 ###### Unadjusted User ----
 # Define the bootstrap function
@@ -560,6 +950,36 @@ boot_user_summary_statistics_costs_per_year <- unadjusted_user_costs_final_df %>
   map_df(function(df_group) {
     # Run bootstrap
     boot_result <- boot(df_group, statistic = fc_grouped_c, R = 1000)
+    boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
+    
+    # Extract year value
+    year_val <- unique(df_group$year_after_index)
+    
+    # Assemble the results
+    tibble(
+      year_after_index = year_val,
+      mean_boot_visits = round(as.numeric(boot_result$t0), 3),
+      lower_ci = round(as.numeric(boot_ci$normal[2]), 3),
+      upper_ci = round(as.numeric(boot_ci$normal[3]), 3)
+    )
+  })
+
+###### Adjusted User ----
+# Define the bootstrap function
+fc_grouped_c_adj <- function(d, i) {
+  sampled <- d[i, ]
+  mean(sampled$adjusted_costs)
+}
+
+set.seed(626)
+
+# Group by year and perform bootstrap per group
+adj_boot_user_summary_statistics_costs_per_year <- adjusted_user_costs_final_df %>%
+  group_by(year_after_index) %>%
+  group_split() %>%
+  map_df(function(df_group) {
+    # Run bootstrap
+    boot_result <- boot(df_group, statistic = fc_grouped_c_adj, R = 1000)
     boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
     
     # Extract year value
@@ -602,12 +1022,42 @@ boot_all_summary_statistics_costs_per_year <- unadjusted_all_costs_final_df %>%
     )
   })
 
+###### Adjusted All ----
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+
+# Set a seed for reproducibility
+set.seed(42)
+
+# Group by year and perform bootstrap per group
+adj_boot_all_summary_statistics_costs_per_year <- adjusted_all_costs_final_df %>%
+  group_by(year_after_index) %>%
+  group_split() %>%
+  map_df(function(df_group) {
+    # Run bootstrap
+    boot_result <- boot(df_group, statistic = fc_grouped_c_adj, R = 1000)
+    boot_ci <- boot.ci(boot.out = boot_result, type = "norm")
+    
+    # Extract year value
+    year_val <- unique(df_group$year_after_index)
+    
+    # Assemble the results
+    tibble(
+      year_after_index = year_val,
+      mean_boot_visits = round(as.numeric(boot_result$t0), 3),
+      lower_ci = round(as.numeric(boot_ci$normal[2]), 3),
+      upper_ci = round(as.numeric(boot_ci$normal[3]), 3)
+    )
+  })
+
 boot_costs_list_per_year <- list(
-  boot_all_summary_stats = boot_all_summary_statistics_costs_per_year,
-  boot_user_summary_stats = boot_user_summary_statistics_costs_per_year
+  unadj_boot_all_summary = boot_all_summary_statistics_costs_per_year,
+  unadj_boot_user_summary = boot_user_summary_statistics_costs_per_year,
+  adj_boot_all_summary = adj_boot_all_summary_statistics_costs_per_year,
+  adj_boot_user_summary = adj_boot_user_summary_statistics_costs_per_year
 )
 
-write_xlsx(boot_costs_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw-Unadjusted_Boot.xlsx"))
+write_xlsx(boot_costs_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw-Boot.xlsx"))
 
 
 ## Visits per specialty ----
