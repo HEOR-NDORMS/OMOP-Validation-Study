@@ -61,7 +61,7 @@ table_one_omop <- cohort_table %>%
 
 # Remove the visits that are not clinically relevance
 # the costs are to be updated
-provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.4.xlsx") 
+provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.4_omop.xlsx") 
 
 # Join visit_detail and provider tables
 joined_visit_provider_tables <- cdm$visit_detail %>% 
@@ -114,7 +114,7 @@ table_one_omop_visit_data <- table_one_omop %>%
                                "gender_source_value", "gender_source_concept_id",
                                "race_source_value", "race_source_concept_id", 
                                "ethnicity_source_value", "ethnicity_source_concept_id", 
-                               "age_fracture", "exposed_yrs", "exposed_months", "excluded_flag"
+                               "age_fracture", "excluded_flag"
   ), copy = T) %>% 
   mutate(
     specialty = case_when(
