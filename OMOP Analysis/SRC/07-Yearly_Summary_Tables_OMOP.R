@@ -473,20 +473,19 @@ unadjusted_all_costs_yr <- visit_data %>%
   summarise(
     visit_count = n(),
     unit_cost = unit_cost,
-    visits_cost = visit_count * unit_cost,
     .groups = "drop"
   ) %>%
+  distinct() %>%
+  mutate(visits_cost = visit_count * unit_cost) %>% 
   mutate(
     visit_count = if_else(specialty == "Not Clinically Relevant", 0L, visit_count),
     visits_cost = if_else(specialty == "Not Clinically Relevant", 0, visits_cost)
   ) %>% 
-  distinct() %>% 
   group_by(subject_id, year_after_index) %>% 
   summarise(
     total_costs = sum(visits_cost),
     .groups = "drop"
-  )
-
+  ) 
 
 
 # Create a complete dataset with all combinations of patient_id and year (1, 2)
@@ -522,6 +521,14 @@ unadjusted_all_summary_costs_per_year <- unadjusted_all_costs_final_df %>%
     upper = mean_visits_cost + qt(0.975, df = n - 1) * se
   ) %>%
   mutate(across(everything(), round, 2))
+
+unadjusted_yearly_costs_list <- list(
+  unadjusted_user_summary = unadjusted_user_summary_costs_per_year,
+  unadjusted_all_summary = unadjusted_all_summary_costs_per_year
+)
+# Write to an Excel file
+write_xlsx(unadjusted_yearly_costs_list, here::here("OMOP Analysis", "Results", "Output_yearly_costs_Raw-Unadjusted.xlsx"))
+
 
 ##### Boostrap ----
 ###### Unadjusted User ----
@@ -590,7 +597,7 @@ boot_costs_list_per_year <- list(
 write_xlsx(boot_costs_list_per_year, here::here("OMOP Analysis", "Results", "Output_yearly_costs_OMOP-Unadjusted_Boot.xlsx"))
 
 
-# Visits per specialty
+# Visits per specialty ----
 (visits_per_specialty <- visit_data %>% 
     filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
     group_by(specialty_reduced) %>% 
