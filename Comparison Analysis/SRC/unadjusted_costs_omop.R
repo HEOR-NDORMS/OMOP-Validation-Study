@@ -1,4 +1,4 @@
-visits_data_omop <- rio::import("H:/Projects/Validation/Data/visits_data_omop.csv")
+visit_data_omop <- rio::import("H:/Projects/Validation/Data/visits_data_omop.csv")
 
 # Step 1: Create base 24-month matrix per patient
 cohort_grid_omop <- cohort_data_omop |>
