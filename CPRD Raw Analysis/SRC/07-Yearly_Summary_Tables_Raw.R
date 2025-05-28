@@ -2,136 +2,136 @@
 ## Users ----
 ## For years 1 and 2 users
 # Step 1: Identify eligible patients and calculate year-specific exposure
-eligible_patients <- cohort_table_raw %>% 
-  mutate(
-    exposed_days = as.numeric(difftime(follow_up_end, index_date, units = "days")),
-    exposed_yrs = exposed_days / 365.25,
-    included_second_year = exposed_days > 365.25 & (exposed_days - 365.25) >= 30.44 & exposed_days <= 730,
-    year1_exposure = pmin(1, exposed_yrs),
-    year2_exposure = case_when(
-      exposed_yrs > 1 ~ pmin(1, exposed_yrs - 1),
-      TRUE ~ 0
-    )
-  ) %>%
-  select(patid, index_date, included_second_year, year1_exposure, year2_exposure)
-
-# Step 2: Assign visits to year 1 or year 2 based on consult date
-user_visits_yr <- visit_data %>%
-  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
-  inner_join(eligible_patients, by = c("patid", "index_date")) %>%
-  mutate(
-    visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")) / 365.25,
-    year_after_index = case_when(
-      visit_yr_from_index < 1 ~ 1,
-      visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
-      TRUE ~ NA_real_
-    )
-  ) %>%
-  filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%
-  group_by(patid, year_after_index, specialty) %>%
-  summarise(visit_count = n(), .groups = "drop")
-
-# Step 3: Total visits per patient per year
-user_total_visits_per_patient_yr <- user_visits_yr %>%
-  group_by(patid, year_after_index) %>%
-  summarise(total_visits = sum(visit_count), .groups = "drop") %>%
-  left_join(
-    eligible_patients %>%
-      pivot_longer(cols = c(year1_exposure, year2_exposure),
-                   names_to = "exposure_label",
-                   values_to = "exposure_time") %>%
-      mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
-      select(patid, year_after_index, exposure_time),
-    by = c("patid", "year_after_index")
-  ) %>%
-  mutate(visits_per_yr = total_visits / exposure_time)
-
-# Step 4: Summary statistics for visits per year
-user_summary_visits_per_year <- user_total_visits_per_patient_yr %>%
-  group_by(year_after_index) %>%
-  summarise(
-    mean_visit_count = round(mean(visits_per_yr, na.rm = TRUE), 2),
-    min_visits = round(min(visits_per_yr, na.rm = TRUE), 2),
-    max_visits = round(max(visits_per_yr, na.rm = TRUE), 2),
-    sd_visits = round(sd(visits_per_yr, na.rm = TRUE), 2),
-    median_visits = round(median(visits_per_yr, na.rm = TRUE), 2),
-    q1_visits = round(quantile(visits_per_yr, 0.25, na.rm = TRUE), 2),
-    q3_visits = round(quantile(visits_per_yr, 0.75, na.rm = TRUE), 2),
-    .groups = "drop"
-  )
-
-# Unadjusted: Count total visits per year without exposure adjustment
-# user_summary_unadjusted <- user_visits_yr %>%
+# eligible_patients <- cohort_table_raw %>% 
+#   mutate(
+#     exposed_days = as.numeric(difftime(follow_up_end, index_date, units = "days")),
+#     exposed_yrs = exposed_days / 365.25,
+#     included_second_year = exposed_days > 365.25 & (exposed_days - 365.25) >= 30.44 & exposed_days <= 730,
+#     year1_exposure = pmin(1, exposed_yrs),
+#     year2_exposure = case_when(
+#       exposed_yrs > 1 ~ pmin(1, exposed_yrs - 1),
+#       TRUE ~ 0
+#     )
+#   ) %>%
+#   select(patid, index_date, included_second_year, year1_exposure, year2_exposure)
+# 
+# # Step 2: Assign visits to year 1 or year 2 based on consult date
+# user_visits_yr <- visit_data %>%
+#   filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+#   inner_join(eligible_patients, by = c("patid", "index_date")) %>%
+#   mutate(
+#     visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")) / 365.25,
+#     year_after_index = case_when(
+#       visit_yr_from_index < 1 ~ 1,
+#       visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
+#       TRUE ~ NA_real_
+#     )
+#   ) %>%
+#   filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%
+#   group_by(patid, year_after_index, specialty) %>%
+#   summarise(visit_count = n(), .groups = "drop")
+# 
+# # Step 3: Total visits per patient per year
+# user_total_visits_per_patient_yr <- user_visits_yr %>%
+#   group_by(patid, year_after_index) %>%
+#   summarise(total_visits = sum(visit_count), .groups = "drop") %>%
+#   left_join(
+#     eligible_patients %>%
+#       pivot_longer(cols = c(year1_exposure, year2_exposure),
+#                    names_to = "exposure_label",
+#                    values_to = "exposure_time") %>%
+#       mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
+#       select(patid, year_after_index, exposure_time),
+#     by = c("patid", "year_after_index")
+#   ) %>%
+#   mutate(visits_per_yr = total_visits / exposure_time)
+# 
+# # Step 4: Summary statistics for visits per year
+# user_summary_visits_per_year <- user_total_visits_per_patient_yr %>%
 #   group_by(year_after_index) %>%
 #   summarise(
-#     mean_visit_count = round(mean(visit_count, na.rm = TRUE), 2),
-#     min_visits = round(min(visit_count, na.rm = TRUE), 2),
-#     max_visits = round(max(visit_count, na.rm = TRUE), 2),
-#     sd_visits = round(sd(visit_count, na.rm = TRUE), 2),
-#     median_visits = round(median(visit_count, na.rm = TRUE), 2),
-#     q1_visits = round(quantile(visit_count, 0.25, na.rm = TRUE), 2),
-#     q3_visits = round(quantile(visit_count, 0.75, na.rm = TRUE), 2),
+#     mean_visit_count = round(mean(visits_per_yr, na.rm = TRUE), 2),
+#     min_visits = round(min(visits_per_yr, na.rm = TRUE), 2),
+#     max_visits = round(max(visits_per_yr, na.rm = TRUE), 2),
+#     sd_visits = round(sd(visits_per_yr, na.rm = TRUE), 2),
+#     median_visits = round(median(visits_per_yr, na.rm = TRUE), 2),
+#     q1_visits = round(quantile(visits_per_yr, 0.25, na.rm = TRUE), 2),
+#     q3_visits = round(quantile(visits_per_yr, 0.75, na.rm = TRUE), 2),
 #     .groups = "drop"
 #   )
-
-
-
-
-## All Patients ---- 
-# Assign year per visit and join with exposure info
-all_visits_yr <- visit_data %>%
-  mutate(
-    visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")) / 365.25,
-    year_after_index = case_when(
-      visit_yr_from_index < 1 ~ 1,
-      visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
-      TRUE ~ NA_real_
-    )
-  ) %>%
-  inner_join(eligible_patients, by = "patid") %>%  # add exposure flags
-  filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>% 
-  group_by(patid, year_after_index, specialty) %>%
-  summarise(visit_count = n(), .groups = "drop") %>%
-  mutate(
-    visit_count = if_else(specialty == "Not Clinically Relevant", 0L, visit_count)
-  )
-
-# Total visits per patient per year, merged with exposure time
-all_total_visits_per_patient_yr <- all_visits_yr %>%
-  group_by(patid, year_after_index) %>%
-  summarise(total_visits = sum(visit_count), .groups = "drop") %>%
-  left_join(
-    eligible_patients %>%
-      pivot_longer(cols = c(year1_exposure, year2_exposure),
-                   names_to = "exposure_label",
-                   values_to = "exposure_time") %>%
-      mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
-      select(patid, year_after_index, exposure_time),
-    by = c("patid", "year_after_index")
-  ) %>%
-  mutate(visits_per_yr = total_visits / exposure_time)
-
-# Summary statistics per year
-all_summary_visits_per_year <- all_total_visits_per_patient_yr %>%
-  group_by(year_after_index) %>%
-  summarise(
-    mean_visit_count = round(mean(visits_per_yr, na.rm = TRUE), 2),
-    min_visits = round(min(visits_per_yr, na.rm = TRUE), 2),
-    max_visits = round(max(visits_per_yr, na.rm = TRUE), 2),
-    sd_visits = round(sd(visits_per_yr, na.rm = TRUE), 2),
-    median_visits = round(median(visits_per_yr, na.rm = TRUE), 2),
-    q1_visits = round(quantile(visits_per_yr, 0.25, na.rm = TRUE), 2),
-    q3_visits = round(quantile(visits_per_yr, 0.75, na.rm = TRUE), 2),
-    .groups = "drop"
-  )
-
-# Export
-yearly_visits_list <- list(
-  user_summary_visits = user_summary_visits_per_year,
-  all_summary_visits = all_summary_visits_per_year
-)
-# Write to an Excel file
-write_xlsx(yearly_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw.xlsx"))
+# 
+# # Unadjusted: Count total visits per year without exposure adjustment
+# # user_summary_unadjusted <- user_visits_yr %>%
+# #   group_by(year_after_index) %>%
+# #   summarise(
+# #     mean_visit_count = round(mean(visit_count, na.rm = TRUE), 2),
+# #     min_visits = round(min(visit_count, na.rm = TRUE), 2),
+# #     max_visits = round(max(visit_count, na.rm = TRUE), 2),
+# #     sd_visits = round(sd(visit_count, na.rm = TRUE), 2),
+# #     median_visits = round(median(visit_count, na.rm = TRUE), 2),
+# #     q1_visits = round(quantile(visit_count, 0.25, na.rm = TRUE), 2),
+# #     q3_visits = round(quantile(visit_count, 0.75, na.rm = TRUE), 2),
+# #     .groups = "drop"
+# #   )
+# 
+# 
+# 
+# 
+# ## All Patients ---- 
+# # Assign year per visit and join with exposure info
+# all_visits_yr <- visit_data %>%
+#   mutate(
+#     visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")) / 365.25,
+#     year_after_index = case_when(
+#       visit_yr_from_index < 1 ~ 1,
+#       visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
+#       TRUE ~ NA_real_
+#     )
+#   ) %>%
+#   inner_join(eligible_patients, by = "patid") %>%  # add exposure flags
+#   filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>% 
+#   group_by(patid, year_after_index, specialty) %>%
+#   summarise(visit_count = n(), .groups = "drop") %>%
+#   mutate(
+#     visit_count = if_else(specialty == "Not Clinically Relevant", 0L, visit_count)
+#   )
+# 
+# # Total visits per patient per year, merged with exposure time
+# all_total_visits_per_patient_yr <- all_visits_yr %>%
+#   group_by(patid, year_after_index) %>%
+#   summarise(total_visits = sum(visit_count), .groups = "drop") %>%
+#   left_join(
+#     eligible_patients %>%
+#       pivot_longer(cols = c(year1_exposure, year2_exposure),
+#                    names_to = "exposure_label",
+#                    values_to = "exposure_time") %>%
+#       mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
+#       select(patid, year_after_index, exposure_time),
+#     by = c("patid", "year_after_index")
+#   ) %>%
+#   mutate(visits_per_yr = total_visits / exposure_time)
+# 
+# # Summary statistics per year
+# all_summary_visits_per_year <- all_total_visits_per_patient_yr %>%
+#   group_by(year_after_index) %>%
+#   summarise(
+#     mean_visit_count = round(mean(visits_per_yr, na.rm = TRUE), 2),
+#     min_visits = round(min(visits_per_yr, na.rm = TRUE), 2),
+#     max_visits = round(max(visits_per_yr, na.rm = TRUE), 2),
+#     sd_visits = round(sd(visits_per_yr, na.rm = TRUE), 2),
+#     median_visits = round(median(visits_per_yr, na.rm = TRUE), 2),
+#     q1_visits = round(quantile(visits_per_yr, 0.25, na.rm = TRUE), 2),
+#     q3_visits = round(quantile(visits_per_yr, 0.75, na.rm = TRUE), 2),
+#     .groups = "drop"
+#   )
+# 
+# # Export
+# yearly_visits_list <- list(
+#   user_summary_visits = user_summary_visits_per_year,
+#   all_summary_visits = all_summary_visits_per_year
+# )
+# # Write to an Excel file
+# write_xlsx(yearly_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw.xlsx"))
 
 
 ## Unadjusted ----
@@ -251,50 +251,118 @@ write_xlsx(unadjusted_yearly_visits_list, here::here("CPRD Raw Analysis", "Resul
 # If a patient was followed up for less than half a year and did not die → Exclude that year.
 
 # Sense check: 23520018 - dropped, less than 6 months of exposed days
+# adjusted_user_visits_yr <- visit_data %>%
+#   filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+#   mutate(
+#     year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)
+#   ) %>%
+#   group_by(patid, year_after_index) %>%
+#   summarise(
+#     total_visits = n(),
+#     index_date = first(index_date),
+#     follow_up_end = as.Date(first(follow_up_end)),
+#     death_date = as.Date(first(death_date)),
+#     .groups = "drop"
+#   ) %>%
+#   mutate(
+#     year_start = index_date + years(year_after_index - 1),
+#     year_end = index_date + years(year_after_index),
+#     
+#     # How many days were they observed during this year?
+#     exposed_days = as.numeric(pmin(follow_up_end, year_end) - pmax(index_date, year_start) + 1),
+#     
+#     # Logic flags
+#     died_in_year = !is.na(death_date) & death_date >= year_start & death_date <= year_end,
+#     fully_contributed = exposed_days >= 365.25,
+#     half_contributed = exposed_days >= 182.6
+#   ) %>%
+#   filter(died_in_year | half_contributed) %>%
+#   mutate(
+#     adjusted_visits = case_when(
+#       died_in_year ~ total_visits,  # Rule 1: no adjustment if died
+#       fully_contributed ~ total_visits,  # Full follow-up: no adjustment needed
+#       TRUE ~ (total_visits / exposed_days) * 365.25  # Rule 2: adjust for other censoring
+#     )
+#   )
+# 
+# # Include missing year combinations (set adjusted visits = 0)
+# adjusted_combinations_users <- expand.grid(
+#   patid = unique(adjusted_user_visits_yr$patid),
+#   year_after_index = 1:2
+# )
+# 
+# adjusted_final_df_users <- merge(adjusted_combinations_users, adjusted_user_visits_yr, by = c("patid", "year_after_index"), all.x = TRUE)
+# adjusted_final_df_users$adjusted_visits[is.na(adjusted_final_df_users$adjusted_visits)] <- 0
+# 
+# # Summary statistics on adjusted visits per year
+# adjusted_user_summary_visits_per_year <- adjusted_final_df_users %>%
+#   group_by(year_after_index) %>%
+#   summarise(
+#     mean_visit_per_year = mean(adjusted_visits),
+#     min_visit_per_year = min(adjusted_visits),
+#     max_visit_per_year = max(adjusted_visits),
+#     sd_visit_per_year = sd(adjusted_visits),
+#     median_visit_per_year = quantile(adjusted_visits, 0.5),
+#     lower_q_visits_per_year = quantile(adjusted_visits, 0.25),
+#     upper_q_visits_per_year = quantile(adjusted_visits, 0.75),
+#     n = n()
+#   ) %>%
+#   mutate(
+#     se = sd_visit_per_year / sqrt(n),
+#     lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+#     upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+#   ) %>%
+#   mutate(across(everything(), round, 2))
+
+library(dplyr)
+library(lubridate)
+
 adjusted_user_visits_yr <- visit_data %>%
   filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  
+  # Step 1: Calculate year index of each visit
   mutate(
-    year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)
+    days_exposed_total = as.numeric(follow_up_end - index_date),
+    final_year_after_index = ceiling(days_exposed_total / 365.25),
+    year_after_index = floor(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25) + 1,
+    died_in_final_year = !is.na(death_date) &
+      floor(as.numeric(death_date - index_date) / 365.25) + 1 == final_year_after_index,
+    days_into_final_year = days_exposed_total - 365.25 * (final_year_after_index - 1)
   ) %>%
+  
+  # Step 2: Count visits per year per patient
   group_by(patid, year_after_index) %>%
   summarise(
     total_visits = n(),
-    index_date = first(index_date),
-    follow_up_end = as.Date(first(follow_up_end)),
-    death_date = as.Date(first(death_date)),
+    final_year_after_index = first(final_year_after_index),
+    days_into_final_year = first(days_into_final_year),
+    died_in_final_year = first(died_in_final_year),
     .groups = "drop"
   ) %>%
-  mutate(
-    year_start = index_date + years(year_after_index - 1),
-    year_end = index_date + years(year_after_index),
-    
-    # How many days were they observed during this year?
-    exposed_days = as.numeric(pmin(follow_up_end, year_end) - pmax(index_date, year_start) + 1),
-    
-    # Logic flags
-    died_in_year = !is.na(death_date) & death_date >= year_start & death_date <= year_end,
-    fully_contributed = exposed_days >= 365.25,
-    half_contributed = exposed_days >= 182.6
-  ) %>%
-  filter(died_in_year | half_contributed) %>%
+  
+  # Step 3: Adjust visits
   mutate(
     adjusted_visits = case_when(
-      died_in_year ~ total_visits,  # Rule 1: no adjustment if died
-      fully_contributed ~ total_visits,  # Full follow-up: no adjustment needed
-      TRUE ~ (total_visits / exposed_days) * 365.25  # Rule 2: adjust for other censoring
+      year_after_index != final_year_after_index ~ total_visits,  # not final year: no adjustment
+      died_in_final_year ~ total_visits,                         # final year + died: no adjustment
+      days_into_final_year >= 365.25 ~ total_visits,             # full year: no adjustment
+      days_into_final_year >= 182.6 ~ (total_visits / days_into_final_year) * 365.25,  # adjust
+      TRUE ~ 0  # drop if < 6 months and not died
     )
-  )
+  ) %>%
+  filter(adjusted_visits > 0)  # drop years with <6 months and not adjusted
 
-# Include missing year combinations (set adjusted visits = 0)
+# Step 4: Add missing years (adjusted visits = 0)
 adjusted_combinations_users <- expand.grid(
   patid = unique(adjusted_user_visits_yr$patid),
   year_after_index = 1:2
 )
 
-adjusted_final_df_users <- merge(adjusted_combinations_users, adjusted_user_visits_yr, by = c("patid", "year_after_index"), all.x = TRUE)
-adjusted_final_df_users$adjusted_visits[is.na(adjusted_final_df_users$adjusted_visits)] <- 0
+adjusted_final_df_users <- adjusted_combinations_users %>%
+  left_join(adjusted_user_visits_yr, by = c("patid", "year_after_index")) %>%
+  mutate(adjusted_visits = ifelse(is.na(adjusted_visits), 0, adjusted_visits))
 
-# Summary statistics on adjusted visits per year
+# Step 5: Summary statistics
 adjusted_user_summary_visits_per_year <- adjusted_final_df_users %>%
   group_by(year_after_index) %>%
   summarise(
@@ -312,65 +380,142 @@ adjusted_user_summary_visits_per_year <- adjusted_final_df_users %>%
     lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
     upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
   ) %>%
-  mutate(across(everything(), round, 2))
+  mutate(across(where(is.numeric), round, 2))
 
-# All
+# # All
+# adjusted_all_visits_yr <- visit_data %>%
+#   # Assign consultation year relative to index
+#   mutate(
+#     year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1),
+#     
+#     # Set visit count to 0 if specialty is Not Clinically Relevant
+#     visit_flag = if_else(specialty == "Not Clinically Relevant", 0L, 1L)
+#   ) %>%
+#   
+#   # Sum visits per patient per year
+#   group_by(patid, year_after_index) %>%
+#   summarise(
+#     total_visits = sum(visit_flag),  # total relevant visits; NCR visits = 0
+#     index_date = first(index_date),
+#     follow_up_end = as.Date(first(follow_up_end)),
+#     death_date = as.Date(first(death_date)),
+#     .groups = "drop"
+#   ) %>%
+#   
+#   # Define calendar boundaries for year N post index
+#   mutate(
+#     year_start = index_date + years(year_after_index - 1),
+#     year_end = index_date + years(year_after_index),
+#     
+#     # How many days patient was observed in this year window
+#     exposed_days = as.numeric(pmin(follow_up_end, year_end) - pmax(index_date, year_start) + 1),
+#     
+#     # Rules
+#     died_in_year = !is.na(death_date) & death_date >= year_start & death_date <= year_end,
+#     fully_contributed = exposed_days >= 365.25,
+#     half_contributed = exposed_days >= 182.6
+#   ) %>%
+#   
+#   # Drop patients with <6 months follow-up unless they died
+#   filter(died_in_year | half_contributed) %>%
+#   
+#   # Apply adjustment logic
+#   mutate(
+#     adjusted_visits = case_when(
+#       died_in_year ~ total_visits,  # Rule 1: No adjustment if death
+#       fully_contributed ~ total_visits,  # Rule 2: Full follow-up, no change
+#       TRUE ~ (total_visits / exposed_days) * 365.25  # Rule 3: Adjust for partial
+#     )
+#   )
+# 
+# 
+# # Include missing year combinations (set adjusted visits = 0)
+# adjusted_combinations_all <- expand.grid(
+#   patid = unique(adjusted_all_visits_yr$patid),
+#   year_after_index = 1:2
+# )
+# 
+# adjusted_final_df_all <- merge(adjusted_combinations_all, adjusted_all_visits_yr, by = c("patid", "year_after_index"), all.x = TRUE)
+# adjusted_final_df_all$adjusted_visits[is.na(adjusted_final_df_all$adjusted_visits)] <- 0
+# 
+# # Summary statistics on adjusted visits per year
+# adjusted_all_summary_visits_per_year <- adjusted_final_df_all %>%
+#   group_by(year_after_index) %>%
+#   summarise(
+#     mean_visit_per_year = mean(adjusted_visits),
+#     min_visit_per_year = min(adjusted_visits),
+#     max_visit_per_year = max(adjusted_visits),
+#     sd_visit_per_year = sd(adjusted_visits),
+#     median_visit_per_year = quantile(adjusted_visits, 0.5),
+#     lower_q_visits_per_year = quantile(adjusted_visits, 0.25),
+#     upper_q_visits_per_year = quantile(adjusted_visits, 0.75),
+#     n = n()
+#   ) %>%
+#   mutate(
+#     se = sd_visit_per_year / sqrt(n),
+#     lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+#     upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+#   ) %>%
+#   mutate(across(everything(), round, 2))
+
+library(dplyr)
+library(lubridate)
+
+# Step 1: Assign year since index and define visit flag
 adjusted_all_visits_yr <- visit_data %>%
-  # Assign consultation year relative to index
   mutate(
     year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1),
-    
-    # Set visit count to 0 if specialty is Not Clinically Relevant
     visit_flag = if_else(specialty == "Not Clinically Relevant", 0L, 1L)
   ) %>%
   
-  # Sum visits per patient per year
+  # Step 2: Sum relevant visits per patient-year
   group_by(patid, year_after_index) %>%
   summarise(
-    total_visits = sum(visit_flag),  # total relevant visits; NCR visits = 0
+    total_visits = sum(visit_flag),
     index_date = first(index_date),
     follow_up_end = as.Date(first(follow_up_end)),
     death_date = as.Date(first(death_date)),
     .groups = "drop"
   ) %>%
   
-  # Define calendar boundaries for year N post index
+  # Step 3: Calculate follow-up exposure during each year
   mutate(
-    year_start = index_date + years(year_after_index - 1),
-    year_end = index_date + years(year_after_index),
+    days_since_index = as.numeric(follow_up_end - index_date),
+    days_since_death = as.numeric(death_date - index_date),
     
-    # How many days patient was observed in this year window
-    exposed_days = as.numeric(pmin(follow_up_end, year_end) - pmax(index_date, year_start) + 1),
+    year_start_days = 365.25 * (year_after_index - 1),
+    year_end_days = 365.25 * year_after_index,
     
-    # Rules
-    died_in_year = !is.na(death_date) & death_date >= year_start & death_date <= year_end,
+    exposed_days = pmin(days_since_index, year_end_days) - pmax(0, year_start_days) + 1,
+    
+    died_in_year = !is.na(death_date) & days_since_death >= year_start_days & days_since_death < year_end_days,
     fully_contributed = exposed_days >= 365.25,
     half_contributed = exposed_days >= 182.6
   ) %>%
   
-  # Drop patients with <6 months follow-up unless they died
+  # Step 4: Drop patients who contributed <6 months and didn’t die
   filter(died_in_year | half_contributed) %>%
   
-  # Apply adjustment logic
+  # Step 5: Adjust visits
   mutate(
     adjusted_visits = case_when(
-      died_in_year ~ total_visits,  # Rule 1: No adjustment if death
-      fully_contributed ~ total_visits,  # Rule 2: Full follow-up, no change
-      TRUE ~ (total_visits / exposed_days) * 365.25  # Rule 3: Adjust for partial
+      died_in_year ~ total_visits,
+      fully_contributed ~ total_visits,
+      TRUE ~ (total_visits / exposed_days) * 365.25
     )
   )
 
-
-# Include missing year combinations (set adjusted visits = 0)
+# Step 6: Fill missing (patid, year) combinations
 adjusted_combinations_all <- expand.grid(
   patid = unique(adjusted_all_visits_yr$patid),
   year_after_index = 1:2
 )
 
-adjusted_final_df_all <- merge(adjusted_combinations_all, adjusted_all_visits_yr, by = c("patid", "year_after_index"), all.x = TRUE)
-adjusted_final_df_all$adjusted_visits[is.na(adjusted_final_df_all$adjusted_visits)] <- 0
+adjusted_final_df_all <- adjusted_combinations_all %>%
+  left_join(adjusted_all_visits_yr, by = c("patid", "year_after_index")) %>%
+  mutate(adjusted_visits = ifelse(is.na(adjusted_visits), 0, adjusted_visits))
 
-# Summary statistics on adjusted visits per year
+# Step 7: Summarise stats per year
 adjusted_all_summary_visits_per_year <- adjusted_final_df_all %>%
   group_by(year_after_index) %>%
   summarise(
@@ -381,7 +526,8 @@ adjusted_all_summary_visits_per_year <- adjusted_final_df_all %>%
     median_visit_per_year = quantile(adjusted_visits, 0.5),
     lower_q_visits_per_year = quantile(adjusted_visits, 0.25),
     upper_q_visits_per_year = quantile(adjusted_visits, 0.75),
-    n = n()
+    n = n(),
+    .groups = "drop"
   ) %>%
   mutate(
     se = sd_visit_per_year / sqrt(n),
@@ -529,116 +675,116 @@ write_xlsx(boot_visits_list_per_year, here::here("CPRD Raw Analysis", "Results",
 # Costs ----
 
 ## Users ----
-user_costs_yr <- visit_data %>%
-  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
-  mutate(
-    visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")) / 365.25,
-    year_after_index = case_when(
-      visit_yr_from_index < 1 ~ 1,
-      visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
-      TRUE ~ NA_real_
-    )
-  ) %>%
-  inner_join(eligible_patients, by = "patid") %>%
-  filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%
-  group_by(patid, year_after_index, specialty) %>%
-  summarise(
-    visit_count = n(),
-    unit_cost = first(unit_cost),
-    visits_cost = visit_count * unit_cost,
-    .groups = "drop"
-  )
-
-# Total cost per user per year, adjusted by exposure
-user_total_costs_per_patient_yr <- user_costs_yr %>%
-  group_by(patid, year_after_index) %>%
-  summarise(total_costs = sum(visits_cost), .groups = "drop") %>%
-  left_join(
-    eligible_patients %>%
-      pivot_longer(cols = c(year1_exposure, year2_exposure),
-                   names_to = "exposure_label",
-                   values_to = "exposure_time") %>%
-      mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
-      select(patid, year_after_index, exposure_time),
-    by = c("patid", "year_after_index")
-  ) %>%
-  mutate(visit_costs_per_yr = total_costs / exposure_time)
-
-# Summary stats for user cost per year
-user_summary_costs_per_year <- user_total_costs_per_patient_yr %>%
-  group_by(year_after_index) %>%
-  summarise(
-    mean_visits_cost = round(mean(visit_costs_per_yr, na.rm = TRUE), 2),
-    min_visits_cost = round(min(visit_costs_per_yr, na.rm = TRUE), 2),
-    max_visits_cost = round(max(visit_costs_per_yr, na.rm = TRUE), 2),
-    sd_visits_cost = round(sd(visit_costs_per_yr, na.rm = TRUE), 2),
-    median_visits_cost = round(median(visit_costs_per_yr, na.rm = TRUE), 2),
-    q1_visits_cost = round(quantile(visit_costs_per_yr, 0.25, na.rm = TRUE), 2),
-    q3_visits_cost = round(quantile(visit_costs_per_yr, 0.75, na.rm = TRUE), 2),
-    .groups = "drop"
-  )
-
-## All Patients ----
-all_costs_yr <- visit_data %>%
-  mutate(
-    visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")) / 365.25,
-    year_after_index = case_when(
-      visit_yr_from_index < 1 ~ 1,
-      visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
-      TRUE ~ NA_real_
-    )
-  ) %>%
-  inner_join(eligible_patients, by = "patid") %>%
-  filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%
-  group_by(patid, year_after_index, specialty) %>%
-  summarise(
-    visit_count = n(),
-    unit_cost = first(unit_cost),
-    visits_cost = visit_count * unit_cost,
-    .groups = "drop"
-  ) %>%
-  mutate(
-    visit_count = if_else(specialty == "Not Clinically Relevant", 0L, visit_count),
-    visits_cost = if_else(specialty == "Not Clinically Relevant", 0, visits_cost)
-  )
-
-# Total cost per patient per year, adjusted by exposure
-all_total_costs_per_patient_yr <- all_costs_yr %>%
-  group_by(patid, year_after_index) %>%
-  summarise(total_costs = sum(visits_cost), .groups = "drop") %>%
-  left_join(
-    eligible_patients %>%
-      pivot_longer(cols = c(year1_exposure, year2_exposure),
-                   names_to = "exposure_label",
-                   values_to = "exposure_time") %>%
-      mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
-      select(patid, year_after_index, exposure_time),
-    by = c("patid", "year_after_index")
-  ) %>%
-  mutate(visit_costs_per_yr = total_costs / exposure_time)
-
-# Summary stats for all-patient cost per year
-all_summary_costs_per_year <- all_total_costs_per_patient_yr %>%
-  group_by(year_after_index) %>%
-  summarise(
-    mean_visits_cost = round(mean(visit_costs_per_yr, na.rm = TRUE), 2),
-    min_visits_cost = round(min(visit_costs_per_yr, na.rm = TRUE), 2),
-    max_visits_cost = round(max(visit_costs_per_yr, na.rm = TRUE), 2),
-    sd_visits_cost = round(sd(visit_costs_per_yr, na.rm = TRUE), 2),
-    median_visits_cost = round(median(visit_costs_per_yr, na.rm = TRUE), 2),
-    q1_visits_cost = round(quantile(visit_costs_per_yr, 0.25, na.rm = TRUE), 2),
-    q3_visits_cost = round(quantile(visit_costs_per_yr, 0.75, na.rm = TRUE), 2),
-    .groups = "drop"
-  )
-
-# Export
-yearly_costs_list <- list(
-  user_summary_costs = user_summary_costs_per_year,
-  all_summary_costs = all_summary_costs_per_year
-)
-# Write to an Excel file
-write_xlsx(yearly_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw.xlsx"))
-
+# user_costs_yr <- visit_data %>%
+#   filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+#   mutate(
+#     visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")) / 365.25,
+#     year_after_index = case_when(
+#       visit_yr_from_index < 1 ~ 1,
+#       visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
+#       TRUE ~ NA_real_
+#     )
+#   ) %>%
+#   inner_join(eligible_patients, by = "patid") %>%
+#   filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%
+#   group_by(patid, year_after_index, specialty) %>%
+#   summarise(
+#     visit_count = n(),
+#     unit_cost = first(unit_cost),
+#     visits_cost = visit_count * unit_cost,
+#     .groups = "drop"
+#   )
+# 
+# # Total cost per user per year, adjusted by exposure
+# user_total_costs_per_patient_yr <- user_costs_yr %>%
+#   group_by(patid, year_after_index) %>%
+#   summarise(total_costs = sum(visits_cost), .groups = "drop") %>%
+#   left_join(
+#     eligible_patients %>%
+#       pivot_longer(cols = c(year1_exposure, year2_exposure),
+#                    names_to = "exposure_label",
+#                    values_to = "exposure_time") %>%
+#       mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
+#       select(patid, year_after_index, exposure_time),
+#     by = c("patid", "year_after_index")
+#   ) %>%
+#   mutate(visit_costs_per_yr = total_costs / exposure_time)
+# 
+# # Summary stats for user cost per year
+# user_summary_costs_per_year <- user_total_costs_per_patient_yr %>%
+#   group_by(year_after_index) %>%
+#   summarise(
+#     mean_visits_cost = round(mean(visit_costs_per_yr, na.rm = TRUE), 2),
+#     min_visits_cost = round(min(visit_costs_per_yr, na.rm = TRUE), 2),
+#     max_visits_cost = round(max(visit_costs_per_yr, na.rm = TRUE), 2),
+#     sd_visits_cost = round(sd(visit_costs_per_yr, na.rm = TRUE), 2),
+#     median_visits_cost = round(median(visit_costs_per_yr, na.rm = TRUE), 2),
+#     q1_visits_cost = round(quantile(visit_costs_per_yr, 0.25, na.rm = TRUE), 2),
+#     q3_visits_cost = round(quantile(visit_costs_per_yr, 0.75, na.rm = TRUE), 2),
+#     .groups = "drop"
+#   )
+# 
+# ## All Patients ----
+# all_costs_yr <- visit_data %>%
+#   mutate(
+#     visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")) / 365.25,
+#     year_after_index = case_when(
+#       visit_yr_from_index < 1 ~ 1,
+#       visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
+#       TRUE ~ NA_real_
+#     )
+#   ) %>%
+#   inner_join(eligible_patients, by = "patid") %>%
+#   filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%
+#   group_by(patid, year_after_index, specialty) %>%
+#   summarise(
+#     visit_count = n(),
+#     unit_cost = first(unit_cost),
+#     visits_cost = visit_count * unit_cost,
+#     .groups = "drop"
+#   ) %>%
+#   mutate(
+#     visit_count = if_else(specialty == "Not Clinically Relevant", 0L, visit_count),
+#     visits_cost = if_else(specialty == "Not Clinically Relevant", 0, visits_cost)
+#   )
+# 
+# # Total cost per patient per year, adjusted by exposure
+# all_total_costs_per_patient_yr <- all_costs_yr %>%
+#   group_by(patid, year_after_index) %>%
+#   summarise(total_costs = sum(visits_cost), .groups = "drop") %>%
+#   left_join(
+#     eligible_patients %>%
+#       pivot_longer(cols = c(year1_exposure, year2_exposure),
+#                    names_to = "exposure_label",
+#                    values_to = "exposure_time") %>%
+#       mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
+#       select(patid, year_after_index, exposure_time),
+#     by = c("patid", "year_after_index")
+#   ) %>%
+#   mutate(visit_costs_per_yr = total_costs / exposure_time)
+# 
+# # Summary stats for all-patient cost per year
+# all_summary_costs_per_year <- all_total_costs_per_patient_yr %>%
+#   group_by(year_after_index) %>%
+#   summarise(
+#     mean_visits_cost = round(mean(visit_costs_per_yr, na.rm = TRUE), 2),
+#     min_visits_cost = round(min(visit_costs_per_yr, na.rm = TRUE), 2),
+#     max_visits_cost = round(max(visit_costs_per_yr, na.rm = TRUE), 2),
+#     sd_visits_cost = round(sd(visit_costs_per_yr, na.rm = TRUE), 2),
+#     median_visits_cost = round(median(visit_costs_per_yr, na.rm = TRUE), 2),
+#     q1_visits_cost = round(quantile(visit_costs_per_yr, 0.25, na.rm = TRUE), 2),
+#     q3_visits_cost = round(quantile(visit_costs_per_yr, 0.75, na.rm = TRUE), 2),
+#     .groups = "drop"
+#   )
+# 
+# # Export
+# yearly_costs_list <- list(
+#   user_summary_costs = user_summary_costs_per_year,
+#   all_summary_costs = all_summary_costs_per_year
+# )
+# # Write to an Excel file
+# write_xlsx(yearly_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw.xlsx"))
+# 
 
 ## Unadjusted ----
 unadjusted_user_costs_yr <- visit_data %>%
@@ -1068,4 +1214,4 @@ write_xlsx(boot_costs_list_per_year, here::here("CPRD Raw Analysis", "Results", 
     mutate(n_percent = round(n_counts/ sum(n_counts) * 100, 4)))
 sum(visits_per_specialty$n_percent)
 
-export(visits_per_specialty, here::here("CPRD Raw Analysis", "Results", "Output_visits_per_specialty_Raw.xlsx"))
+rio::export(visits_per_specialty, here::here("CPRD Raw Analysis", "Results", "Output_visits_per_specialty_Raw.xlsx"))
