@@ -230,7 +230,7 @@ cohort_table <- cohort_table %>%
 cohort_table <- cohort_table %>% 
   mutate(exposed_days = as.numeric(difftime(follow_up_end, index_date, units = "days"))) %>% 
   mutate(
-    excluded_flag = if_else(exposed_days < 30.74, "Exclude", "Include")
+    excluded_flag = if_else(exposed_days < 30.44, "Exclude", "Include")
     ) %>% 
   filter(excluded_flag == "Include")
 
