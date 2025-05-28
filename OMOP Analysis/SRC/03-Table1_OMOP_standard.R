@@ -218,7 +218,7 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
   rename("Variable" = "**Variable**",
-         "N = 23,956" = "**N = 23,956**") %>% 
+         "N = 17,705" = "**N = 17,705**") %>% 
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 rio::export(gt_summary_table_df, here::here("OMOP Analysis", "Results", "Table1_OMOP.xlsx"))
