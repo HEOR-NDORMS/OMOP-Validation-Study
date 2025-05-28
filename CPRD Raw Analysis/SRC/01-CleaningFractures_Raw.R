@@ -286,70 +286,70 @@ AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>%
 sites <- c("hip", "vert", "nhnv") # now sites are only these without trauma = 0
 
 # Initialise the backup table and the result container
-fracture_table_back_up <- fracture_table_e
-index_fractures <- tibble()
-
-suppressWarnings(
-  while (nrow(fracture_table_back_up) > 0) {
-    fracture_correction <- list()
-    
-    # Process each site independently
-    for (site in sites) {
-      fracture_correction[[site]] <- fracture_table_back_up %>% 
-        dplyr::filter(site == site) %>%  # Filter fractures for the current site
-        dplyr::group_by(patid) %>% 
-        dplyr::summarise(min_date = min(fx_date, na.rm = TRUE)) %>% 
-        dplyr::mutate(site = site)
-    }
-    
-    # Combine corrections for all sites
-    fracture_correction_combined <- bind_rows(fracture_correction)
-    
-    # Update the fracture table with the washout logic
-    fracture_table_back_up <- fracture_table_back_up %>% 
-      dplyr::left_join(fracture_correction_combined, by = c("patid", "site")) %>% 
-      dplyr::mutate(gap_to_min_date = fx_date - min_date) %>% 
-      dplyr::filter(gap_to_min_date == 0 | gap_to_min_date > 90) %>% 
-      dplyr::group_by(patid, fx_date, site) %>% 
-      dplyr::arrange(patid, .by_group = TRUE) %>%
-      dplyr::filter(row_number() == 1) %>% 
-      dplyr::ungroup()
-    
-    # Append index fractures (those that meet the criteria)
-    index_fractures <- bind_rows(
-      index_fractures,
-      fracture_table_back_up %>% 
-        dplyr::filter(gap_to_min_date == 0) %>%
-        dplyr::select(-min_date, -gap_to_min_date)
-    )
-    
-    # Prepare the remaining fractures for the next loop
-    fracture_table_back_up <- fracture_table_back_up %>% 
-      dplyr::filter(!gap_to_min_date == 0) %>%
-      dplyr::select(-min_date, -gap_to_min_date)
-  }
-)
-
-# Final output: index fractures
-fracture_table_f <- index_fractures
-
-AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>% 
-  union_all(  
-    tibble(
-      cohort_definition_id = as.integer(1),
-      number_records = fracture_table_f %>% dplyr::tally() %>% dplyr::pull(),
-      number_subjects = fracture_table_f %>% distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
-      reason = "Clean out using washout period"
-    )
-  ) 
-rm(index_fractures)
+# fracture_table_back_up <- fracture_table_e
+# index_fractures <- tibble()
+# 
+# suppressWarnings(
+#   while (nrow(fracture_table_back_up) > 0) {
+#     fracture_correction <- list()
+#     
+#     # Process each site independently
+#     for (site in sites) {
+#       fracture_correction[[site]] <- fracture_table_back_up %>% 
+#         dplyr::filter(site == site) %>%  # Filter fractures for the current site
+#         dplyr::group_by(patid) %>% 
+#         dplyr::summarise(min_date = min(fx_date, na.rm = TRUE)) %>% 
+#         dplyr::mutate(site = site)
+#     }
+#     
+#     # Combine corrections for all sites
+#     fracture_correction_combined <- bind_rows(fracture_correction)
+#     
+#     # Update the fracture table with the washout logic
+#     fracture_table_back_up <- fracture_table_back_up %>% 
+#       dplyr::left_join(fracture_correction_combined, by = c("patid", "site")) %>% 
+#       dplyr::mutate(gap_to_min_date = fx_date - min_date) %>% 
+#       dplyr::filter(gap_to_min_date == 0 | gap_to_min_date > 90) %>% 
+#       dplyr::group_by(patid, fx_date, site) %>% 
+#       dplyr::arrange(patid, .by_group = TRUE) %>%
+#       dplyr::filter(row_number() == 1) %>% 
+#       dplyr::ungroup()
+#     
+#     # Append index fractures (those that meet the criteria)
+#     index_fractures <- bind_rows(
+#       index_fractures,
+#       fracture_table_back_up %>% 
+#         dplyr::filter(gap_to_min_date == 0) %>%
+#         dplyr::select(-min_date, -gap_to_min_date)
+#     )
+#     
+#     # Prepare the remaining fractures for the next loop
+#     fracture_table_back_up <- fracture_table_back_up %>% 
+#       dplyr::filter(!gap_to_min_date == 0) %>%
+#       dplyr::select(-min_date, -gap_to_min_date)
+#   }
+# )
+# 
+# # Final output: index fractures
+# fracture_table_f <- index_fractures
+# 
+# AttritionReportFrac_Raw <- AttritionReportFrac_Raw %>% 
+#   union_all(  
+#     tibble(
+#       cohort_definition_id = as.integer(1),
+#       number_records = fracture_table_f %>% dplyr::tally() %>% dplyr::pull(),
+#       number_subjects = fracture_table_f %>% distinct(patid) %>% dplyr::tally() %>% dplyr::pull(),
+#       reason = "Clean out using washout period"
+#     )
+#   ) 
+# rm(index_fractures)
 
 # g) Applying Hierarchy (hip,vertebra,NHNV) to multiple records on the same day ----
-fracture_table_f <- fracture_table_f %>% 
-  mutate(site = factor(site, levels = sites))
+# fracture_table_f <- fracture_table_f %>% 
+#   mutate(site = factor(site, levels = sites))
 
 
-fracture_table_g <- fracture_table_f %>%
+fracture_table_g <- fracture_table_e %>%
   group_by(patid, fx_date) %>%
   # dplyr::arrange(site, .by_group = TRUE) %>%
   # mutate(row.number = row_number())
