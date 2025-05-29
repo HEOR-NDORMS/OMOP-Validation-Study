@@ -104,5 +104,5 @@ boot_user_costs_summary_per_month_r <- final_long_df_cost_raw |>
     )
   })
 
-mean_costs_combined_o <- mean_costs_per_month_r |>
+mean_costs_combined_r <- mean_costs_per_month_r |>
   left_join(boot_user_costs_summary_per_month_r, by = "month_after_index")

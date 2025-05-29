@@ -4,11 +4,11 @@ library(lubridate)
 library(tidylog)
 
 # Import data ----
-visit_data_omop <- rio::import("H:/Projects/Validation/Data/visits_data_omop.csv")
+visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_omop.csv")
 glimpse(visit_data_omop)
 cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_cprd.csv")
 
-visits_data_raw <- rio::import("H:/Projects/Validation/Data/visits_data_raw.csv")
+visits_data_raw <- rio::import("H:/Projects/Validation/Data/visit_data_raw.csv")
 cohort_data_raw <- rio::import("H:/Projects/Validation/Data/cohort_table_raw.csv")
 
 # Step 1: Create base 24-month matrix per patient

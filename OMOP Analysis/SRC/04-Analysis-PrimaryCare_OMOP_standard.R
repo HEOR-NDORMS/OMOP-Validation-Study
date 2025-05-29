@@ -79,7 +79,7 @@ visit_data <- cohort_data_omop %>%
                                               "gender_source_value", "gender_source_concept_id",
                                               "race_source_value", "race_source_concept_id", 
                                               "ethnicity_source_value", "ethnicity_source_concept_id", 
-                                              "age_fracture", "exposed_yrs", "exposed_months", "excluded_flag"
+                                              "age_fracture", "excluded_flag"
   ), copy = T) %>% 
   mutate(
     specialty = case_when(
@@ -203,66 +203,68 @@ all_summary_reduced <- visits_results_omop_reduced$all_summary_reduced
 # Filter user visits and relevant specialties
 user_visits <- visit_data %>%
   filter(user_status == "User", specialty != "Not Clinically Relevant")
+# non_user_v <- visit_data %>%
+#   filter(user_status == "Non-User") %>% group_by(subject_id) %>% slice(1)
 
 # We then compute visits per year per patient
-user_yearly_visits <- user_visits %>%
-  group_by(subject_id, specialty) %>%
-  summarise(visits_count = first(visit_count),
-            exposed_yrs = first(exposed_yrs),
-            .groups = "drop") %>%
-  group_by(subject_id) %>%
-  summarise(
-    total_patient_visits = sum(visits_count, na.rm = TRUE),
-    total_exposed_yrs = first(exposed_yrs),
-    visits_per_year = total_patient_visits / total_exposed_yrs,
-    .groups = "drop"
-  )
+# user_yearly_visits <- user_visits %>%
+#   group_by(subject_id, specialty) %>%
+#   summarise(visits_count = first(visit_count),
+#             exposed_yrs = first(exposed_yrs),
+#             .groups = "drop") %>%
+#   group_by(subject_id) %>%
+#   summarise(
+#     total_patient_visits = sum(visits_count, na.rm = TRUE),
+#     total_exposed_yrs = first(exposed_yrs),
+#     visits_per_year = total_patient_visits / total_exposed_yrs,
+#     .groups = "drop"
+#   )
 
 # mean(user_yearly_visits$visits_per_year)
 
-user_only_summary_statistics_overall <- tibble(
-  mean_visit_per_year = round(sum(user_yearly_visits$total_patient_visits) / sum(user_yearly_visits$total_exposed_yrs), 2),
-  min_visit_per_year = round(min(user_yearly_visits$visits_per_year), 2),
-  max_visit_per_year = round(max(user_yearly_visits$visits_per_year), 2),
-  sd_visit_per_year = round(sd(user_yearly_visits$visits_per_year), 2),
-  median_visit_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.5)), 2),
-  lower_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.25)), 2),
-  upper_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.75)), 2)
-)
+# user_only_summary_statistics_overall <- tibble(
+#   mean_visit_per_year = round(sum(user_yearly_visits$total_patient_visits) / sum(user_yearly_visits$total_exposed_yrs), 2),
+#   min_visit_per_year = round(min(user_yearly_visits$visits_per_year), 2),
+#   max_visit_per_year = round(max(user_yearly_visits$visits_per_year), 2),
+#   sd_visit_per_year = round(sd(user_yearly_visits$visits_per_year), 2),
+#   median_visit_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.5)), 2),
+#   lower_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.25)), 2),
+#   upper_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.75)), 2)
+# )
 
 # All patients
 
 # We then compute visits per year per patient
-all_yearly_visits <- visit_data %>%
-  group_by(subject_id, specialty) %>%
-  summarise(visits_count = first(visit_count),
-            exposed_yrs = first(exposed_yrs),
-            .groups = "drop") %>%
-  group_by(subject_id) %>%
-  summarise(
-    total_patient_visits = sum(visits_count, na.rm = TRUE),
-    total_exposed_yrs = first(exposed_yrs),
-    visits_per_year = total_patient_visits / total_exposed_yrs,
-    .groups = "drop"
-  )
-
-all_summary_statistics_overall <- tibble(
-  mean_visit_per_year = round(sum(all_yearly_visits$total_patient_visits) / sum(all_yearly_visits$total_exposed_yrs), 2),
-  min_visit_per_year = round(min(all_yearly_visits$visits_per_year), 2),
-  max_visit_per_year = round(max(all_yearly_visits$visits_per_year), 2),
-  sd_visit_per_year = round(sd(all_yearly_visits$visits_per_year), 2),
-  median_visit_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.5)), 2),
-  lower_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.25)), 2),
-  upper_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.75)), 2)
-)
+# all_yearly_visits <- visit_data %>%
+#   group_by(subject_id, specialty) %>%
+#   summarise(visits_count = first(visit_count),
+#             exposed_yrs = first(exposed_yrs),
+#             .groups = "drop") %>%
+#   group_by(subject_id) %>%
+#   summarise(
+#     total_patient_visits = sum(visits_count, na.rm = TRUE),
+#     total_exposed_yrs = first(exposed_yrs),
+#     visits_per_year = total_patient_visits / total_exposed_yrs,
+#     .groups = "drop"
+#   )
+# 
+# all_summary_statistics_overall <- tibble(
+#   mean_visit_per_year = round(sum(all_yearly_visits$total_patient_visits) / sum(all_yearly_visits$total_exposed_yrs), 2),
+#   min_visit_per_year = round(min(all_yearly_visits$visits_per_year), 2),
+#   max_visit_per_year = round(max(all_yearly_visits$visits_per_year), 2),
+#   sd_visit_per_year = round(sd(all_yearly_visits$visits_per_year), 2),
+#   median_visit_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.5)), 2),
+#   lower_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.25)), 2),
+#   upper_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.75)), 2)
+# )
 
 
 # Export the output
 library(writexl)
 
 visits_list <- list(
-  overall_user_visits_only = user_only_summary_statistics_overall,
-  overall_all_visits_only = all_summary_statistics_overall,
+  # overall_user_visits_only = user_only_summary_statistics_overall,
+  # overall_all_visits_only = all_summary_statistics_overall,
   user_only_summary = user_only_summary,
   all_summary = all_summary,
   user_only_summary_reduced = user_only_summary_reduced,
@@ -340,13 +342,165 @@ unadjusted_all_summary_statistics_overall <- unadjusted_all_yearly_visits %>%
     upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
   ) %>%
   mutate(across(everything(), round, 2))
+
 unadjusted_visits_list <- list(
   unadjusted_all_summary = unadjusted_all_summary_statistics_overall,
-  unadjusted_user_only_summary = unadjusted_user_only_summary_statistics_overall
+  unadjusted_user_only_summary = unadjusted_user_summary_statistics_overall
 )
 
 # Write to an Excel file
 write_xlsx(unadjusted_visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP-Unadjusted.xlsx"))
+
+
+#### Adjusted ----
+adjusted_users_visits_overall <- visit_data %>%
+  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
+  
+  # Total exposure duration
+  mutate(
+    days_exposed_total = as.numeric(follow_up_end - index_date),
+    years_exposed = days_exposed_total / 365.25,
+    died_during_followup = !is.na(death_date) & death_date <= follow_up_end
+  ) %>%
+  
+  # Drop those with < 1 year and no death
+  filter(days_exposed_total >= 365.25 | died_during_followup) %>%
+  
+  # Count visits per patient/specialty
+  group_by(subject_id, specialty_reduced) %>%
+  summarise(visit_count = n(), .groups = "drop") %>%
+  
+  # Join back exposure and death info
+  left_join(
+    visit_data %>%
+      mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
+      mutate(
+        days_exposed_total = as.numeric(follow_up_end - index_date),
+        years_exposed = days_exposed_total / 365.25,
+        died_during_followup = !is.na(death_date) & death_date <= follow_up_end
+      ) %>%
+      distinct(subject_id, years_exposed, days_exposed_total, died_during_followup),
+    by = "subject_id"
+  ) %>%
+  
+  # Adjust visits based on overall period rules
+  mutate(
+    adjusted_visits = case_when(
+      died_during_followup ~ visit_count,  # No adjustment if died
+      days_exposed_total >= 365.25 ~ visit_count,  # No adjustment if full year
+      days_exposed_total >= 182.625 ~ (visit_count / days_exposed_total) * 365.25,  # Adjust if ≥ half year
+      TRUE ~ 0  # Ignore if < 6 months exposure
+    )
+  ) %>% 
+  mutate(adjusted_visits = round(adjusted_visits, 2))
+# 1834920545
+
+# Sum adjusted visits per patient
+# why the hell are we dropping the decimals, sometimes you can be annoying af!!
+adjusted_users_visits_overall_results <- adjusted_users_visits_overall %>%
+  group_by(subject_id) %>%
+  summarise(
+    total_patient_visits = sum(adjusted_visits, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Summary statistics
+adjusted_user_only_summary_statistics_overall <- adjusted_users_visits_overall_results %>%
+  summarise(
+    mean_visit_per_year = mean(total_patient_visits),
+    min_visit_per_year = min(total_patient_visits),
+    max_visit_per_year = max(total_patient_visits),
+    sd_visit_per_year = sd(total_patient_visits),
+    median_visit_per_year = quantile(total_patient_visits, 0.5),
+    lower_q_visits_per_year = quantile(total_patient_visits, 0.25),
+    upper_q_visits_per_year = quantile(total_patient_visits, 0.75),
+    n = n(),
+    se = sd_visit_per_year / sqrt(n),
+    lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+    upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+# All patients
+adjusted_all_visits_overall <- visit_data %>%
+  mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
+  
+  # Exposure and death status
+  mutate(
+    days_exposed_total = as.numeric(follow_up_end - index_date),
+    years_exposed = days_exposed_total / 365.25,
+    died_during_followup = !is.na(death_date) & death_date <= follow_up_end
+  ) %>%
+  
+  # Drop those with < 1 year and no death
+  filter(days_exposed_total >= 365.25 | died_during_followup) %>%
+  
+  # Set visit count
+  mutate(
+    visit_count = if_else(specialty == "Not Clinically Relevant", 0L, 1L)
+  ) %>%
+  
+  # Summarise visits per patient/specialty
+  group_by(subject_id, specialty) %>%
+  summarise(visit_count = sum(visit_count), .groups = "drop") %>%
+  
+  # Join back exposure info
+  left_join(
+    visit_data %>%
+      mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
+      mutate(
+        days_exposed_total = as.numeric(follow_up_end - index_date),
+        years_exposed = days_exposed_total / 365.25,
+        died_during_followup = !is.na(death_date) & death_date <= follow_up_end
+      ) %>%
+      distinct(subject_id, days_exposed_total, years_exposed, died_during_followup),
+    by = "subject_id"
+  ) %>%
+  
+  # Adjust visits
+  mutate(
+    adjusted_visits = case_when(
+      # specialty == "Not Clinically Relevant" ~ 0,
+      died_during_followup ~ visit_count,
+      days_exposed_total >= 365.25 ~ visit_count,
+      days_exposed_total >= 182.625 ~ (visit_count / days_exposed_total) * 365.25,
+      TRUE ~ 0
+    )
+  )
+
+# Sum adjusted visits per patient
+# why the hell are we dropping the decimals, sometimes you can be annoying af!!
+adjusted_all_visits_overall_results <- adjusted_all_visits_overall %>%
+  group_by(subject_id) %>%
+  summarise(
+    total_patient_visits = sum(adjusted_visits, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Summary statistics
+adjusted_all_summary_statistics_overall <- adjusted_all_visits_overall_results %>%
+  summarise(
+    mean_visit_per_year = mean(total_patient_visits),
+    min_visit_per_year = min(total_patient_visits),
+    max_visit_per_year = max(total_patient_visits),
+    sd_visit_per_year = sd(total_patient_visits),
+    median_visit_per_year = quantile(total_patient_visits, 0.5),
+    lower_q_visits_per_year = quantile(total_patient_visits, 0.25),
+    upper_q_visits_per_year = quantile(total_patient_visits, 0.75),
+    n = n(),
+    se = sd_visit_per_year / sqrt(n),
+    lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
+    upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+adjusted_visits_list <- list(
+  adjusted_all_summary = adjusted_all_only_summary_statistics_overall,
+  adjusted_user_only_summary = adjusted_user_only_summary_statistics_overall
+)
+
+write_xlsx(adjusted_visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP-Adjusted.xlsx"))
 
 
 ##### Boostrap ----
@@ -380,6 +534,33 @@ boot_user_summary_statistics_overall <- tibble(
   upper_ci_boot_visits_user = upper_ci_boot_visits_user
 )
 
+###### Adjusted User ----
+
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+fc_user_adj <- function(d, i){
+  adjusted_users_visits_overall_results <- d[i, ]               # Sample the data with replacement
+  return(mean(adjusted_users_visits_overall_results$total_patient_visits))   # This is your variable of interest (e.g., visits, or costs)
+}
+
+# Set a seed for reproducibility
+set.seed(626)
+
+# Run bootstrap with 1000 resamples
+boot_result_user_adj <- boot(adjusted_users_visits_overall_results, fc_user_adj, R = 1000)
+
+# Compute 95% percentile-based confidence interval
+boot_ci_user_adj <- boot.ci(boot.out = boot_result_user_adj, type = "norm")
+
+mean_boot_visits_user_adj <-round(as.numeric(boot_result_user_adj$t0),3)
+lower_ci_boot_visits_user_adj <-round(as.numeric(boot_ci_user_adj$normal[2]), 3)
+upper_ci_boot_visits_user_adj <-round(as.numeric(boot_ci_user_adj$normal[3]), 3)
+
+adj_boot_user_summary_statistics_overall <- tibble(
+  mean_boot_visits_user_adj = mean_boot_visits_user_adj,
+  lower_ci_boot_visits_user_adj = lower_ci_boot_visits_user_adj,
+  upper_ci_boot_visits_user_adj = upper_ci_boot_visits_user_adj
+)
 
 ###### Unadjusted All ----
 # Define the statistic function
@@ -407,12 +588,41 @@ boot_all_summary_statistics_overall <- tibble(
   upper_ci_boot_visits_all = upper_ci_boot_visits_all
 )
 
-boot_visits_list <- list(
-  boot_all_summary_stats = boot_all_summary_statistics_overall,
-  boot_user_summary_stats = boot_user_summary_statistics_overall
+
+####### Adjusted All ----
+fc_all_adj <- function(d, i){
+  adjusted_all_visits_overall_results <- d[i, ]               # Sample the data with replacement
+  return(mean(adjusted_all_visits_overall_results$total_patient_visits))   # This is your variable of interest (e.g., visits, or costs)
+}
+
+# Set a seed for reproducibility
+set.seed(42)
+
+# Run bootstrap with 1000 resamples
+boot_result_all_adj <- boot(adjusted_all_visits_overall_results, fc_all_adj, R = 1000)
+
+# Compute 95% percentile-based confidence interval
+boot_ci_all_adj <- boot.ci(boot.out = boot_result_all_adj, type = "norm")
+
+mean_boot_visits_all_adj <-round(as.numeric(boot_result_all_adj$t0),3)
+lower_ci_boot_visits_all_adj <-round(as.numeric(boot_ci_all_adj$normal[2]), 3)
+upper_ci_boot_visits_all_adj <-round(as.numeric(boot_ci_all_adj$normal[3]), 3)
+
+adj_boot_all_summary_statistics_overall <- tibble(
+  mean_boot_visits_all_adj = mean_boot_visits_all_adj,
+  lower_ci_boot_visits_all_adj = lower_ci_boot_visits_all_adj,
+  upper_ci_boot_visits_all_adj = upper_ci_boot_visits_all_adj
 )
 
-write_xlsx(boot_visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP-Unadjusted_Boot.xlsx"))
+
+boot_visits_list <- list(
+  unadj_boot_all_summary_stats = boot_all_summary_statistics_overall,
+  unadj_boot_user_summary_stats = boot_user_summary_statistics_overall,
+  adj_boot_all_summary_stats = adj_boot_all_summary_statistics_overall,
+  adj_boot_user_summary_stats = adj_boot_user_summary_statistics_overall
+)
+
+write_xlsx(boot_visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP-Boot.xlsx"))
 
 
 ## Cost - Primary care ----
@@ -438,60 +648,60 @@ user_costs <- visit_data %>%
   filter(user_status == "User", specialty != "Not Clinically Relevant")
 
 # We then compute visits per year per patient
-user_yearly_costs <- user_costs %>%
-  group_by(subject_id, specialty) %>%
-  summarise(visit_cost = first(visit_cost),
-            exposed_yrs = first(exposed_yrs),
-            .groups = "drop") %>%
-  group_by(subject_id) %>%
-  summarise(
-    total_patient_visits_cost = sum(visit_cost, na.rm = TRUE),
-    total_exposed_yrs = first(exposed_yrs),
-    visits_cost_per_year = total_patient_visits_cost / total_exposed_yrs,
-    .groups = "drop"
-  )
-
-user_only_costs_summary_statistics_overall <- tibble(
-  mean_visit_cost_per_year = round(sum(user_yearly_costs$total_patient_visits_cost) / sum(user_yearly_costs$total_exposed_yrs), 2),
-  min_visit_cost_per_year = round(min(user_yearly_costs$visits_cost_per_year), 2),
-  max_visit_cost_per_year = round(max(user_yearly_costs$visits_cost_per_year), 2),
-  sd_visit_cost_per_year = round(sd(user_yearly_costs$visits_cost_per_year), 2),
-  median_visit_cost_per_year = round(quantile(user_yearly_costs$visits_cost_per_year, probs = (.5)), 2),
-  lower_q_visits_cost_per_year = round(quantile(user_yearly_costs$visits_cost_per_year, probs = (.25)), 2),
-  upper_q_visits_cost_per_year = round(quantile(user_yearly_costs$visits_cost_per_year, probs = (.75)), 2)
-)
-
-
-
-# All patients
-# We then compute visit costs per year per patient
-all_yearly_costs <- visit_data %>%
-  group_by(subject_id, specialty) %>%
-  summarise(visit_cost = first(visit_cost),
-            exposed_yrs = first(exposed_yrs),
-            .groups = "drop") %>%
-  group_by(subject_id) %>%
-  summarise(
-    total_patient_visits_cost = sum(visit_cost, na.rm = TRUE),
-    total_exposed_yrs = first(exposed_yrs),
-    visits_cost_per_year = total_patient_visits_cost / total_exposed_yrs,
-    .groups = "drop"
-  )
-
-all_costs_summary_statistics_overall <- tibble(
-  mean_visit_cost_per_year = round(sum(all_yearly_costs$total_patient_visits_cost) / sum(all_yearly_costs$total_exposed_yrs), 2),
-  min_visit_cost_per_year = round(min(all_yearly_costs$visits_cost_per_year), 2),
-  max_visit_cost_per_year = round(max(all_yearly_costs$visits_cost_per_year), 2),
-  sd_visit_cost_per_year = round(sd(all_yearly_costs$visits_cost_per_year), 2),
-  median_visit_cost_per_year = round(quantile(all_yearly_costs$visits_cost_per_year, probs = (.5)), 2),
-  lower_q_visits_cost_per_year = round(quantile(all_yearly_costs$visits_cost_per_year, probs = (.25)), 2),
-  upper_q_visits_cost_per_year = round(quantile(all_yearly_costs$visits_cost_per_year, probs = (.75)), 2)
-)
+# user_yearly_costs <- user_costs %>%
+#   group_by(subject_id, specialty) %>%
+#   summarise(visit_cost = first(visit_cost),
+#             exposed_yrs = first(exposed_yrs),
+#             .groups = "drop") %>%
+#   group_by(subject_id) %>%
+#   summarise(
+#     total_patient_visits_cost = sum(visit_cost, na.rm = TRUE),
+#     total_exposed_yrs = first(exposed_yrs),
+#     visits_cost_per_year = total_patient_visits_cost / total_exposed_yrs,
+#     .groups = "drop"
+#   )
+# 
+# user_only_costs_summary_statistics_overall <- tibble(
+#   mean_visit_cost_per_year = round(sum(user_yearly_costs$total_patient_visits_cost) / sum(user_yearly_costs$total_exposed_yrs), 2),
+#   min_visit_cost_per_year = round(min(user_yearly_costs$visits_cost_per_year), 2),
+#   max_visit_cost_per_year = round(max(user_yearly_costs$visits_cost_per_year), 2),
+#   sd_visit_cost_per_year = round(sd(user_yearly_costs$visits_cost_per_year), 2),
+#   median_visit_cost_per_year = round(quantile(user_yearly_costs$visits_cost_per_year, probs = (.5)), 2),
+#   lower_q_visits_cost_per_year = round(quantile(user_yearly_costs$visits_cost_per_year, probs = (.25)), 2),
+#   upper_q_visits_cost_per_year = round(quantile(user_yearly_costs$visits_cost_per_year, probs = (.75)), 2)
+# )
+# 
+# 
+# 
+# # All patients
+# # We then compute visit costs per year per patient
+# all_yearly_costs <- visit_data %>%
+#   group_by(subject_id, specialty) %>%
+#   summarise(visit_cost = first(visit_cost),
+#             exposed_yrs = first(exposed_yrs),
+#             .groups = "drop") %>%
+#   group_by(subject_id) %>%
+#   summarise(
+#     total_patient_visits_cost = sum(visit_cost, na.rm = TRUE),
+#     total_exposed_yrs = first(exposed_yrs),
+#     visits_cost_per_year = total_patient_visits_cost / total_exposed_yrs,
+#     .groups = "drop"
+#   )
+# 
+# all_costs_summary_statistics_overall <- tibble(
+#   mean_visit_cost_per_year = round(sum(all_yearly_costs$total_patient_visits_cost) / sum(all_yearly_costs$total_exposed_yrs), 2),
+#   min_visit_cost_per_year = round(min(all_yearly_costs$visits_cost_per_year), 2),
+#   max_visit_cost_per_year = round(max(all_yearly_costs$visits_cost_per_year), 2),
+#   sd_visit_cost_per_year = round(sd(all_yearly_costs$visits_cost_per_year), 2),
+#   median_visit_cost_per_year = round(quantile(all_yearly_costs$visits_cost_per_year, probs = (.5)), 2),
+#   lower_q_visits_cost_per_year = round(quantile(all_yearly_costs$visits_cost_per_year, probs = (.25)), 2),
+#   upper_q_visits_cost_per_year = round(quantile(all_yearly_costs$visits_cost_per_year, probs = (.75)), 2)
+# )
 
 # List of the output of costs
 costs_list <- list(
-  overall_user_only_costs = user_only_costs_summary_statistics_overall,
-  overall_all_only_costs = all_costs_summary_statistics_overall,
+  # overall_user_only_costs = user_only_costs_summary_statistics_overall,
+  # overall_all_only_costs = all_costs_summary_statistics_overall,
   user_only_cost_summary = user_only_cost_summary,
   all_cost_summary = all_cost_summary,
   user_only_cost_summary_reduced = user_only_cost_summary_reduced,
@@ -522,15 +732,25 @@ unadjusted_user_yearly_costs <- user_costs %>%
     .groups = "drop"
   )
 
-unadjusted_user_only_costs_summary_statistics_overall <- tibble(
-  mean_visit_cost = round(mean(unadjusted_user_yearly_costs$total_patient_visits_cost), 2),
-  min_visit_cost = round(min(unadjusted_user_yearly_costs$total_patient_visits_cost), 2),
-  max_visit_cost = round(max(unadjusted_user_yearly_costs$total_patient_visits_cost), 2),
-  sd_visit_cost = round(sd(unadjusted_user_yearly_costs$total_patient_visits_cost), 2),
-  median_visit_cost = round(quantile(unadjusted_user_yearly_costs$total_patient_visits_cost, probs = (.5)), 2),
-  lower_q_visits_cost = round(quantile(unadjusted_user_yearly_costs$total_patient_visits_cost, probs = (.25)), 2),
-  upper_q_visits_cost = round(quantile(unadjusted_user_yearly_costs$total_patient_visits_cost, probs = (.75)), 2)
-)
+
+# Summary stats for user cost per year
+unadjusted_user_only_costs_summary_statistics_overall <- unadjusted_user_yearly_costs %>%
+  # group_by(year_after_index) %>%
+  summarise(
+    mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 2),
+    min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 2),
+    max_visits_cost = round(max(total_patient_visits_cost, na.rm = TRUE), 2),
+    sd_visits_cost = round(sd(total_patient_visits_cost, na.rm = TRUE), 2),
+    median_visits_cost = round(median(total_patient_visits_cost, na.rm = TRUE), 2),
+    q1_visits_cost = round(quantile(total_patient_visits_cost, 0.25, na.rm = TRUE), 2),
+    q3_visits_cost = round(quantile(total_patient_visits_cost, 0.75, na.rm = TRUE), 2),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  )
 
 unadjusted_all_yearly_costs <- visit_data %>%
   group_by(subject_id, specialty) %>%
@@ -549,23 +769,9 @@ unadjusted_all_yearly_costs <- visit_data %>%
     .groups = "drop"
   )
 
-unadjusted_all_costs_summary_statistics_overall <- tibble(
-  mean_visit_cost_per_year = round(mean(unadjusted_all_yearly_costs$total_patient_visits_cost), 4),
-  min_visit_cost_per_year = round(min(unadjusted_all_yearly_costs$total_patient_visits_cost), 2),
-  max_visit_cost_per_year = round(max(unadjusted_all_yearly_costs$total_patient_visits_cost), 2),
-  sd_visit_cost_per_year = round(sd(unadjusted_all_yearly_costs$total_patient_visits_cost), 2),
-  median_visit_cost_per_year = round(quantile(unadjusted_all_yearly_costs$total_patient_visits_cost, probs = (.5)), 2),
-  lower_q_visits_cost_per_year = round(quantile(unadjusted_all_yearly_costs$total_patient_visits_cost, probs = (.25)), 2),
-  upper_q_visits_cost_per_year = round(quantile(unadjusted_all_yearly_costs$total_patient_visits_cost, probs = (.75)), 2)
-)
 
-unadjusted_costs_list <- list(
-  unadjusted_all_costs_summary = unadjusted_all_costs_summary_statistics_overall,
-  unadjusted_user_only_costs = unadjusted_user_only_costs_summary_statistics_overall
-)
 
 unadjusted_all_costs_summary_statistics_overall <- unadjusted_all_yearly_costs %>%
-  # group_by(year_after_index) %>%
   summarise(
     mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 2),
     min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 2),
@@ -582,7 +788,173 @@ unadjusted_all_costs_summary_statistics_overall <- unadjusted_all_yearly_costs %
     upper = mean_visits_cost + qt(0.975, df = n - 1) * se
   )
 
+unadjusted_costs_list <- list(
+  unadjusted_all_costs_summary = unadjusted_all_costs_summary_statistics_overall,
+  unadjusted_user_only_costs = unadjusted_user_only_costs_summary_statistics_overall
+)
+
+
 write_xlsx(unadjusted_costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP-Unadjusted.xlsx"))
+
+#### Adjusted ----
+adjusted_users_costs_overall <- visit_data %>%
+  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
+  
+  # Total exposure duration
+  mutate(
+    days_exposed_total = as.numeric(follow_up_end - index_date),
+    years_exposed = days_exposed_total / 365.25,
+    died_during_followup = !is.na(death_date) & death_date <= follow_up_end
+  ) %>%
+  # Drop those with < 1 year and no death
+  filter(days_exposed_total >= 365.25 | died_during_followup) %>%
+  
+  # Count visits per patient/specialty
+  group_by(subject_id, specialty) %>%
+  summarise(visit_count = n(), 
+            unit_cost = unit_cost,
+            .groups = "drop") %>%
+  distinct() %>% 
+  
+  # Join back exposure and death info
+  left_join(
+    visit_data %>%
+      mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
+      mutate(
+        days_exposed_total = as.numeric(follow_up_end - index_date),
+        years_exposed = days_exposed_total / 365.25,
+        died_during_followup = !is.na(death_date) & death_date <= follow_up_end
+      ) %>%
+      distinct(subject_id, years_exposed, days_exposed_total, died_during_followup),
+    by = "subject_id"
+  ) %>%
+  
+  # Adjust visits based on overall period rules
+  mutate(
+    adjusted_visits = case_when(
+      died_during_followup ~ visit_count,  # No adjustment if died
+      days_exposed_total >= 365.25 ~ visit_count,  # No adjustment if full year
+      days_exposed_total >= 182.625 ~ (visit_count / days_exposed_total) * 365.25,  # Adjust if ≥ half year
+      TRUE ~ 0  # Ignore if < 6 months exposure
+    )
+  ) %>% 
+  
+  mutate(adjusted_visit_costs = adjusted_visits * unit_cost) 
+
+# Sum adjusted visit costs per patient
+adjusted_users_costs_overall_results <- adjusted_users_costs_overall %>%
+  group_by(subject_id) %>%
+  summarise(
+    total_patient_visits_cost = sum(adjusted_visit_costs, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# summary stats
+adjusted_user_costs_summary_statistics_overall <- adjusted_users_costs_overall_results %>%
+  summarise(
+    mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 2),
+    min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 2),
+    max_visits_cost = round(max(total_patient_visits_cost, na.rm = TRUE), 2),
+    sd_visits_cost = round(sd(total_patient_visits_cost, na.rm = TRUE), 2),
+    median_visits_cost = round(median(total_patient_visits_cost, na.rm = TRUE), 2),
+    q1_visits_cost = round(quantile(total_patient_visits_cost, 0.25, na.rm = TRUE), 2),
+    q3_visits_cost = round(quantile(total_patient_visits_cost, 0.75, na.rm = TRUE), 2),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  )
+
+# All patients
+adjusted_all_costs_overall <- visit_data %>%
+  mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
+  
+  # Exposure and death status
+  mutate(
+    days_exposed_total = as.numeric(follow_up_end - index_date),
+    years_exposed = days_exposed_total / 365.25,
+    died_during_followup = !is.na(death_date) & death_date <= follow_up_end
+  ) %>%
+  
+  # Drop those with < 1 year and no death
+  filter(days_exposed_total >= 365.25 | died_during_followup) %>%
+  
+  # Set visit count
+  mutate(
+    visit_count = if_else(specialty == "Not Clinically Relevant", 0L, 1L)
+  ) %>%
+  
+  # Summarise visits per patient/specialty
+  group_by(subject_id, specialty) %>%
+  summarise(visit_count = sum(visit_count),
+            unit_cost = unit_cost,
+            .groups = "drop") %>%
+  
+  # Remove duplicated rows
+  distinct() %>% 
+  
+  # Join back exposure info
+  left_join(
+    visit_data %>%
+      mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
+      mutate(
+        days_exposed_total = as.numeric(follow_up_end - index_date),
+        years_exposed = days_exposed_total / 365.25,
+        died_during_followup = !is.na(death_date) & death_date <= follow_up_end
+      ) %>%
+      distinct(subject_id, days_exposed_total, years_exposed, died_during_followup),
+    by = "subject_id"
+  ) %>%
+  
+  # Adjust visits
+  mutate(
+    adjusted_visits = case_when(
+      # specialty == "Not Clinically Relevant" ~ 0,
+      died_during_followup ~ visit_count,
+      days_exposed_total >= 365.25 ~ visit_count,
+      days_exposed_total >= 182.625 ~ (visit_count / days_exposed_total) * 365.25,
+      TRUE ~ 0
+    )
+  ) %>% 
+  mutate(adjusted_visit_costs = adjusted_visits * unit_cost) 
+
+
+# Sum adjusted visits per patient
+# why the hell are we dropping the decimals, sometimes you can be annoying af!!
+adjusted_all_costs_overall_results <- adjusted_all_costs_overall %>%
+  group_by(subject_id) %>%
+  summarise(
+    total_patient_visits_cost = sum(adjusted_visit_costs, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+adjusted_all_costs_summary_statistics_overall <- adjusted_all_costs_overall_results %>%
+  summarise(
+    mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 2),
+    min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 2),
+    max_visits_cost = round(max(total_patient_visits_cost, na.rm = TRUE), 2),
+    sd_visits_cost = round(sd(total_patient_visits_cost, na.rm = TRUE), 2),
+    median_visits_cost = round(median(total_patient_visits_cost, na.rm = TRUE), 2),
+    q1_visits_cost = round(quantile(total_patient_visits_cost, 0.25, na.rm = TRUE), 2),
+    q3_visits_cost = round(quantile(total_patient_visits_cost, 0.75, na.rm = TRUE), 2),
+    n = n()
+  ) %>%
+  mutate(
+    se = sd_visits_cost / sqrt(n),
+    lower = mean_visits_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_visits_cost + qt(0.975, df = n - 1) * se
+  )
+
+adjusted_costs_list <- list(
+  adjusted_all_costs_summary = adjusted_all_costs_summary_statistics_overall,
+  adjusted_user_only_costs = adjusted_user_costs_summary_statistics_overall
+)
+
+write_xlsx(adjusted_costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP-Adjusted.xlsx"))
+
 
 #### Boostrap ----
 ###### Unadjusted User ----
@@ -614,6 +986,33 @@ boot_user_costs_summary_statistics_overall <- tibble(
   upper_ci_boot_visits_user_costs = upper_ci_boot_visits_user_costs
 )
 
+###### Adjusted User ----
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+fc_user_costs_adj <- function(d, i){
+  adjusted_users_costs_overall_results <- d[i, ]               # Sample the data with replacement
+  return(mean(adjusted_users_costs_overall_results$total_patient_visits_cost))   # This is your variable of interest (e.g., visits, or costs)
+}
+
+# Set a seed for reproducibility
+set.seed(626)
+
+# Run bootstrap with 1000 resamples
+boot_result_user_costs_adj <- boot(adjusted_users_costs_overall_results, fc_user_costs_adj, R = 1000)
+
+# Compute 95% percentile-based confidence interval
+boot_ci_user_costs_adj <- boot.ci(boot.out = boot_result_user_costs_adj, type = "norm")
+
+mean_boot_visits_user_costs_adj <-round(as.numeric(boot_result_user_costs_adj$t0),3)
+lower_ci_boot_visits_user_costs_adj <- round(as.numeric(boot_ci_user_costs_adj$normal[2]), 3)
+upper_ci_boot_visits_user_costs_adj <- round(as.numeric(boot_ci_user_costs_adj$normal[3]), 3)
+
+
+adj_boot_user_costs_summary_statistics_overall <- tibble(
+  mean_boot_visits_user_costs_adj = mean_boot_visits_user_costs_adj,
+  lower_ci_boot_visits_user_costs_adj = lower_ci_boot_visits_user_costs_adj,
+  upper_ci_boot_visits_user_costs_adj = upper_ci_boot_visits_user_costs_adj
+)
 
 ###### Unadjusted All ----
 # Define the statistic function
@@ -649,7 +1048,41 @@ boot_costs_list <- list(
 
 write_xlsx(boot_costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP-Unadjusted_Boot.xlsx"))
 
+###### Adjusted All ----
+# Define the statistic function
+# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+fc_all_costs_adj <- function(d, i){
+  adjusted_all_costs_overall_results <- d[i, ]               # Sample the data with replacement
+  return(mean(adjusted_all_costs_overall_results$total_patient_visits_cost))   # This is your variable of interest (e.g., visits, or costs)
+}
 
+# Set a seed for reproducibility
+set.seed(42)
+
+# Run bootstrap with 1000 resamples
+boot_result_all_costs_adj <- boot(adjusted_all_costs_overall_results, fc_all_costs_adj, R = 1000)
+
+# Compute 95% percentile-based confidence interval
+boot_ci_all_costs_adj <- boot.ci(boot.out = boot_result_all_costs_adj, type = "norm")
+
+mean_boot_visits_all_costs_adj <-round(as.numeric(boot_result_all_costs_adj$t0),3)
+lower_ci_boot_visits_all_costs_adj <-round(as.numeric(boot_ci_all_costs_adj$normal[2]), 3)
+upper_ci_boot_visits_all_costs_adj <-round(as.numeric(boot_ci_all_costs_adj$normal[3]), 3)
+
+adj_boot_all_costs_summary_statistics_overall <- tibble(
+  mean_boot_visits_all_costs_adj = mean_boot_visits_all_costs_adj,
+  lower_ci_boot_visits_all_costs_adj = lower_ci_boot_visits_all_costs_adj,
+  upper_ci_boot_visits_all_costs_adj = upper_ci_boot_visits_all_costs_adj
+)
+
+boot_costs_list <- list(
+  unadj_boot_all_stats = boot_all_costs_summary_statistics_overall,
+  unadj_boot_user_stats = boot_user_costs_summary_statistics_overall,
+  adj_boot_all_costs_stats = adj_boot_all_costs_summary_statistics_overall,
+  adj_boot_user_costs_stats = adj_boot_user_costs_summary_statistics_overall
+)
+
+write_xlsx(boot_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_costs_Raw-Boot.xlsx"))
 
 ## Cohort summary ----
 cohort_summary_omop <- cohort_summary(visit_data)

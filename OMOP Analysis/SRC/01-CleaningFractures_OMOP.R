@@ -255,7 +255,7 @@ AttritionReportFrac<- AttritionReportFrac %>%
 
 ### d) Remove fractures on the same day as trauma codes or 3 distinct fracture sites on same day ----
 fracture_table_d <- fracture_table_c %>% # remember to revert to condition_occurrence if you want to have both primary and secondary
-  anti_join(cdm[["condition_occurrence_primary"]] %>% dplyr::filter(condition_concept_id %in% trauma_condition), by = c("subject_id" = "person_id", "condition_start_date"), copy = T)
+  dplyr::anti_join(cdm[["condition_occurrence_primary"]] %>% dplyr::filter(condition_concept_id %in% trauma_condition), by = c("subject_id" = "person_id", "condition_start_date"), copy = T)
 
 fracture_table_d <- fracture_table_d %>% 
   dplyr::anti_join(cdm[["observation"]] %>% dplyr::filter(observation_concept_id %in% trauma_observation), by = c("subject_id" = "person_id", "condition_start_date" = "observation_date"), copy = T) 
@@ -318,70 +318,70 @@ AttritionReportFrac<- AttritionReportFrac %>%
 
 # Define the fracture sites
 sites <- c("Hip", "Vertebra", "NHNS")
-
-# Initialise the backup table and the result container
-fracture_table_back_up <- fracture_table_e
-index_fractures <- tibble()
-
-suppressWarnings(
-  while (nrow(fracture_table_back_up) > 0) {
-    fracture_correction <- list()
-    
-    # Process each site independently
-    for (site in sites) {
-      fracture_correction[[site]] <- fracture_table_back_up %>% 
-        dplyr::filter(fracture_site == site) %>%  # Filter fractures for the current site
-        dplyr::group_by(subject_id) %>% 
-        dplyr::summarise(min_date = min(condition_start_date, na.rm = TRUE)) %>% 
-        dplyr::mutate(site = site)
-    }
-    
-    # Combine corrections for all sites
-    fracture_correction_combined <- dplyr::bind_rows(fracture_correction)
-    
-    # Update the fracture table with the washout logic
-    fracture_table_back_up <- fracture_table_back_up %>% 
-      dplyr::left_join(fracture_correction_combined, by = c("subject_id", "fracture_site" = "site")) %>% 
-      dplyr::mutate(gap_to_min_date = condition_start_date - min_date) %>% 
-      dplyr::filter(gap_to_min_date == 0 | gap_to_min_date > 90) %>% 
-      dplyr::group_by(subject_id, condition_start_date, fracture_site) %>% 
-      dplyr::arrange(condition_concept_id, .by_group = TRUE) %>% 
-      dplyr::filter(dplyr::row_number() == 1) %>% 
-      dplyr::ungroup()
-    
-    # Append index fractures (those that meet the criteria)
-    index_fractures <- dplyr::bind_rows(
-      index_fractures,
-      fracture_table_back_up %>% 
-        dplyr::filter(gap_to_min_date == 0) %>% 
-        dplyr::select(-min_date, -gap_to_min_date)
-    )
-    
-    # Prepare the remaining fractures for the next loop
-    fracture_table_back_up <- fracture_table_back_up %>% 
-      dplyr::filter(!gap_to_min_date == 0) %>% 
-      dplyr::select(-min_date, -gap_to_min_date)
-  }
-)
-
-# Final output: index fractures
-fracture_table_f <- index_fractures
-
-AttritionReportFrac<- AttritionReportFrac %>% 
-  dplyr::union_all(  
-    tibble(
-      cohort_definition_id = as.integer(1),
-      number_records = fracture_table_f %>% dplyr::tally() %>% dplyr::pull(),
-      number_subjects = fracture_table_f %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
-      reason = "Clean out using washout period"
-    )
-  ) 
-rm(index_fractures)
+# 
+# # Initialise the backup table and the result container
+# fracture_table_back_up <- fracture_table_e
+# index_fractures <- tibble()
+# 
+# suppressWarnings(
+#   while (nrow(fracture_table_back_up) > 0) {
+#     fracture_correction <- list()
+#     
+#     # Process each site independently
+#     for (site in sites) {
+#       fracture_correction[[site]] <- fracture_table_back_up %>% 
+#         dplyr::filter(fracture_site == site) %>%  # Filter fractures for the current site
+#         dplyr::group_by(subject_id) %>% 
+#         dplyr::summarise(min_date = min(condition_start_date, na.rm = TRUE)) %>% 
+#         dplyr::mutate(site = site)
+#     }
+#     
+#     # Combine corrections for all sites
+#     fracture_correction_combined <- dplyr::bind_rows(fracture_correction)
+#     
+#     # Update the fracture table with the washout logic
+#     fracture_table_back_up <- fracture_table_back_up %>% 
+#       dplyr::left_join(fracture_correction_combined, by = c("subject_id", "fracture_site" = "site")) %>% 
+#       dplyr::mutate(gap_to_min_date = condition_start_date - min_date) %>% 
+#       dplyr::filter(gap_to_min_date == 0 | gap_to_min_date > 90) %>% 
+#       dplyr::group_by(subject_id, condition_start_date, fracture_site) %>% 
+#       dplyr::arrange(condition_concept_id, .by_group = TRUE) %>% 
+#       dplyr::filter(dplyr::row_number() == 1) %>% 
+#       dplyr::ungroup()
+#     
+#     # Append index fractures (those that meet the criteria)
+#     index_fractures <- dplyr::bind_rows(
+#       index_fractures,
+#       fracture_table_back_up %>% 
+#         dplyr::filter(gap_to_min_date == 0) %>% 
+#         dplyr::select(-min_date, -gap_to_min_date)
+#     )
+#     
+#     # Prepare the remaining fractures for the next loop
+#     fracture_table_back_up <- fracture_table_back_up %>% 
+#       dplyr::filter(!gap_to_min_date == 0) %>% 
+#       dplyr::select(-min_date, -gap_to_min_date)
+#   }
+# )
+# 
+# # Final output: index fractures
+# fracture_table_f <- index_fractures
+# 
+# AttritionReportFrac<- AttritionReportFrac %>% 
+#   dplyr::union_all(  
+#     tibble(
+#       cohort_definition_id = as.integer(1),
+#       number_records = fracture_table_f %>% dplyr::tally() %>% dplyr::pull(),
+#       number_subjects = fracture_table_f %>% distinct(subject_id) %>% dplyr::tally() %>% dplyr::pull(),
+#       reason = "Clean out using washout period"
+#     )
+#   ) 
+# rm(index_fractures)
 
 ### Applying Hierarchy (hip,vertebra,NHNS) to multiple records on the same day ----
-fracture_table_f$fracture_site<-factor(fracture_table_f$fracture_site, levels = sites)
+fracture_table_e$fracture_site<-factor(fracture_table_e$fracture_site, levels = sites)
 
-fracture_table_g <- fracture_table_f %>%
+fracture_table_g <- fracture_table_e %>%
   dplyr::group_by(subject_id, condition_start_date) %>%
   dplyr::arrange(fracture_site, .by_group = TRUE) %>% 
   dplyr::filter( dplyr::row_number()==1) %>%
