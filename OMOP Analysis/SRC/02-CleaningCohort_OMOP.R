@@ -249,14 +249,30 @@ excluded_patients <- cohort_table %>%
 
 ## Attrition report
 # Update attrition report
+# AttritionReportCoh <- AttritionReportCoh %>%
+#   dplyr::union_all(
+#     tibble(
+#       number_records = cohort_table.1 %>% 
+#         dplyr::filter(excluded_flag == "Included") %>%
+#         nrow(),
+#       number_subjects = cohort_table.1 %>%
+#         dplyr::filter(excluded_flag == "Included") %>%
+#         dplyr::distinct(subject_id) %>%
+#         dplyr::tally() %>%
+#         dplyr::pull(),
+#       reason = "Exclude patients with less than one month of exposure"
+#     )
+#   )
+
+# Update attrition report
 AttritionReportCoh <- AttritionReportCoh %>%
   dplyr::union_all(
     tibble(
       number_records = cohort_table %>% 
-        filter(excluded_flag == "Included") %>%
+        filter(excluded_flag == "Include") %>%
         nrow(),
       number_subjects = cohort_table %>%
-        filter(excluded_flag == "Included") %>%
+        filter(excluded_flag == "Include") %>%
         distinct(subject_id) %>%
         tally() %>%
         pull(),
