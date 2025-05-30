@@ -983,7 +983,7 @@ visits_df.1 <- bind_rows(visits_raw.1, visits_omop.1)
 (line_visits_plot <- ggplot(visits_df.1, 
                            aes(x = tot_visits, y = n_pts, colour = data_source)) +
   geom_line(aes(linetype = data_source), size = 0.8) +
-  geom_point(aes(shape = data_source), size = 1.0) +
+  # geom_point(aes(shape = data_source), size = 1.0) +
   theme_minimal() +
   labs(
     title = "Distribution of Total Primary Care Visits by Data Source",
@@ -1013,9 +1013,9 @@ ggsave(here::here(
     geom_line(aes(linetype = data_source), 
               size = 0.8,
               colour = "#1874CD") +
-    geom_point(aes(shape = data_source), 
-               size = 1.0,
-               colour = "#1874CD") +
+    # geom_point(aes(shape = data_source), 
+    #            size = 1.0,
+    #            colour = "#1874CD") +
     theme_minimal() +
     labs(
       title = "Distribution of Total Primary Care Visits by Data Source",
