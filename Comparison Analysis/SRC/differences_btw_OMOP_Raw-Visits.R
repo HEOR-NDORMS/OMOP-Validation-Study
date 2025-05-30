@@ -40,6 +40,14 @@ grid.draw(venn_plot)
 
 
 # 2*2 table of patients ----
+# Import data ----
+visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_omop.csv")
+# glimpse(visit_data_omop)
+cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_omop.csv")
+
+visits_data_raw <- rio::import("H:/Projects/Validation/Data/visit_data_raw.csv")
+cohort_data_raw <- rio::import("H:/Projects/Validation/Data/cohort_table_raw.csv")
+
 
 # Convert IDs to character just to be safe
 omop_ids <- visit_data_omop %>% select(subject_id) |> rename("patid" = "subject_id") %>% distinct()
@@ -55,7 +63,7 @@ combined <- full_join(omop_ids %>% mutate(in_omop = TRUE),
   )
 
 # Create the 2x2 table
-(presence_table <- table(OMOP = combined$in_omop, Source = combined$in_raw))
+(presence_table <- table(Source = combined$in_raw, OMOP = combined$in_omop))
 colnames(presence_table)
 row.names(presence_table)
 
@@ -67,10 +75,10 @@ print(presence_table)
 
 # Convert the table to a data frame with OMOP as a column
 presence_df <- as.data.frame.matrix(presence_table)
-presence_df <- tibble::rownames_to_column(presence_df, var = "OMOP")  # Now 'OMOP' is a column
+presence_df <- tibble::rownames_to_column(presence_df, var = "Source")  # Now 'OMOP' is a column
 
 # Rename the column names to reflect Raw status
-colnames(presence_df)[2:3] <- c("Raw: No", "Raw: Yes")
+colnames(presence_df)[2:3] <- c("OMOP: No", "OMOP: Yes")
 
 rio::export(presence_df, here::here("Comparison Analysis", "Results", "contigency_table_for_pts.xlsx"))
 
