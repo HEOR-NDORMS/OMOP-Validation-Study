@@ -2,14 +2,19 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 library(tidylog)
+library(ggplot2)
+library(ggExtra)
+library(ggtext)
 
 # Import data ----
 visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_omop.csv")
-glimpse(visit_data_omop)
-cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_cprd.csv")
+# glimpse(visit_data_omop)
+cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_omop.csv")
 
 visits_data_raw <- rio::import("H:/Projects/Validation/Data/visit_data_raw.csv")
 cohort_data_raw <- rio::import("H:/Projects/Validation/Data/cohort_table_raw.csv")
+
+
 
 # Step 1: Create base 24-month matrix per patient
 cohort_grid_raw <- cohort_data_raw |>
@@ -23,20 +28,33 @@ cohort_grid_raw <- cohort_data_raw |>
   pivot_wider(names_from = month_col, values_from = value)
 
 # Step 2: Calculate month of visit relative to index date
+# visit_data_with_month_raw <- visits_data_raw |>
+#   filter(specialty != "Not Clinically Relevant",
+#          user_status == "User") |>
+#   mutate(index_date = ymd(index_date),
+#          follow_up_end = ymd(follow_up_end)) |>
+#   left_join(cohort_data_raw |> mutate(index_date = ymd(index_date),
+#                                       follow_up_end = ymd(follow_up_end)), by = c("patid", "follow_up_end", "index_date")) |>
+#   mutate(month_since_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) |>
+#   # filter(month_since_index >= 0) |>
+#   # filter(month_since_index < 24) |>
+#   group_by(patid, month_since_index) |>
+#   summarise(visits = n(), .groups = 'drop') |>
+#   mutate(month_col = paste0("month_", month_since_index)) |>
+#   select(patid, month_col, visits)
+
 visit_data_with_month_raw <- visits_data_raw |>
-  filter(specialty != "Not Clinically Relevant", 
-         user_status == "User") |> 
   mutate(index_date = ymd(index_date),
-         follow_up_end = ymd(follow_up_end)) |> 
+         follow_up_end = ymd(follow_up_end)) |>
   left_join(cohort_data_raw |> mutate(index_date = ymd(index_date),
-                                      follow_up_end = ymd(follow_up_end)), by = c("patid", "follow_up_end", "index_date")) |>
-  mutate(month_since_index = trunc((as.numeric(difftime(consdate, index_date,units = "days"))/30.44) + 1)) |>
-  # filter(month_since_index >= 0) |>
-  # filter(month_since_index < 24) |> 
+                                      follow_up_end = ymd(follow_up_end)), 
+            by = c("patid", "follow_up_end", "index_date")) |>
+  mutate(month_since_index = trunc((as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1)) |>
   group_by(patid, month_since_index) |>
-  summarise(visits = n(), .groups = 'drop') |>
+  summarise(visits = sum(if_else(specialty == "Not Clinically Relevant", 0L, 1L)), .groups = 'drop') |>
   mutate(month_col = paste0("month_", month_since_index)) |>
   select(patid, month_col, visits)
+
 
 # Step 3: Pivot visit counts to wide format
 visit_matrix_raw <- visit_data_with_month_raw |>
@@ -112,4 +130,14 @@ boot_user_visits_summary_per_month_r <- final_long_df_raw |>
 
 mean_visits_combined_r <- mean_visits_per_month_r |>
   left_join(boot_user_visits_summary_per_month_r, by = "month_after_index")
+
+m1_12 <- mean_visits_combined_r |> 
+  filter(month_after_index %in% c(1:12))
+
+sum(m1_12$mean_visits)
+
+m12_24 <- mean_visits_combined_r |> 
+  filter(month_after_index %in% c(13:24))
+sum(m12_24$mean_visits)
+
 
