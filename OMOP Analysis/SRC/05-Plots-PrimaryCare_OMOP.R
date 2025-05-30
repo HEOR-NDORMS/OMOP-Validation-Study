@@ -134,7 +134,7 @@ final_combined_prop_df <- avg_prop_specialty_month %>%
       y = "Mean Visits per Healthcare Service User",
       fill = "Specialty"
     ) +
-    scale_y_continuous(limits = c(0, 8)) +
+    scale_y_continuous(limits = c(0, 6)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
