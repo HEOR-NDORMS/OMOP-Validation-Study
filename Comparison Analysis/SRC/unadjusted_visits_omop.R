@@ -5,9 +5,9 @@ library(tidylog)
 
 # Import data ----
 
-visit_data_omop <- rio::import("H:/Projects/Validation/Data/visits_data_omop.csv")
-glimpse(visit_data_omop)
-cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_cprd.csv")
+# visit_data_omop <- rio::import("H:/Projects/Validation/Data/visits_data_omop.csv")
+# glimpse(visit_data_omop)
+# cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_cprd.csv")
 
 
 # OMOP
@@ -24,8 +24,8 @@ cohort_grid_omop <- cohort_data_omop |>
 
 # Step 2: Calculate month of visit relative to index date
 visit_data_with_month_omop <- visit_data_omop |>
-  filter(specialty != "Not Clinically Relevant", 
-         user_status == "User") |> 
+  # filter(specialty != "Not Clinically Relevant", 
+  #        user_status == "User") |> 
   mutate(index_date = ymd(index_date),
          follow_up_end = ymd(follow_up_end)) |> 
   left_join(cohort_data_omop |> mutate(index_date = ymd(index_date),
@@ -33,7 +33,7 @@ visit_data_with_month_omop <- visit_data_omop |>
   mutate(month_since_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) |>
   # filter(month_since_index >= 0, month_since_index < 24) |>
   group_by(subject_id, month_since_index) |>
-  summarise(visits = n(), .groups = 'drop') |>
+  summarise(visits = sum(if_else(specialty == "Not Clinically Relevant", 0L, 1L)), .groups = 'drop') |>
   mutate(month_col = paste0("month_", month_since_index)) |>
   select(subject_id, month_col, visits)
 
@@ -110,3 +110,12 @@ boot_user_visits_summary_per_month_o <- final_long_df_omop |>
 
 mean_visits_combined_o <- mean_visits_per_month_o |>
   left_join(boot_user_visits_summary_per_month_o, by = "month_after_index")
+
+m1_12o <- mean_visits_combined_o |> 
+  filter(month_after_index %in% c(1:12))
+
+sum(m1_12o$mean_visits)
+
+m12_24o <- mean_visits_combined_o |> 
+  filter(month_after_index %in% c(13:24))
+sum(m12_24o$mean_visits)
