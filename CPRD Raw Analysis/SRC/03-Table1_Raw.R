@@ -289,7 +289,7 @@ table_one_raw_pt <- table_one_raw_visit_data %>%
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
   rename("Variable" = "**Variable**",
-         "N = 24,740" = "**N = 24,740**") %>% 
+         "N = 18,133" = "**N = 18,133**") %>% 
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 rio::export(gt_summary_table_df, here::here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx"))
