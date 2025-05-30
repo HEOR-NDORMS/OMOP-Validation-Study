@@ -218,16 +218,16 @@ starting_population_table %>%
 ```{r}
 # Table 2: Exclusions (row 2 to 15)
 exclusion_table <- reordered_attrition %>%
-  slice(2:16)
+  slice(2:15)
 
 # Get raw count from row 16
 eligible_count_raw <- reordered_attrition %>%
-  slice(16) %>%
+  slice(15) %>%
   pull(number_subjects_raw)
 
 # Get omop count from row 18
 eligible_count_omop <- reordered_attrition %>%
-  slice(16) %>%
+  slice(15) %>%
   pull(number_subjects_omop)
 
 # Create final row with eligible counts mapped to visible columns
@@ -355,11 +355,11 @@ merged_data %>%
   # Add spanner headers for CPRD Raw and OMOP Analysis
   tab_spanner(
     label = "Source Analysis",
-    columns = c("N = 24,740")
+    columns = c("N = 17,705")
   ) %>%
   tab_spanner(
     label = "OMOP Analysis",
-    columns = c("N = 23,956")
+    columns = c("N = 18,133")
   ) %>%
 
 
@@ -596,17 +596,26 @@ grid.raster(Mean_visits_per_specialty_weighted_rp)
 
 ```{r}
 # Add a column to identify the source
-yearly_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw.xlsx"), sheet = "all_summary_visits") %>%
-  mutate(Source = "Raw")
+unadj_yearly_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Unadjusted.xlsx"), sheet = "unadjusted_all_summary") %>%
+  mutate(Source = "Raw") %>% 
+  mutate(Analysis = "Unadjusted")
+adj_yearly_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Adjusted.xlsx"), sheet = "adjusted_all_summary") %>%
+  mutate(Source = "Raw") %>% 
+  mutate(Analysis = "Adjusted")
 
-yearly_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_visits_OMOP.xlsx"), sheet = "all_summary_visits") %>%
-  mutate(Source = "OMOP")
+unadj_yearly_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_visits_OMOP-Unadjusted.xlsx"), sheet = "unadjusted_all_summary") %>%
+  mutate(Source = "OMOP")%>% 
+  mutate(Analysis = "Unadjusted")
+
+adj_yearly_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_visits_OMOP-Adjusted.xlsx"), sheet = "adjusted_all_summary") %>%
+  mutate(Source = "OMOP")%>% 
+  mutate(Analysis = "Adjusted")
 
 # Combine the data
-yearly_combined_visits_rp <- bind_rows(yearly_all_visits_only_rp_raw, yearly_all_visits_only_rp_omop) %>% 
-  select(Source, everything())
+yearly_combined_visits_rp <- bind_rows(unadj_yearly_all_visits_only_rp_raw, unadj_yearly_all_visits_only_rp_omop, adj_yearly_all_visits_only_rp_raw, adj_yearly_all_visits_only_rp_omop) %>% 
+  select(Source, Analysis, everything())
 
-# Step 3: Create the gt table
+# Create the gt table
 yearly_combined_visits_rp %>%
   gt() %>%
   tab_header(
@@ -622,36 +631,48 @@ yearly_combined_visits_rp %>%
   opt_stylize(style = 3) %>% 
   cols_label(
     Source = "Data Source",
-    mean_visit_count = "Mean Visits Per Year",
-    min_visits = "Minimum Visits Per Year",
-    max_visits = "Maximum Visits Per Year",
-    sd_visits = "SD Visits Per Year",
-    median_visits = "Median Visits Per Year",
-    q1_visits = "Lower Quartile Visits Per Year",
-    q3_visits = "Upper Quartile Visits Per Year"
+    Analysis = "Analysis",
+    mean_visit_per_year = "Mean Visits Per Year",
+    min_visit_per_year = "Minimum Visits Per Year",
+    max_visit_per_year = "Maximum Visits Per Year",
+    sd_visit_per_year = "SD Visits Per Year",
+    median_visit_per_year = "Median Visits Per Year",
+    lower_q_visits_per_year = "Lower Quartile Visits Per Year",
+    upper_q_visits_per_year = "Upper Quartile Visits Per Year",
+    lower = "Lower CI",
+    upper = "Upper CI"
   )
 
 ```
 
 ```{r}
 # Add a column to identify the source
-yearly_user_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw.xlsx"), sheet = "user_summary_visits") %>%
-  mutate(Source = "Source")
+unadj_yearly_user_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Unadjusted.xlsx"), sheet = "unadjusted_user_summary") %>%
+  mutate(Source = "Raw") %>% 
+  mutate(Analysis = "Unadjusted")
+adj_yearly_user_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Adjusted.xlsx"), sheet = "adjusted_user_summary") %>%
+  mutate(Source = "Raw") %>% 
+  mutate(Analysis = "Adjusted")
 
-yearly_user_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_visits_OMOP.xlsx"), sheet = "user_summary_visits") %>%
-  mutate(Source = "OMOP")
+unadj_yearly_user_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_visits_OMOP-Unadjusted.xlsx"), sheet = "unadjusted_user_summary") %>%
+  mutate(Source = "OMOP")%>% 
+  mutate(Analysis = "Unadjusted")
+
+adj_yearly_user_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_yearly_visits_OMOP-Adjusted.xlsx"), sheet = "adjusted_user_summary") %>%
+  mutate(Source = "OMOP")%>% 
+  mutate(Analysis = "Adjusted")
 
 # Combine the data
-yearly_user_combined_visits_rp <- bind_rows(yearly_user_visits_only_rp_raw, yearly_user_visits_only_rp_omop) %>% 
-  select(Source, everything())
+yearly_user_combined_visits_rp <- bind_rows(unadj_yearly_user_visits_only_rp_raw, unadj_yearly_user_visits_only_rp_omop, adj_yearly_user_visits_only_rp_raw, adj_yearly_user_visits_only_rp_omop) %>% 
+  select(Source, Analysis, everything())
 
-# Step 3: Create the gt table
+# Create the gt table
 yearly_user_combined_visits_rp %>%
   gt() %>%
   tab_header(
     title = md("**Healthcare Service Users - Visits Per Patient Per Year 1 & 2**"),
     subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-  ) %>%
+    ) %>%
   opt_all_caps() %>% 
   tab_options(
     table.width = px(800),
@@ -661,61 +682,50 @@ yearly_user_combined_visits_rp %>%
   opt_stylize(style = 3) %>% 
   cols_label(
     Source = "Data Source",
-    mean_visit_count = "Mean Visits Per Year",
-    min_visits = "Minimum Visits Per Year",
-    max_visits = "Maximum Visits Per Year",
-    sd_visits = "SD Visits Per Year",
-    median_visits = "Median Visits Per Year",
-    q1_visits = "Lower Quartile Visits Per Year",
-    q3_visits = "Upper Quartile Visits Per Year"
+    Analysis = "Analysis",
+    mean_visit_per_year = "Mean Visits Per Year",
+    min_visit_per_year = "Minimum Visits Per Year",
+    max_visit_per_year = "Maximum Visits Per Year",
+    sd_visit_per_year = "SD Visits Per Year",
+    median_visit_per_year = "Median Visits Per Year",
+    lower_q_visits_per_year = "Lower Quartile Visits Per Year",
+    upper_q_visits_per_year = "Upper Quartile Visits Per Year",
+    lower = "Lower CI",
+    upper = "Upper CI"
   )
-
 ```
+
 
 
 ### HCRU Overall Summary Tables
 
 ```{r}
 # Add a column to identify the source
-overall_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw.xlsx"), sheet = "overall_all_visits_only") %>%
-  mutate(Source = "Source")
+unadj_overall_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw-Unadjusted.xlsx"), sheet = "unadjusted_all_summary") %>%
+  mutate(Source = "Source") %>% 
+  mutate(Analysis = "Unadjusted")
 
-overall_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"), sheet = "overall_all_visits_only") %>%
-  mutate(Source = "OMOP")
+adj_overall_all_visits_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_visits_Raw-Adjusted.xlsx"), sheet = "adjusted_all_summary") %>%
+  mutate(Source = "Source") %>% 
+  mutate(Analysis = "Adjusted")
+
+unadj_overall_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP-Unadjusted.xlsx"), sheet = "unadjusted_all_summary") %>%
+  mutate(Source = "OMOP") %>% 
+  mutate(Analysis = "Unadjusted")
+
+adj_overall_all_visits_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_visits_OMOP-Adjusted.xlsx"), sheet = "adjusted_all_summary") %>%
+  mutate(Source = "OMOP") %>% 
+  mutate(Analysis = "Adjusted")
 
 # Combine the data
-all_combined_visits_rp <- bind_rows(overall_all_visits_only_rp_raw, overall_all_visits_only_rp_omop) %>% 
-  select(Source, everything())
+all_combined_visits_rp <- bind_rows(unadj_overall_all_visits_only_rp_raw, unadj_overall_all_visits_only_rp_omop, adj_overall_all_visits_only_rp_raw, adj_overall_all_visits_only_rp_omop) %>% 
+  select(Source, Analysis, everything())
 
-# # Step 3: Create the gt table
-# all_combined_visits_rp %>%
-#   gt() %>%
-#   tab_header(
-#     title = md("**All Patients - Visits Per Patient Per Year**"),
-#     subtitle = md("*Healthcare Service Users and Non-users*")
-#   ) %>%
-#   opt_all_caps() %>% 
-#   tab_options(
-#     table.width = px(800),
-#     heading.align = "left",
-#     table.font.size = px(14)
-#   ) |> 
-#   opt_stylize(style = 3) %>% 
-#   cols_label(
-#     Source = "Data Source",
-#     mean_visit_per_year = "Mean Visits Per Year",
-#     min_visit_per_year = "Minimum Visits Per Year",
-#     max_visit_per_year = "Maximum Visits Per Year",
-#     sd_visit_per_year = "SD Visits Per Year",
-#     median_visit_per_year = "Median Visits Per Year",
-#     lower_q_visits_per_year = "Lower Quartile Visits Per Year",
-#     upper_q_visits_per_year = "Upper Quartile Visits Per Year"
-#   )
 
 # Step 3: Transpose the table
 transposed_visits_rp <- all_combined_visits_rp %>%
   pivot_longer(
-    cols = -Source,
+    cols = c(-Source,-Analysis),
     names_to = "Metric",
     values_to = "Value"
   ) %>%
@@ -724,13 +734,19 @@ transposed_visits_rp <- all_combined_visits_rp %>%
     values_from = Value
   ) %>% 
    mutate(Metric = recode(Metric,
+    Source = "Data Source",
+    Analysis = "Analysis",
     mean_visit_per_year = "Mean Visits Per Year",
     min_visit_per_year = "Minimum Visits Per Year",
     max_visit_per_year = "Maximum Visits Per Year",
     sd_visit_per_year = "SD Visits Per Year",
     median_visit_per_year = "Median Visits Per Year",
     lower_q_visits_per_year = "Lower Quartile Visits Per Year",
-    upper_q_visits_per_year = "Upper Quartile Visits Per Year"
+    upper_q_visits_per_year = "Upper Quartile Visits Per Year",
+    lower = "Lower CI",
+    upper = "Upper CI",
+    n = "No. of Patients",
+    se = "Standard Error"
   ))
 
 # Step 4: Create gt table
