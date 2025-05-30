@@ -454,8 +454,8 @@ pt_count_visits <- visit_data_MIN %>%
    ggplot(aes(x = total_patient_visits, y = Percent_Subjects)) +
    geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
    labs(x = "Total Number of Visits", y = "% of Subjects") +
-   scale_y_continuous(limits = c(0, 4) ,
-                      breaks = seq(0, 4, by = 1))+
+   scale_y_continuous(limits = c(0, 6) ,
+                      breaks = seq(0, 6, by = 1))+
    coord_cartesian(xlim = c(0, 250)) +
    theme_minimal(base_family = 20) +
    theme(
