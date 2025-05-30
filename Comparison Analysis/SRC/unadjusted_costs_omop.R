@@ -1,4 +1,4 @@
-visit_data_omop <- rio::import("H:/Projects/Validation/Data/visits_data_omop.csv")
+# visit_data_omop <- rio::import("H:/Projects/Validation/Data/visits_data_omop.csv")
 
 # Step 1: Create base 24-month matrix per patient
 cohort_grid_omop <- cohort_data_omop |>
@@ -106,3 +106,12 @@ boot_user_costs_summary_per_month_o <- final_long_df_cost_omop |>
 
 mean_costs_combined_o <- mean_costs_per_month_o |>
   left_join(boot_user_costs_summary_per_month_o, by = "month_after_index")
+
+m1_12_co <- mean_costs_combined_o |> 
+  filter(month_after_index %in% c(1:12))
+
+sum(m1_12_co$mean_costs)
+
+m12_24_co <- mean_costs_combined_o |> 
+  filter(month_after_index %in% c(13:24))
+sum(m12_24_co$mean_costs)
