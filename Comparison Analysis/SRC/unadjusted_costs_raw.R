@@ -13,8 +13,8 @@ cohort_grid_raw <- cohort_data_raw |>
 
 # Step 2: Calculate month of visit relative to index date
 costs_visit_data_with_month_raw <- visits_data_raw |>
-  filter(specialty != "Not Clinically Relevant", 
-         user_status == "User") |> 
+  # filter(specialty != "Not Clinically Relevant", 
+  #        user_status == "User") |> 
   mutate(index_date = ymd(index_date),
          follow_up_end = ymd(follow_up_end)) |> 
   left_join(cohort_data_raw |> mutate(index_date = ymd(index_date),
@@ -27,6 +27,7 @@ costs_visit_data_with_month_raw <- visits_data_raw |>
             unit_cost = unit_cost,  
             .groups = 'drop') |>
   mutate(visits_costs = visits * unit_cost) |>
+  mutate(visits_costs = if_else(specialty == "Not Clinically Relevant", 0, visits_costs))
   distinct() |> 
   group_by(patid, month_since_index) |> 
   summarise(total_visits_cost = sum(visits_costs),
@@ -106,3 +107,12 @@ boot_user_costs_summary_per_month_r <- final_long_df_cost_raw |>
 
 mean_costs_combined_r <- mean_costs_per_month_r |>
   left_join(boot_user_costs_summary_per_month_r, by = "month_after_index")
+
+m1_12_c <- mean_costs_combined_r |> 
+  filter(month_after_index %in% c(1:12))
+
+sum(m1_12_c$mean_costs)
+
+m12_24_c <- mean_costs_combined_r |> 
+  filter(month_after_index %in% c(13:24))
+sum(m12_24_c$mean_costs)
