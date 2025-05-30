@@ -24,9 +24,9 @@ visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_min_omop.
 glimpse(visit_data_omop)
 
 # Identify overlapping and missing subjects ----
-overlap_subjects <- intersect(visit_data_omop$subject_id, visit_data_raw$patid)
-only_in_omop <- setdiff(visit_data_omop$subject_id, visit_data_raw$patid)
-only_in_raw <- setdiff(visit_data_raw$patid, visit_data_omop$subject_id)	
+overlap_subjects <- intersect(visits_data_omop$subject_id, visits_data_raw$patid)
+only_in_omop <- setdiff(visits_data_omop$subject_id, visits_data_raw$patid)
+only_in_raw <- setdiff(visits_data_raw$patid, visits_data_omop$subject_id)	
 
 
 cat("Subjects in both datasets:", length(overlap_subjects), "\n")
@@ -43,7 +43,7 @@ grid.draw(venn_plot)
 
 # Convert IDs to character just to be safe
 omop_ids <- visit_data_omop %>% select(subject_id) |> rename("patid" = "subject_id") %>% distinct()
-raw_ids  <- visit_data_raw %>% select(patid) %>% distinct()
+raw_ids  <- visits_data_raw %>% select(patid) %>% distinct()
 
 # Full join to get all unique patient IDs from both datasets
 combined <- full_join(omop_ids %>% mutate(in_omop = TRUE),
@@ -72,7 +72,7 @@ presence_df <- tibble::rownames_to_column(presence_df, var = "OMOP")  # Now 'OMO
 # Rename the column names to reflect Raw status
 colnames(presence_df)[2:3] <- c("Raw: No", "Raw: Yes")
 
-# export(presence_df, here("Comparison Analysis", "Results", "contigency_table_for_pts.xlsx"))
+rio::export(presence_df, here::here("Comparison Analysis", "Results", "contigency_table_for_pts.xlsx"))
 
 # 2*2 for user/non-users ----
 
@@ -84,7 +84,7 @@ omop_clean <- visit_data_omop %>%
   distinct(subject_id, omop_status, .keep_all = TRUE)
 
 table(omop_clean$omop_status)
-source_clean <- visit_data_raw %>%
+source_clean <- visits_data_raw %>%
   select(patid, user_status) %>%
   mutate(source_status = user_status) |> 
   select(-user_status) |> 
@@ -715,7 +715,7 @@ combined_costs2 <- bind_rows(raw_costs_by_month2, omop_costs_by_month2, mean_cos
 
 
 # Specialty count ----
-specialty_count_r <- visit_data_raw |> 
+specialty_count_r <- visits_data_raw |> 
   group_by(specialty) |> 
   summarise(n_pts = n_distinct(patid),
             n_rows = n(),
@@ -742,7 +742,8 @@ library(viridis)
 library(scales)
 library(patchwork)
 
-(top_20_plot_r <- ggplot(top_20_r, aes(x = reorder(specialty, n_pts), y = n_pts, fill = specialty)) +
+(top_20_plot_r <- ggplot(top_20_r, aes(x = reorder(specialty, n_pts,
+                                                   decreasing = TRUE), y = n_pts, fill = specialty)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = comma(n_pts)), 
             hjust = -0.1, size = 3.2) +
@@ -823,13 +824,13 @@ library(ggplot2)
                  aes(x = month_after_index, 
                      y = mean_visits_boot, color = source)) +
     geom_line(size = 0.8) +
-    geom_point(size = 0.8) +
+    geom_point(size = 1.0) +
     geom_errorbar(aes(ymin=lower_ci,
                     ymax=upper_ci), width = 0.4)+
     labs(
       title = "Mean Primary Care Visits by Data Source",
       x = "Month After Index Fracture",
-      y = "Mean Primary Care Visits (Service Users)",
+      y = "Mean Primary Care Visits",
       color = "Data Source"
     ) +
     scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
@@ -845,7 +846,7 @@ library(ggplot2)
 
 ggsave(here::here(
   "Comparison Analysis", "Results", "Plots",
-  "Mean_visits_per_data_source_unadjusted.PNG"),
+  "Mean_visits_per_data_source_unadjusted_no_washout.PNG"),
   plot = plot1,
   width = 6.5,
   height = 5,
@@ -867,17 +868,17 @@ combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
                        aes(x = month_after_index, 
                            y = mean_costs, color = source)) +
     geom_line(size = 0.8) +
-    geom_point(size = 0.8) +
+    geom_point(size = 1.0) +
     geom_errorbar(aes(ymin=lower_ci,
                       ymax=upper_ci), width = 0.4)+
     labs(
       title = "Mean Costs of Primary Care Visit by Data Source",
       x = "Month After Index Fracture",
-      y = "Mean Costs of Primary Care Visits, Service Users (£)",
+      y = "Mean Costs of Primary Care Visits (£)",
       color = "Data Source"
     ) +
     scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-    scale_y_continuous(breaks = seq(0, 120, by = 20), limits = c(0, 120)) +
+    scale_y_continuous(breaks = seq(0, 100, by = 20), limits = c(0, 100)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -889,10 +890,303 @@ combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
 
 ggsave(here::here(
   "Comparison Analysis", "Results", "Plots",
-  "Mean_costs_per_data_source_unadjusted.PNG"),
+  "Mean_costs_per_data_source_unadjusted_no_washout.PNG"),
   plot = plot_costs1,
   width = 6.5,
   height = 5,
   dpi = 300,
   bg = "white"
 )
+
+## Distribution of visits ----
+visits_raw <- visits_data_raw |> 
+  group_by(patid, specialty) |> 
+  summarise(visits = n()) |>
+  ungroup() |> 
+  mutate(visits = if_else(specialty == "Not Clinically Relevant", 0L, visits)) |> 
+  group_by(patid) |> 
+  summarise(tot_visits = sum(visits)) |> 
+  ungroup() |> 
+  mutate(data_source = "Source") |> 
+  select(data_source, tot_visits)
+
+visits_omop <- visit_data_omop |> 
+  group_by(subject_id, specialty) |> 
+  summarise(visits = n()) |>
+  ungroup() |> 
+  mutate(visits = if_else(specialty == "Not Clinically Relevant", 0L, visits)) |> 
+  group_by(subject_id) |> 
+  summarise(tot_visits = sum(visits)) |> 
+  ungroup() |> 
+  mutate(data_source = "OMOP")|> 
+  select(data_source, tot_visits) 
+
+visits_df <- bind_rows(visits_raw, visits_omop)
+
+(hist_visits_plot <- ggplot(visits_df, 
+                            aes(x = tot_visits, 
+                                fill = data_source,
+                                colour = data_source)) +
+    geom_histogram(binwidth = 2, alpha = 0.7) +
+    guides(colour = "none") +
+    theme_minimal() +
+    labs(
+      title = "Distribution of Total Primary Care Visits by Data Source",
+      x = "Total Primary Care Visits (bin width = 2)",
+      y = "Count of Patients",
+      fill = "Data Source",
+      caption = "Each bar represents a 2-visit range (e.g., 0–1, 2–3, ...) \n up to the range of the data source."
+    ) +
+    theme(
+      axis.title = element_text(hjust = 0.5, size = 12),
+      plot.title = element_text(face = "bold", size = 14)
+    ))
+
+ggsave(here::here(
+  "Comparison Analysis", "Results", "Plots",
+  "Tot_visits_per_data_source_unadjusted_no_washout-hist.PNG"),
+  plot = hist_visits_plot,
+  width = 6.5,
+  height = 5,
+  dpi = 300,
+  bg = "white"
+)
+
+visits_raw.1 <- visits_data_raw |> 
+  group_by(patid, specialty) |> 
+  summarise(visits = n()) |>
+  ungroup() |> 
+  mutate(visits = if_else(specialty == "Not Clinically Relevant", 0L, visits)) |> 
+  group_by(patid) |> 
+  summarise(tot_visits = sum(visits)) |> 
+  ungroup() |> 
+  group_by(tot_visits) |> 
+  summarise(n_pts = n()) |> 
+  mutate(data_source = "Source") |> 
+  select(data_source,n_pts, tot_visits)
+
+visits_omop.1 <- visit_data_omop |> 
+  group_by(subject_id, specialty) |> 
+  summarise(visits = n()) |>
+  ungroup() |> 
+  mutate(visits = if_else(specialty == "Not Clinically Relevant", 0L, visits)) |> 
+  group_by(subject_id) |> 
+  summarise(tot_visits = sum(visits)) |> 
+  ungroup() |>
+  group_by(tot_visits) |> 
+  summarise(n_pts = n()) |>
+  mutate(data_source = "OMOP")|> 
+  select(data_source, n_pts, tot_visits) 
+
+visits_df.1 <- bind_rows(visits_raw.1, visits_omop.1)
+
+(line_visits_plot <- ggplot(visits_df.1, 
+                           aes(x = tot_visits, y = n_pts, colour = data_source)) +
+  geom_line(aes(linetype = data_source), size = 0.8) +
+  geom_point(aes(shape = data_source), size = 1.0) +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Total Primary Care Visits by Data Source",
+    x = "Total Primary Care Visits",
+    y = "Count of Patients"
+  ) +
+  scale_colour_discrete(name = "Data Source") +
+  scale_linetype_discrete(name = "Data Source") +
+  scale_shape_discrete(name = "Data Source") +
+  theme(
+    axis.title = element_text(hjust = 0.5, size = 12),
+    plot.title = element_text(face = "bold", size = 14)
+  ))
+
+ggsave(here::here(
+  "Comparison Analysis", "Results", "Plots",
+  "Tot_visits_per_data_source_unadjusted_no_washout-line.PNG"),
+  plot = line_visits_plot,
+  width = 6.5,
+  height = 5,
+  dpi = 300,
+  bg = "white"
+)
+
+(line_visits_plot_f <- ggplot(visits_df.1, 
+                            aes(x = tot_visits, y = n_pts)) +
+    geom_line(aes(linetype = data_source), 
+              size = 0.8,
+              colour = "#1874CD") +
+    geom_point(aes(shape = data_source), 
+               size = 1.0,
+               colour = "#1874CD") +
+    theme_minimal() +
+    labs(
+      title = "Distribution of Total Primary Care Visits by Data Source",
+      x = "Total Primary Care Visits",
+      y = "Count of Patients",
+      fill = "Data Source"
+    ) +
+    theme(
+      axis.title = element_text(hjust = 0.5, size = 12),
+      plot.title = element_text(face = "bold", size = 14)
+    ) +
+    facet_wrap(~data_source))
+
+ggsave(here::here(
+  "Comparison Analysis", "Results", "Plots",
+  "Tot_visits_per_data_source_unadjusted_no_washout-line_faceted.PNG"),
+  plot = line_visits_plot_f,
+  width = 6.5,
+  height = 5,
+  dpi = 300,
+  bg = "white"
+)
+
+(density_plot_v <- ggplot(data = visits_df, 
+                          aes(
+                            x = tot_visits,
+                            fill = data_source,
+                            colour = data_source)) +
+    geom_density() +
+    guides(colour = "none") +
+    theme_minimal() +
+    labs(
+      title = "Distribution of Total Primary Care Visitsby Data Source",
+      x = "Total Primary Care Visits",
+      y = "Count of Patients",
+      fill = "Data Source"
+    ) +
+    theme(
+      axis.title = element_text(hjust = 0.5, size = 12),
+      plot.title = element_text(face = "bold", size = 14)
+    ))
+
+ggsave(here::here(
+  "Comparison Analysis", "Results", "Plots",
+  "Tot_visits_per_data_source_unadjusted_no_washout-dens.PNG"),
+  plot = density_plot_v,
+  width = 6.5,
+  height = 5,
+  dpi = 300,
+  bg = "white"
+)
+
+# (combined_plot <- ggplot(visits_df, 
+#                         aes(x = tot_visits, fill = data_source, colour = data_source)) +
+#   geom_histogram(binwidth = 2, alpha = 0.4, position = "identity") +  # Slightly transparent
+#   geom_density(alpha = 0.8, linewidth = 1.1) +                         # Add smoothed lines
+#   guides(colour = "none") +
+#   theme_minimal() +
+#   labs(
+#     title = "Distribution of Total Visits by Data Source",
+#     x = "Total Visits",
+#     y = "Count of Patients",
+#     fill = "Data Source",
+#     caption = "Each bar represents a 2-visit range (e.g., 0–2, 2–4, ...) up to the range of the data source."
+#   ) +
+#   theme(
+#     axis.title = element_text(hjust = 0.5, size = 12),
+#     plot.title = element_text(face = "bold", size = 14)
+#   ))
+
+## Distribution of visit costs ----
+costs_raw <- visits_data_raw |> 
+  group_by(patid, specialty) |> 
+  summarise(visits = n(), 
+            visits_costs = visits * unit_cost) |>
+  ungroup() |> 
+  mutate(visits_costs = if_else(specialty == "Not Clinically Relevant", 0L, visits_costs)) |>
+  distinct() |> 
+  group_by(patid) |> 
+  summarise(tot_costs = sum(visits_costs)) |> 
+  ungroup() |> 
+  mutate(data_source = "Source") |> 
+  select(data_source, tot_costs)
+
+costs_omop <- visit_data_omop |> 
+  group_by(subject_id, specialty) |> 
+  summarise(visits = n(), 
+            visits_costs = visits * unit_cost) |>
+  ungroup() |> 
+  mutate(visits_costs = if_else(specialty == "Not Clinically Relevant", 0L, visits_costs)) |> 
+  distinct() |>
+  group_by(subject_id) |> 
+  summarise(tot_costs = sum(visits_costs)) |> 
+  ungroup() |> 
+  mutate(data_source = "OMOP")|> 
+  select(data_source, tot_costs) 
+
+costs_df <- bind_rows(costs_raw, costs_omop)
+options(scipen = 999)
+(hist_costs_plot <- ggplot(costs_df, 
+                           aes(x = tot_costs, 
+                               fill = data_source,
+                               colour = data_source)) +
+    geom_histogram(binwidth = 100, alpha = 0.7) +
+    guides(colour = "none") +
+    theme_minimal() +
+    labs(
+      title = "Distribution of Total Visit Costs by Data Source",
+      x = "Total Costs of Primary Care Visits (£) (bin width = 100)",
+      y = "Count of Patients",
+      fill = "Data Source",
+      caption = "Each bar represents a 100-visit costs range (e.g., 0–100, 101-200, ...) \n up to the range of the data source."
+    ) +
+    scale_y_continuous(labels = scales::comma) +
+    scale_x_continuous(labels = scales::comma) +
+    theme(
+      axis.title = element_text(hjust = 0.5, size = 12),
+      plot.title = element_text(face = "bold", size = 14)
+    ))
+ggsave(here::here(
+  "Comparison Analysis", "Results", "Plots",
+  "Tot_costs_per_data_source_unadjusted_no_washout-hist.PNG"),
+  plot = hist_costs_plot,
+  width = 6.5,
+  height = 5,
+  dpi = 300,
+  bg = "white"
+)
+(density_plot_c <- ggplot(costs_df, 
+                          aes(x = tot_costs, 
+                              fill = data_source,
+                              colour = data_source)) +
+    geom_density() +
+    guides(colour = "none") +
+    theme_minimal() +
+    labs(
+      title = "Distribution of Total Visit Costs by Data Source",
+      x = "Total Costs of Primary Care Visits (£)",
+      y = "Density",
+      fill = "Data Source"
+    ) +
+    # scale_y_continuous(labels = scales::comma) +
+    scale_x_continuous(labels = scales::comma) +
+    theme(
+      axis.title = element_text(hjust = 0.5, size = 12),
+      plot.title = element_text(face = "bold", size = 14)
+    ))
+ggsave(here::here(
+  "Comparison Analysis", "Results", "Plots",
+  "Tot_costs_per_data_source_unadjusted_no_washout-dens.PNG"),
+  plot = density_plot_c,
+  width = 6.5,
+  height = 5,
+  dpi = 300,
+  bg = "white"
+)
+
+# (combined_plot <- ggplot(visits_df, 
+#                          aes(x = tot_visits, fill = data_source, colour = data_source)) +
+#     geom_histogram(binwidth = 2, alpha = 0.4, position = "identity") +  # Slightly transparent
+#     geom_density(alpha = 0.8, linewidth = 1.1) +                         # Add smoothed lines
+#     guides(colour = "none") +
+#     theme_minimal() +
+#     labs(
+#       title = "Distribution of Total Visits by Data Source",
+#       x = "Total Visits",
+#       y = "Count of Patients",
+#       fill = "Data Source",
+#       caption = "Each bar represents a 2-visit range (e.g., 0–2, 2–4, ...) up to the range of the data source."
+#     ) +
+#     theme(
+#       axis.title = element_text(hjust = 0.5, size = 12),
+#       plot.title = element_text(face = "bold", size = 14)
+#     ))
