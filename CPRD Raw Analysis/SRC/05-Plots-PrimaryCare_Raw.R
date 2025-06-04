@@ -134,22 +134,23 @@ final_combined_prop_df <- avg_prop_specialty_month %>%
   ) +
   scale_y_continuous(limits = c(0, 5)) +
   theme_minimal() +
-  theme(
-    plot.title = element_text(face = "bold", hjust = 0.5),
-    axis.title = element_text(hjust = 0.5, size = 12),
-    axis.text = element_text(size = 10),
-    legend.text = element_text(size = 10),
-    legend.title = element_text(size = 12),
-    legend.position = "top",
-    panel.spacing = unit(2, "lines")
-  ))
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      axis.title = element_text(hjust = 0.5, size = 18),
+      axis.text = element_text(size = 15),
+      legend.text = element_text(size = 15),
+      legend.title = element_text(size = 14),
+      legend.position = "top",
+      plot.caption = element_text(size = 14),
+      panel.spacing = unit(2, "lines")
+    ))
 
 ggsave(here::here(
   "CPRD Raw Analysis", "Results", "Plots",
   "Mean_visits_per_specialty_unweighted.PNG"),
   plot = plot_visits_unadjusted,
   width = 7.5,
-  height = 7,
+  height = 6,
   bg = "white"
 )
 
@@ -340,20 +341,20 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
     )) +
     labs(
       x = "Month After Index",
-      y = "Mean Visits per Healthcare Service User (Adjusted)",
+      y = "Adjusted Mean Visits per Healthcare Service User",
       fill = "Specialty",
-      caption = "Adjusted for partial follow-up: included patients with ≥15.22 days/month.\nPartial months scaled by exposure; full months or death-months used raw counts."
+      caption = "Adjusted for partial follow-up: included patients with ≥15.22 days/month.\nPartial months scaled by exposure; \n full months or death-months used raw counts."
     ) +
-    scale_y_continuous(limits = c(0, 5)) +
+    scale_y_continuous(limits = c(0, 4)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
-      axis.title = element_text(hjust = 0.5, size = 12),
-      axis.text = element_text(size = 10),
-      legend.text = element_text(size = 10),
-      legend.title = element_text(size = 12),
+      axis.title = element_text(hjust = 0.5, size = 18),
+      axis.text = element_text(size = 15),
+      legend.text = element_text(size = 15),
+      legend.title = element_text(size = 14),
       legend.position = "top",
-      plot.caption = element_text(size = 12),
+      plot.caption = element_text(size = 14),
       panel.spacing = unit(2, "lines")
     ))
 
@@ -361,7 +362,7 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
 ggsave(here::here("CPRD Raw Analysis", "Results", "Plots", "Mean_visits_per_specialty_weighted.PNG"),
        plot = plot_visits_adjusted,
        width = 7.5,
-       height = 7,
+       height = 6,
        bg = "white"
        )
 
@@ -454,8 +455,8 @@ pt_count_visits <- visit_data_MIN %>%
    ggplot(aes(x = total_patient_visits, y = Percent_Subjects)) +
    geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
    labs(x = "Total Number of Visits", y = "% of Subjects") +
-   scale_y_continuous(limits = c(0, 4) ,
-                      breaks = seq(0, 4, by = 1))+
+   scale_y_continuous(limits = c(0, 6) ,
+                      breaks = seq(0, 6, by = 1))+
    coord_cartesian(xlim = c(0, 250)) +
    theme_minimal(base_family = 20) +
    theme(
@@ -577,9 +578,8 @@ unadj_plots_users_mean_costs_specialty_weighted <- unadj_costs_per_specialty_mon
       "Other" = "#253494"
     )) +
     labs(
-      title = "Mean Monthly Healthcare Costs per User by Specialty",
       x = "Month After Index",
-      y = "Mean Costs per User (£)",
+      y = "Mean Costs per Healthcare Service User ",
       fill = "Specialty"
     ) +
     scale_y_continuous(limits = c(0, 130)) +
@@ -600,7 +600,7 @@ ggsave(here::here(
   "Mean_costs_per_specialty_unweighted.PNG"),
   plot = plot_costs_unadjusted,
   width = 7.5,
-  height = 7,
+  height = 6,
   bg = "white"
 )
 
@@ -806,10 +806,10 @@ adj_final_combined_costs_df <- adj_avg_prop_specialty_month_costs |>
     )) +
     labs(
       x = "Month After Index",
-      y = "Adjusted Mean Costs per User",
+      y = "Adjusted Mean Costs per Healthcare Service User",
       fill = "Specialty"
     ) +
-    scale_y_continuous(limits = c(0, 200)) +
+    scale_y_continuous(limits = c(0, 130)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -818,6 +818,7 @@ adj_final_combined_costs_df <- adj_avg_prop_specialty_month_costs |>
       legend.text = element_text(size = 15),
       legend.title = element_text(size = 14),
       legend.position = "top",
+      plot.caption = element_text(size = 14),
       panel.spacing = unit(2, "lines")
     ))
 
@@ -827,7 +828,7 @@ ggsave(here::here(
   "CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_weighted.PNG"),
   plot = plot_costs_adjusted,
   width = 7.5,
-  height = 7,
+  height = 6,
   bg = "white"
 )
 
