@@ -203,61 +203,6 @@ all_summary_reduced <- visits_results_omop_reduced$all_summary_reduced
 # Filter user visits and relevant specialties
 user_visits <- visit_data %>%
   filter(user_status == "User", specialty != "Not Clinically Relevant")
-# non_user_v <- visit_data %>%
-#   filter(user_status == "Non-User") %>% group_by(subject_id) %>% slice(1)
-
-# We then compute visits per year per patient
-# user_yearly_visits <- user_visits %>%
-#   group_by(subject_id, specialty) %>%
-#   summarise(visits_count = first(visit_count),
-#             exposed_yrs = first(exposed_yrs),
-#             .groups = "drop") %>%
-#   group_by(subject_id) %>%
-#   summarise(
-#     total_patient_visits = sum(visits_count, na.rm = TRUE),
-#     total_exposed_yrs = first(exposed_yrs),
-#     visits_per_year = total_patient_visits / total_exposed_yrs,
-#     .groups = "drop"
-#   )
-
-# mean(user_yearly_visits$visits_per_year)
-
-# user_only_summary_statistics_overall <- tibble(
-#   mean_visit_per_year = round(sum(user_yearly_visits$total_patient_visits) / sum(user_yearly_visits$total_exposed_yrs), 2),
-#   min_visit_per_year = round(min(user_yearly_visits$visits_per_year), 2),
-#   max_visit_per_year = round(max(user_yearly_visits$visits_per_year), 2),
-#   sd_visit_per_year = round(sd(user_yearly_visits$visits_per_year), 2),
-#   median_visit_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.5)), 2),
-#   lower_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.25)), 2),
-#   upper_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.75)), 2)
-# )
-
-# All patients
-
-# We then compute visits per year per patient
-# all_yearly_visits <- visit_data %>%
-#   group_by(subject_id, specialty) %>%
-#   summarise(visits_count = first(visit_count),
-#             exposed_yrs = first(exposed_yrs),
-#             .groups = "drop") %>%
-#   group_by(subject_id) %>%
-#   summarise(
-#     total_patient_visits = sum(visits_count, na.rm = TRUE),
-#     total_exposed_yrs = first(exposed_yrs),
-#     visits_per_year = total_patient_visits / total_exposed_yrs,
-#     .groups = "drop"
-#   )
-# 
-# all_summary_statistics_overall <- tibble(
-#   mean_visit_per_year = round(sum(all_yearly_visits$total_patient_visits) / sum(all_yearly_visits$total_exposed_yrs), 2),
-#   min_visit_per_year = round(min(all_yearly_visits$visits_per_year), 2),
-#   max_visit_per_year = round(max(all_yearly_visits$visits_per_year), 2),
-#   sd_visit_per_year = round(sd(all_yearly_visits$visits_per_year), 2),
-#   median_visit_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.5)), 2),
-#   lower_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.25)), 2),
-#   upper_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.75)), 2)
-# )
-
 
 # Export the output
 library(writexl)
@@ -285,8 +230,6 @@ unadjusted_yearly_visits <- user_visits %>%
   group_by(subject_id) %>%
   summarise(
     total_patient_visits = sum(visits_count, na.rm = TRUE),
-    # total_exposed_yrs = first(exposed_yrs),
-    # visits_per_year = total_patient_visits / total_exposed_yrs,
     .groups = "drop"
   )
 
@@ -320,8 +263,6 @@ unadjusted_all_yearly_visits <- visit_data %>%
   group_by(subject_id) %>%
   summarise(
     total_patient_visits = sum(visits_count, na.rm = TRUE),
-    # total_exposed_yrs = first(exposed_yrs),
-    # visits_per_year = total_patient_visits / total_exposed_yrs,
     .groups = "drop"
   )
 
@@ -352,7 +293,7 @@ unadjusted_visits_list <- list(
 write_xlsx(unadjusted_visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP-Unadjusted.xlsx"))
 
 
-#### Adjusted ----
+###Adjusted ----
 adjusted_users_visits_overall <- visit_data %>%
   filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
   mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
@@ -496,7 +437,7 @@ adjusted_all_summary_statistics_overall <- adjusted_all_visits_overall_results %
   mutate(across(everything(), round, 2))
 
 adjusted_visits_list <- list(
-  adjusted_all_summary = adjusted_all_only_summary_statistics_overall,
+  adjusted_all_summary = adjusted_all_summary_statistics_overall,
   adjusted_user_only_summary = adjusted_user_only_summary_statistics_overall
 )
 
