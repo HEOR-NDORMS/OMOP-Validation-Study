@@ -84,12 +84,14 @@ addInFollowUpEndGL <- function(fractureTable) {
   fractureTable %>%
     dplyr::mutate(
       follow_up_end = pmin(
-        .data$after_index, 
-        .data$observation_period_end_date, 
+        .data$two_yrs_after_index, 
+        .data$cohort_end_date, 
         .data$cancer_date, 
         .data$mbd_date, 
         .data$fracture_after_index, 
         .data$death_date, 
+        .data$study_end, 
+        
         na.rm = TRUE
       )
     ) %>%
@@ -97,16 +99,18 @@ addInFollowUpEndGL <- function(fractureTable) {
     dplyr::mutate(
       follow_up_reason = paste(
         c(
-          if (!is.na(after_index) & follow_up_end == after_index) "after_index",
-          if (!is.na(observation_period_end_date) & follow_up_end == observation_period_end_date) "observation_period_end_date",
+          if (!is.na(two_yrs_after_index) & follow_up_end == two_yrs_after_index) "two_yrs_after_index",
+          if (!is.na(cohort_end_date) & follow_up_end == cohort_end_date) "observation_period_end_date",
           if (!is.na(cancer_date) & follow_up_end == cancer_date) "cancer_date",
           if (!is.na(mbd_date) & follow_up_end == mbd_date) "mbd_date",
           if (!is.na(fracture_after_index) & follow_up_end == fracture_after_index) "fracture_after_index",
-          if (!is.na(death_date) & follow_up_end == death_date) "death_date"
+          if (!is.na(death_date) & follow_up_end == death_date) "death_date",
+          if (!is.na(study_end) & follow_up_end == study_end) "study_end"
+          
         ),
         collapse = ", "
       ),
-      follow_up_time = follow_up_end - index_date
+      follow_up_time = follow_up_end - condition_start_date
     ) %>%
     dplyr::ungroup()
 }

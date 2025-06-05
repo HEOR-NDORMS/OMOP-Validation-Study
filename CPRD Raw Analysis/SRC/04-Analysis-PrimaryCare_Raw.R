@@ -21,14 +21,15 @@ cohort_table_raw <- table_one_raw
 ## Import the staff and consultation tables ----
 # this is to be used for the specialty
 validation_staff <- my_dm$`validation_staff` %>% collect()
-validation_consultation <- my_dm$`validation_consultation` %>% collect()
+validation_consultation <- my_dm$`validation_consultation` %>% collect() %>% 
+  # Filter such that we have the visits between the study start and study end dates
+  filter(consdate >= study_start_date & consdate <= study_end_date)
 
 ## Merge with validation_consultation ----
 # Filter from index date to follow up end date
 visit_data <- inner_join(cohort_table_raw, validation_consultation,
                          by = "patid"
-) %>%
-  # in order to count all the visits  from index date until follow-up end date.
+) %>%  # in order to count all the visits  from index date until follow-up end date.
   filter(consdate >= index_date & consdate <= follow_up_end)
 # left_join it back to the cohort data - so this 13 data will be non-users
 # NOTE: 13 patients are being dropped when we filter to have consultation date be
@@ -491,7 +492,7 @@ adjusted_all_summary_statistics_overall <- adjusted_all_visits_overall_results %
 
 
 adjusted_visits_list <- list(
-  adjusted_all_summary = adjusted_all_only_summary_statistics_overall,
+  adjusted_all_summary = adjusted_all_summary_statistics_overall,
   adjusted_user_only_summary = adjusted_user_only_summary_statistics_overall
 )
 
@@ -932,7 +933,7 @@ adjusted_all_costs_summary_statistics_overall <- adjusted_all_costs_overall_resu
 
 adjusted_costs_list <- list(
   adjusted_all_costs_summary = adjusted_all_costs_summary_statistics_overall,
-  adjusted_user_only_costs = adjusted_user_only_costs_summary_statistics_overall
+  adjusted_user_only_costs = adjusted_user_costs_summary_statistics_overall
 )
 
 write_xlsx(adjusted_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_costs_Raw-Adjusted.xlsx"))

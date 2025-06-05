@@ -98,12 +98,14 @@ addInFollowUpEndGL <- function(fractureTable) {
   fractureTable %>%
     dplyr::mutate(
       follow_up_end = pmin( # follow-up end is the minimum date of possible censoring events being:
-        .data$after_index, # 730 after index
+        .data$two_yrs_after_index, # 730 after index
         .data$aurum_max_accept_date, # end of data collection
         .data$cancer_fa_index_dt, # cancer
         .data$paget_fa_index_dt, # pagets or mbd
         .data$fracture_after_index, # fracture ensuing index
         .data$death_date, # death
+        .data$study_end, # end of study
+        
         na.rm = TRUE
       )
     ) %>%
@@ -111,12 +113,14 @@ addInFollowUpEndGL <- function(fractureTable) {
     dplyr::mutate(
       follow_up_reason = paste(
         c(
-          if (!is.na(after_index) & follow_up_end == after_index) "after_index",
+          if (!is.na(two_yrs_after_index) & follow_up_end == two_yrs_after_index) "two_yrs_after_index",
           if (!is.na(aurum_max_accept_date) & follow_up_end == aurum_max_accept_date) "observation_period_end_date",
           if (!is.na(cancer_fa_index_dt) & follow_up_end == cancer_fa_index_dt) "cancer_date",
           if (!is.na(paget_fa_index_dt) & follow_up_end == paget_fa_index_dt) "mbd_date",
           if (!is.na(fracture_after_index) & follow_up_end == fracture_after_index) "fracture_after_index",
-          if (!is.na(death_date) & follow_up_end == death_date) "death_date"
+          if (!is.na(death_date) & follow_up_end == death_date) "death_date",
+          if (!is.na(study_end) & follow_up_end == study_end) "study_end"
+          
         ),
         collapse = ", "
       ),
