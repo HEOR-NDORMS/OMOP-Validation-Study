@@ -7,12 +7,12 @@ library(ggExtra)
 library(ggtext)
 
 # Import data ----
-visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_omop.csv")
-# glimpse(visit_data_omop)
-cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_omop.csv")
-
-visits_data_raw <- rio::import("H:/Projects/Validation/Data/visit_data_raw.csv")
-cohort_data_raw <- rio::import("H:/Projects/Validation/Data/cohort_table_raw.csv")
+# visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_omop.csv")
+# # glimpse(visit_data_omop)
+# cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_omop.csv")
+# 
+# visits_data_raw <- rio::import("H:/Projects/Validation/Data/visit_data_raw.csv")
+# cohort_data_raw <- rio::import("H:/Projects/Validation/Data/cohort_table_raw.csv")
 
 
 
