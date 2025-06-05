@@ -24,9 +24,9 @@ visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_min_omop.
 glimpse(visit_data_omop)
 
 # Identify overlapping and missing subjects ----
-overlap_subjects <- intersect(visits_data_omop$subject_id, visits_data_raw$patid)
-only_in_omop <- setdiff(visits_data_omop$subject_id, visits_data_raw$patid)
-only_in_raw <- setdiff(visits_data_raw$patid, visits_data_omop$subject_id)	
+overlap_subjects <- intersect(visit_data_omop$subject_id, visits_data_raw$patid)
+only_in_omop <- setdiff(visit_data_omop$subject_id, visits_data_raw$patid)
+only_in_raw <- setdiff(visits_data_raw$patid, visit_data_omop$subject_id)	
 
 
 cat("Subjects in both datasets:", length(overlap_subjects), "\n")
@@ -41,12 +41,12 @@ grid.draw(venn_plot)
 
 # 2*2 table of patients ----
 # Import data ----
-visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_omop.csv")
-# glimpse(visit_data_omop)
-cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_omop.csv")
-
-visits_data_raw <- rio::import("H:/Projects/Validation/Data/visit_data_raw.csv")
-cohort_data_raw <- rio::import("H:/Projects/Validation/Data/cohort_table_raw.csv")
+# visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_omop.csv")
+# # glimpse(visit_data_omop)
+# cohort_data_omop <- rio::import("H:/Projects/Validation/Data/cohort_table_omop.csv")
+# 
+# visits_data_raw <- rio::import("H:/Projects/Validation/Data/visit_data_raw.csv")
+# cohort_data_raw <- rio::import("H:/Projects/Validation/Data/cohort_table_raw.csv")
 
 
 # Convert IDs to character just to be safe
@@ -119,7 +119,7 @@ row.names(user_table)
 user_df <- as.data.frame.matrix(user_table)
 user_df <- tibble::rownames_to_column(user_df, var = "Source")  # Now 'OMOP' is a column
 
-# export(user_df, here("Comparison Analysis", "Results", "contigency_table_for_user_status.xlsx"))
+export(user_df, here("Comparison Analysis", "Results", "contigency_table_for_user_status.xlsx"))
 
 # Monthly  Visits plot -----
 visit_data_reduced_min_raw <- rio::import("H:/Projects/Validation/Data/visit_data_reduced_min_raw.csv")
@@ -1097,8 +1097,9 @@ ggsave(here::here(
 ## Distribution of visit costs ----
 costs_raw <- visits_data_raw |> 
   group_by(patid, specialty) |> 
-  summarise(visits = n(), 
-            visits_costs = visits * unit_cost) |>
+  summarise(visits = n(),
+            unit_cost = unit_cost) |> 
+  mutate(visits_costs = visits * unit_cost) |> 
   ungroup() |> 
   mutate(visits_costs = if_else(specialty == "Not Clinically Relevant", 0L, visits_costs)) |>
   distinct() |> 
@@ -1110,8 +1111,9 @@ costs_raw <- visits_data_raw |>
 
 costs_omop <- visit_data_omop |> 
   group_by(subject_id, specialty) |> 
-  summarise(visits = n(), 
-            visits_costs = visits * unit_cost) |>
+  summarise(visits = n(),
+            unit_cost = unit_cost) |> 
+  mutate(visits_costs = visits * unit_cost) |>
   ungroup() |> 
   mutate(visits_costs = if_else(specialty == "Not Clinically Relevant", 0L, visits_costs)) |> 
   distinct() |>
