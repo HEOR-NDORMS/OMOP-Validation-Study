@@ -24,12 +24,26 @@ cohort_grid_omop <- cohort_data_omop |>
 
 # Step 2: Calculate month of visit relative to index date
 visit_data_with_month_omop <- visit_data_omop |>
-  # filter(specialty != "Not Clinically Relevant", 
-  #        user_status == "User") |> 
-  mutate(index_date = ymd(index_date),
-         follow_up_end = ymd(follow_up_end)) |> 
-  left_join(cohort_data_omop |> mutate(index_date = ymd(index_date),
-                                      follow_up_end = ymd(follow_up_end)), by = c("subject_id", "follow_up_end", "index_date")) |>
+  # filter(specialty != "Not Clinically Relevant", user_status == "User") |> 
+  mutate(
+    index_date = ymd(index_date),
+    follow_up_end = ymd(follow_up_end)
+  )
+
+# Ensure cohort_data_omop is clean before join
+common_cols <- intersect(
+  setdiff(names(visit_data_with_month_omop), c("subject_id", "index_date", "follow_up_end")),
+  setdiff(names(cohort_data_omop), c("subject_id", "index_date", "follow_up_end"))
+)
+
+cohort_data_omop <- cohort_data_omop |>
+  select(-all_of(common_cols))
+
+# Now do the join
+visit_data_with_month_omop <- visit_data_with_month_omop |>
+  left_join(cohort_data_omop, by = c("subject_id", "follow_up_end", "index_date"))
+
+visit_data_with_month_omop <- visit_data_with_month_omop |>
   mutate(month_since_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) |>
   # filter(month_since_index >= 0, month_since_index < 24) |>
   group_by(subject_id, month_since_index) |>
