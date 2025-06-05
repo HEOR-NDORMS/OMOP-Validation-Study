@@ -3,7 +3,7 @@
 #	Author: Njoki Njuki	
 # Do file name: Table 1: description of the patients
 # Date: 31.01.2025
-# Last date edited: 04.02.2025
+# Last date edited: 04.06.2025
 # ****************************************************************************** #
 
 # Number of patients
@@ -58,7 +58,9 @@ table_one_raw <- cohort_table %>%
 ## Import the staff and consultation tables
 # this is to be used for the specialty
 validation_staff <- my_dm$`validation_staff` %>% collect()
-validation_consultation <- my_dm$`validation_consultation` %>% collect()
+validation_consultation <- my_dm$`validation_consultation` %>% collect() %>% 
+  # Filter such that we have the visits between the study start and study end dates
+  filter(consdate >= study_start_date & consdate <= study_end_date)
 
 ## Merge with validation_consultation ----
 # Filter from index date to follow up end date

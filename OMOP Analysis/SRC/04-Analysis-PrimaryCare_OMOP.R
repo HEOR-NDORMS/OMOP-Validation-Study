@@ -21,17 +21,21 @@ cohort_data_omop <- table_one_omop
 
 # Remove the visits that are not clinically relevance ----
 # the costs are to be updated
-provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.3.xlsx") 
+provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.4_omop.xlsx") 
 
 # Join visit_detail and provider tables
 joined_visit_provider_tables <- cdm$visit_detail %>% 
   dplyr::inner_join(cdm$provider) 
 
+# for this subject_id 2599304320977, we go from 1887 
+# (after filtering for index_date and follow up end dates & primary care visits)
+# to 2!! check why?
+
 ## Sub-setting the visit data ----
 # To remove the visit_data table from the cdm object
-cdm[["visit_data"]] <- NULL
+# cdm[["visit_data"]] <- NULL
 cdm[["visit_data"]] <- joined_visit_provider_tables %>%
-  dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include == "1"),
+  dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include_source == "1"),
                    by = "specialty_source_value", copy=TRUE) %>% # Filter for only meaningful specialties
   # dplyr::select(person_id, provider_id, specialty_source_value, specialty_source_value_summarised, 
   #               visit_detail_start_date, visit_detail_id, unit_cost, visit_detail_concept_id) %>%
@@ -57,7 +61,7 @@ visit_data <- left_join(cohort_data_omop %>% select(subject_id, index_date,
 
 ## Clinically Relevant Consultations ----
 provider_cost_inputs_relev <- provider_cost_inputs %>% 
-  filter(Include == 1)
+  filter(Include_source == 1)
 specialty_source_value_ids <- unique(provider_cost_inputs_relev$specialty_source_value)
 
 
@@ -274,7 +278,7 @@ visits_list <- list(
 )
 
 # Write to an Excel file
-# write_xlsx(visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"))
+write_xlsx(visits_list, here::here("OMOP Analysis", "Results", "Output_visits_OMOP.xlsx"))
 
 ## Cost - Primary care ----
 cost_results_omop <- analyse_visits_cost(
@@ -358,7 +362,7 @@ costs_list <- list(
 )
 
 # Write to an Excel file
-# write_xlsx(costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"))
+write_xlsx(costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"))
 
 ## Cohort summary ----
 cohort_summary_omop <- cohort_summary(visit_data)

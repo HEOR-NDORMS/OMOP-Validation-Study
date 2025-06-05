@@ -3,46 +3,116 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
   patid, index_date, consdate, user_status,
   specialty_reduced, follow_up_end, death_date
 )
+
 ## Unweighted ----
-# Step 1: Get patient-month grid (from cohort_table_raw)
-patient_months <- cohort_table_raw %>%
-  mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
-  rowwise() %>%
-  mutate(month_after_index = list(1:(months_exposed))) %>%
-  unnest(month_after_index) %>%
-  select(patid, month_after_index)
+# Create base 24-month matrix per patient
+cohort_grid_raw <- cohort_table |>
+  mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) |>
+  rowwise() |>
+  mutate(month_vector = list(0:23)) |>
+  unnest(month_vector) |>
+  mutate(month_col = paste0("month_", month_vector + 1),
+         value = ifelse(month_vector < months_exposed, 0, NA_real_)) |>  # <- Use NA_real_ for numeric cost
+  select(patid, month_col, value) |>
+  pivot_wider(names_from = month_col, values_from = value)
 
-# Step 2: Summarise actual visits
-visits_summary <- visit_data_reduced_MIN %>%
+# Calculate month of visit and total visit cost
+# Only for users, so we filter out non-users
+unadj_user_visits_summary <- visit_data |>
   filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
-  mutate(month_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1) %>%
-  group_by(patid, month_after_index) %>%
-  summarise(total_visits = n(), .groups = "drop")
+  mutate(index_date = ymd(index_date),
+         follow_up_end = ymd(follow_up_end)) |>
+  left_join(cohort_table |> mutate(index_date = ymd(index_date),
+                                       follow_up_end = ymd(follow_up_end)),
+            by = c("patid", "follow_up_end", "index_date")) |>
+  mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1)) |>
+  group_by(patid, specialty, month_after_index) |>
+  summarise(
+    visit_count = n(),
+    .groups = 'drop'
+  ) |>
+  # mutate(visit_count = if_else(specialty == "Not Clinically Relevant", 0, visit_count)) %>%
+  group_by(patid, month_after_index) %>% 
+  summarise(total_visits = sum(visit_count)) %>% 
+  mutate(month_col = paste0("month_", month_after_index)) |>
+  select(patid, month_col, total_visits)
 
-# Step 3: Merge to include zeros
-full_patient_months <- patient_months %>%
-  left_join(visits_summary, by = c("patid", "month_after_index")) %>%
-  mutate(total_visits = replace_na(total_visits, 0))
+# Convert to wide format
+unadj_visit_matrix <- unadj_user_visits_summary |>
+  pivot_wider(names_from = month_col, values_from = total_visits)
 
-# Step 4: Calculate summary stats
-monthly_visit_summary_unweighted <- full_patient_months %>%
+# Replace base zeros with actual costs
+month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
+
+merged_matrix_visits <- cohort_grid_raw |>
+  left_join(unadj_visit_matrix, by = "patid", suffix = c("_exp", "_visit"))
+
+# Coalesce cost columns over exposure base
+for (col in month_cols) {
+  exp_col <- paste0(col, "_exp")
+  visit_col <- paste0(col, "_visit")
+  
+  merged_matrix_visits[[col]] <- dplyr::coalesce(merged_matrix_visits[[visit_col]], merged_matrix_visits[[exp_col]])
+}
+
+# Final reshape
+final_matrix_visits <- merged_matrix_visits |>
+  select(patid, all_of(month_cols))
+
+final_long_df_visits <- final_matrix_visits |>
+  mutate(across(starts_with("month_"), ~ replace_na(.x, 0))) |>
+  pivot_longer(
+    cols = starts_with("month_"),
+    names_to = "month",
+    values_to = "tot_visits"
+  ) |>
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+
+# But first, let's filter for users only
+users_ids <- visit_data %>%
+  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  distinct(patid) %>% 
+  pull(patid)
+
+final_long_df_visits <- final_long_df_visits %>% 
+  filter(patid %in% users_ids)
+
+# Generate monthly summary statistics
+monthly_visit_summary_unweighted <- final_long_df_visits %>%
   group_by(month_after_index) %>%
   summarise(
-    mean_visits = round(mean(total_visits), 2),
-    min_visits = round(min(total_visits), 2),
-    max_visits = round(max(total_visits), 2),
-    sd_visits = round(sd(total_visits), 2),
-    q1_visits = round(quantile(total_visits, 0.25), 2),
-    median_visits = round(median(total_visits), 2),
-    q3_visits = round(quantile(total_visits, 0.75), 2),
-    n_pts = n_distinct(patid),
+    mean_visits   = mean(tot_visits), 
+    min_visits    = min(tot_visits),
+    max_visits    = max(tot_visits), 
+    sd_visits     = sd(tot_visits), 
+    q1_visits     = quantile(tot_visits, 0.25), 
+    median_visitst = median(tot_visits), 
+    q3_visits     = quantile(tot_visits, 0.75), 
+    n       = n_distinct(patid),
     .groups = "drop"
-  )
+  ) %>% 
+  mutate(
+    se = sd_visits / sqrt(n),
+    lower = mean_visits - qt(0.975, df = n - 1) * se,
+    upper = mean_visits + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+m1_12 <- monthly_visit_summary_unweighted |> 
+  filter(month_after_index %in% c(1:12))
+
+sum(m1_12$mean_visits)
+rm(m1_12)
+
+m12_24 <- monthly_visit_summary_unweighted |> 
+  filter(month_after_index %in% c(13:24))
+sum(m12_24$mean_visits)
+rm(m12_24)
 
 ## Weighted ----
 # Monthly summary stats for visits (filtered)
 # Prepare data with filtering on follow_up_end
-# STEP 1: Compute days exposed + month info
+# Compute days exposed + month info
 patient_months <- visit_data_reduced_MIN_c %>%
   filter(user_status == "User") %>%
   mutate(across(c(index_date, follow_up_end, death_date), lubridate::ymd)) %>%
@@ -51,7 +121,9 @@ patient_months <- visit_data_reduced_MIN_c %>%
     final_month_after_index = ceiling(total_days / 30.44),
     days_into_final_month = total_days - 30.44 * (final_month_after_index - 1),
     died_in_final_month = !is.na(death_date) &
-      (floor(as.numeric(difftime(death_date, index_date, units = "days")) / 30.44) + 1 == final_month_after_index)
+      (floor(as.numeric(
+        difftime(
+          death_date, index_date, units = "days")) / 30.44) + 1 == final_month_after_index)
   ) %>%
   rowwise() %>%
   mutate(month_after_index = list(1:final_month_after_index)) %>%
@@ -67,8 +139,8 @@ patient_months <- visit_data_reduced_MIN_c %>%
   filter(valid_exposure) %>%
   select(patid, month_after_index)
 
-# STEP 2: Adjusted visit counts
-adjusted_visits <- visit_data_reduced_MIN_c %>%
+# Adjusted visit counts
+adjusted_visits <- visit_data_reduced_MIN %>%
   filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
   mutate(across(c(index_date, follow_up_end, consdate, death_date), lubridate::ymd)) %>%
   mutate(
@@ -90,26 +162,44 @@ adjusted_visits <- visit_data_reduced_MIN_c %>%
   group_by(patid, visit_month_after_index) %>%
   summarise(total_adjusted_visits = sum(adjusted_visit_count), .groups = "drop")
 
-# STEP 3: Merge with patient-months at risk
+# Merge with patient-months at risk
 final_df <- patient_months %>%
   left_join(adjusted_visits, by = c("patid", "month_after_index" = "visit_month_after_index")) %>%
   mutate(total_adjusted_visits = replace_na(total_adjusted_visits, 0)) %>% 
   distinct()
 
-# STEP 4: Now calculate accurate stats
+# Now calculate accurate stats
 monthly_visit_summary_weighted <- final_df %>%
   group_by(month_after_index) %>%
   summarise(
-    mean = round(mean(total_adjusted_visits), 2),
-    min = round(min(total_adjusted_visits), 2),
-    max = round(max(total_adjusted_visits), 2),
-    sd = round(sd(total_adjusted_visits), 2),
-    q1 = round(quantile(total_adjusted_visits, 0.25), 2),
-    median = round(median(total_adjusted_visits), 4),
-    q3 = round(quantile(total_adjusted_visits, 0.75), 2),
-    n_pts = n_distinct(patid),
+    mean_visits = mean(total_adjusted_visits),
+    min_visits = min(total_adjusted_visits),
+    max_visits = max(total_adjusted_visits),
+    sd_visits = sd(total_adjusted_visits),
+    q1_visits = quantile(total_adjusted_visits, 0.25),
+    median_visits = median(total_adjusted_visits),
+    q3_visits = quantile(total_adjusted_visits, 0.75),
+    n = n_distinct(patid),
     .groups = "drop"
-  )
+  ) %>% 
+  mutate(
+    se = sd_visits / sqrt(n),
+    lower = mean_visits - qt(0.975, df = n - 1) * se,
+    upper = mean_visits + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+m1_12o <- monthly_visit_summary_weighted |> 
+  filter(month_after_index %in% c(1:12))
+
+sum(m1_12o$mean_visits)
+rm(m12_24o)
+
+m12_24o <- monthly_visit_summary_weighted |> 
+  filter(month_after_index %in% c(13:24))
+sum(m12_24o$mean_visits)
+rm(m12_24o)
+
 
 # Export
 monthly_visits_list <- list(
@@ -129,126 +219,196 @@ visit_data_reduced_MIN_c <- visit_data_reduced %>%
   )
 
 ## Unweighted ----
-cohort_grid_costs <- cohort_table_raw |>
+# Step 1: Create base 24-month matrix per patient
+cohort_grid_raw <- cohort_table |>
   mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) |>
   rowwise() |>
   mutate(month_vector = list(0:23)) |>
   unnest(month_vector) |>
-  mutate(
-    month_col = paste0("month_", month_vector + 1),
-    value = ifelse(month_vector < months_exposed, 0, NA_real_)
-  ) |>
+  mutate(month_col = paste0("month_", month_vector + 1),
+         value = ifelse(month_vector < months_exposed, 0, NA_real_)) |>  # <- Use NA_real_ for numeric cost
   select(patid, month_col, value) |>
   pivot_wider(names_from = month_col, values_from = value)
 
-# STEP 1: Create exposed patient-month dataset (denominator)
-exposed_patient_months_cost <- cohort_grid_costs %>%
+# Step 2: Calculate month of visit and total visit cost
+visit_data_with_month_omop <- visit_data |>
+  mutate(index_date = ymd(index_date),
+         follow_up_end = ymd(follow_up_end)) |>
+  left_join(cohort_table |> mutate(index_date = ymd(index_date),
+                                       follow_up_end = ymd(follow_up_end)),
+            by = c("patid", "follow_up_end", "index_date")) |>
+  mutate(month_since_index = trunc((as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1)) |>
+  group_by(patid, month_since_index) |>
+  summarise(
+    total_visit_cost = sum(if_else(specialty == "Not Clinically Relevant", 0, unit_cost)),
+    .groups = 'drop'
+  ) |>
+  mutate(month_col = paste0("month_", month_since_index)) |>
+  select(patid, month_col, total_visit_cost)
+
+# Step 3: Pivot to wide format
+visit_cost_matrix <- visit_data_with_month_omop |>
+  pivot_wider(names_from = month_col, values_from = total_visit_cost)
+
+# Step 4: Replace base zeros with actual costs
+month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
+
+merged_matrix_costs <- cohort_grid_raw |>
+  left_join(visit_cost_matrix, by = "patid", suffix = c("_exp", "_visit"))
+
+# Coalesce cost columns over exposure base
+for (col in month_cols) {
+  exp_col <- paste0(col, "_exp")
+  cost_col <- paste0(col, "_visit")
+  
+  merged_matrix_costs[[col]] <- dplyr::coalesce(merged_matrix_costs[[cost_col]], merged_matrix_costs[[exp_col]])
+}
+
+# Final reshape
+final_matrix_costs <- merged_matrix_costs |>
+  select(patid, all_of(month_cols))
+
+final_long_df_costs <- final_matrix_costs |>
+  mutate(across(starts_with("month_"), ~ replace_na(.x, 0))) |>
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
-    values_to = "exposure"
-  ) %>%
-  filter(!is.na(exposure)) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month))) %>%
-  select(patid, month_after_index)
+    values_to = "visit_cost"
+  ) |>
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))
 
-# STEP 2: Compute total costs per patient-month
-total_costs_per_patient_month <- visit_data_reduced_MIN_c %>%
+# But first, let's filter for users only
+users_ids <- visit_data %>%
   filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
-  mutate(month_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1) %>%
-  group_by(patid, month_after_index) %>%
-  summarise(total_costs = sum(unit_cost), .groups = "drop")
+  distinct(patid) %>% 
+  pull(patid)
 
-# STEP 3: Join with exposure and fill missing (i.e., 0-cost months)
-monthly_costs_full <- exposed_patient_months_cost %>%
-  left_join(total_costs_per_patient_month, by = c("patid", "month_after_index")) %>%
-  mutate(total_costs = replace_na(total_costs, 0))
+final_long_df_costs <- final_long_df_costs %>% 
+  filter(patid %in% users_ids)
 
 # STEP 4: Generate monthly summary statistics
-monthly_summary_costs_unweighted <- monthly_costs_full %>%
+monthly_summary_costs_unweighted <- final_long_df_costs %>%
   group_by(month_after_index) %>%
   summarise(
-    mean_cost   = round(mean(total_costs), 2),
-    min_cost    = round(min(total_costs), 2),
-    max_cost    = round(max(total_costs), 2),
-    sd_cost     = round(sd(total_costs), 2),
-    q1_cost     = round(quantile(total_costs, 0.25), 2),
-    median_cost = round(median(total_costs), 2),
-    q3_cost     = round(quantile(total_costs, 0.75), 2),
-    n_pts       = n_distinct(patid),
+    mean_cost   = mean(visit_cost), 
+    min_cost    = min(visit_cost), 
+    max_cost    = max(visit_cost), 
+    sd_cost     = sd(visit_cost), 
+    q1_cost     = quantile(visit_cost, 0.25), 
+    median_cost = median(visit_cost),
+    q3_cost     = quantile(visit_cost, 0.75),
+    n           = n_distinct(patid),
     .groups = "drop"
-  )
+  )%>% 
+  mutate(
+    se = sd_cost / sqrt(n),
+    lower = mean_cost - qt(0.975, df = n - 1) * se,
+    upper = mean_cost + qt(0.975, df = n - 1) * se
+  ) %>%
+  mutate(across(everything(), round, 2))
+
+m1_12o <- monthly_summary_costs_unweighted |> 
+  filter(month_after_index %in% c(1:12))
+
+sum(m1_12o$mean_cost)
+rm(m1_12o)
+
+m12_24o <- monthly_summary_costs_unweighted |> 
+  filter(month_after_index %in% c(13:24))
+sum(m12_24o$mean_cost)
+rm(m12_24o)
+
 
 ## Weighted ----
-# Step 1: Preprocess visits and calculate adjusted costs as before
-adjusted_costs <- visit_data_reduced_MIN_c %>%
-  filter(specialty_reduced != "Not Clinically Relevant", 
-         user_status == "User") %>% 
+patient_months <- visit_data_reduced_MIN_c %>%
+  filter(user_status == "User") %>%
+  mutate(across(c(index_date, follow_up_end, death_date), lubridate::ymd)) %>%
+  mutate(
+    total_days = as.numeric(follow_up_end - index_date),
+    final_month_after_index = ceiling(total_days / 30.44),
+    days_into_final_month = total_days - 30.44 * (final_month_after_index - 1),
+    died_in_final_month = !is.na(death_date) &
+      (floor(as.numeric(
+        difftime(
+          death_date, index_date, units = "days")) / 30.44) + 1 == final_month_after_index)
+  ) %>%
+  rowwise() %>%
+  mutate(month_after_index = list(1:final_month_after_index)) %>%
+  unnest(month_after_index) %>%
+  mutate(
+    valid_exposure = case_when(
+      month_after_index < final_month_after_index ~ TRUE,
+      month_after_index == final_month_after_index &
+        (died_in_final_month | days_into_final_month >= 15.22) ~ TRUE,
+      TRUE ~ FALSE
+    )
+  ) %>%
+  filter(valid_exposure) %>%
+  select(patid, month_after_index)
+
+# Adjusted visit counts
+adjusted_costs_monthly <- visit_data_reduced_MIN_c %>%
+  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
   mutate(across(c(index_date, follow_up_end, consdate, death_date), lubridate::ymd)) %>%
   mutate(
     days_exposed_total = as.numeric(follow_up_end - index_date),
     final_month_after_index = ceiling(days_exposed_total / 30.44),
-    died_during_followup = !is.na(death_date) & death_date <= follow_up_end,
-    died_in_final_month = died_during_followup &
-      (floor(as.numeric(difftime(death_date, index_date, units = "days")) / 30.44) + 1 == final_month_after_index),
+    month_after_index = floor(as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1,
+    died_in_final_month = !is.na(death_date) &
+      floor(as.numeric(difftime(death_date, index_date, units = "days")) / 30.44) + 1 == final_month_after_index,
     days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
-    visit_month_after_index = floor(as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1,
-    visit_count = 1L,
     adjusted_visit_count = case_when(
-      visit_month_after_index != final_month_after_index ~ visit_count,
-      died_in_final_month ~ visit_count,
-      days_into_final_month >= 30.44 ~ visit_count,
-      days_into_final_month >= 15.22 ~ (visit_count / days_into_final_month) * 30.44,
+      month_after_index != final_month_after_index ~ 1,
+      died_in_final_month ~ 1,
+      days_into_final_month >= 30.44 ~ 1,
+      days_into_final_month >= 15.22 ~ (1 / days_into_final_month) * 30.44,
       TRUE ~ 0
-    ),
-    adjusted_cost = adjusted_visit_count * unit_cost
+    )
   ) %>%
+  filter(!(month_after_index == final_month_after_index & adjusted_visit_count == 0)) %>%
+  group_by(patid, month_after_index, specialty_reduced) %>%
+  summarise(
+    unit_cost = unit_cost,
+    adjusted_visits = sum(adjusted_visit_count),
+    .groups = "drop") %>% 
   distinct() %>% 
-  filter(!(visit_month_after_index == final_month_after_index & adjusted_visit_count == 0)) %>%
-  group_by(patid, visit_month_after_index) %>%
-  summarise(
-    total_adjusted_cost = sum(adjusted_cost, na.rm = TRUE),
-    .groups = "drop"
-  )
+  mutate(adjust_visit_costs = unit_cost * adjusted_visits)
 
-# Step 2: Create full patient-month grid for exposed months
-patient_month_grid <- visit_data_reduced_MIN_c %>%
-  mutate(across(c(index_date, follow_up_end), lubridate::ymd)) %>%
+
+# Merge with patient-months at risk
+final_df_costs <- patient_months %>%
+  left_join(adjusted_costs_monthly, by = c("patid", "month_after_index")) %>%
+  mutate(adjust_visit_costs = replace_na(adjust_visit_costs, 0)) %>% 
+  distinct() %>% 
+  select(patid, month_after_index, adjust_visit_costs)
+
+# Find summary stats
+monthly_cost_summary_weighted <- final_df_costs %>%
+  group_by(month_after_index) %>%
+  summarise(
+    mean_costs = sum(adjust_visit_costs)/n_distinct(patid), 
+    min_costs = min(adjust_visit_costs),
+    max_costs = max(adjust_visit_costs),
+    sd_costs = sd(adjust_visit_costs), 
+    q1_costs = quantile(adjust_visit_costs, 0.25), 
+    median_costs = median(adjust_visit_costs), 
+    q3_costs = quantile(adjust_visit_costs, 0.75), 
+    n = n_distinct(patid),
+    .groups = "drop"
+  ) %>% 
   mutate(
-    months_exposed = ceiling(as.numeric(follow_up_end - index_date) / 30.44)
+    se = sd_costs / sqrt(n),
+    lower = mean_costs - qt(0.975, df = n - 1) * se,
+    upper = mean_costs + qt(0.975, df = n - 1) * se
   ) %>%
-  select(patid, months_exposed) %>%
-  distinct() %>%
-  rowwise() %>%
-  mutate(month_list = list(1:months_exposed)) %>%
-  unnest(month_list) %>%
-  rename(visit_month_after_index = month_list)
-
-# Step 3: Join with adjusted costs and fill zeros for missing months
-full_patient_costs <- patient_month_grid %>%
-  left_join(adjusted_costs, by = c("patid", "visit_month_after_index")) %>%
-  mutate(total_adjusted_cost = replace_na(total_adjusted_cost, 0))
-
-# Step 4: Final monthly cost summary
-monthly_cost_summary_weighted <- full_patient_costs %>%
-  group_by(visit_month_after_index) %>%
-  summarise(
-    mean_cost = round(mean(total_adjusted_cost), 2),
-    min_cost = round(min(total_adjusted_cost), 2),
-    max_cost = round(max(total_adjusted_cost), 2),
-    sd_cost = round(sd(total_adjusted_cost), 2),
-    q1_cost = round(quantile(total_adjusted_cost, 0.25), 2),
-    median_cost = round(median(total_adjusted_cost), 4),
-    q3_cost = round(quantile(total_adjusted_cost, 0.75), 2),
-    n_pts = n(),
-    .groups = "drop"
-  )
+  mutate(across(everything(), round, 2))
 
 
 # Export
 monthly_costs_list <- list(
   monthly_costs_unweighted = monthly_summary_costs_unweighted,
-  monthly_costs_weighted = monthly_summary_costs_weighted
+  monthly_costs_weighted = monthly_cost_summary_weighted
 )
+
 # Write to an Excel file
 write_xlsx(monthly_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_monthly_costs_Raw.xlsx"))
