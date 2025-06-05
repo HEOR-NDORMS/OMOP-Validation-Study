@@ -1,4 +1,4 @@
-visits_data_raw <- rio::import("H:/Projects/Validation/Data/visits_data_raw.csv")
+# visits_data_raw <- rio::import("H:/Projects/Validation/Data/visits_data_raw.csv")
 
 # Step 1: Create base 24-month matrix per patient
 cohort_grid_raw <- cohort_data_raw |>
@@ -27,7 +27,7 @@ costs_visit_data_with_month_raw <- visits_data_raw |>
             unit_cost = unit_cost,  
             .groups = 'drop') |>
   mutate(visits_costs = visits * unit_cost) |>
-  mutate(visits_costs = if_else(specialty == "Not Clinically Relevant", 0, visits_costs))
+  mutate(visits_costs = if_else(specialty == "Not Clinically Relevant", 0, visits_costs)) |> 
   distinct() |> 
   group_by(patid, month_since_index) |> 
   summarise(total_visits_cost = sum(visits_costs),
