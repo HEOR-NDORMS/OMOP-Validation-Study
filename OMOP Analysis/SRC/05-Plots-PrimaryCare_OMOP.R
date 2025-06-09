@@ -559,12 +559,13 @@ unadj_costs_per_specialty_month <- unadj_visit_data_reduced_user %>%
 unadj_plots_users_mean_costs_specialty <- unadj_costs_per_specialty_month %>%
   left_join(mean_costs_per_month_o, by = "month_after_index") %>%
   group_by(month_after_index) %>% 
-  mutate(proportion = total_costs_specialty / sum(total_costs_specialty, na.rm = TRUE))
+  mutate(proportion = total_costs_specialty / sum(total_costs_specialty, na.rm = TRUE),
+         prop_mean = proportion * mean_costs)
 
 # STEP 7: Plot
 (plot_costs_unadjusted <- ggplot(
   unadj_plots_users_mean_costs_specialty,
-  aes(x = factor(month_after_index), y = proportion, fill = specialty_reduced)
+  aes(x = factor(month_after_index), y = prop_mean, fill = specialty_reduced)
 ) +
     geom_bar(stat = "identity", position = "stack", width = 0.8) +
     scale_fill_manual(values = c(
@@ -574,7 +575,6 @@ unadj_plots_users_mean_costs_specialty <- unadj_costs_per_specialty_month %>%
       "Uncategorised" = "#53868B"
     )) +
     labs(
-      title = "Mean Monthly Healthcare Costs per User by Specialty",
       x = "Month After Index",
       y = "Mean Costs per User",
       fill = "Specialty"
