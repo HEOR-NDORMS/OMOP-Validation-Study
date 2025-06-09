@@ -316,7 +316,7 @@ AttritionReportCoh <- AttritionReportCoh %>%
   dplyr::mutate(subjects_excluded = -(number_subjects-dplyr::lag(number_subjects)), records_excluded = -(number_records - dplyr::lag(number_records)))
 
 
-# rio::export(AttritionReportCoh, here::here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
+rio::export(AttritionReportCoh, here::here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
 # 
 # 
 # rio::export(cohort_table, here::here("OMOP Analysis", "Results", "cohort_table_omop_gl.csv"))
