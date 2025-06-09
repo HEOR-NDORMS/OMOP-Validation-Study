@@ -21,93 +21,108 @@ visit_data_reduced_MIN <- visit_data_reduced %>% select(
 )
 
 ### PLOT visits per month/specialty   -------
-# STEP 1: Create 24-Month Exposure Matrix Per Patient
-cohort_grid_omop <- cohort_data_omop |>
-  mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) |>
-  rowwise() |>
-  mutate(month_vector = list(0:23)) |>
-  unnest(month_vector) |>
+# STEP 0: Identify users
+users_adj <- visit_data %>%
+  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  distinct(subject_id) %>%
+  pull(subject_id)
+
+# STEP 1: Build 24-Month Exposure Grid
+cohort_grid_omop <- cohort_data_omop %>%
+  filter(subject_id %in% users_adj) %>%
+  mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
+  rowwise() %>%
+  mutate(month_vector = list(0:23)) %>%
+  unnest(month_vector) %>%
   mutate(
     month_col = paste0("month_", month_vector + 1),
     value = ifelse(month_vector < months_exposed, 0, NA_integer_)
-  ) |>
-  select(subject_id, month_col, value) |>
+  ) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 # STEP 2: Create Visit Matrix
-visit_data_with_month_raw <- visit_data |>
-  filter(specialty != "Not Clinically Relevant", user_status == "User") |> 
-  mutate(across(c(index_date, follow_up_end), ymd)) |> 
-  left_join(cohort_data_omop |> mutate(across(c(index_date, follow_up_end), ymd)), 
-            by = c("subject_id", "index_date", "follow_up_end")) |>
-  mutate(month_since_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1) |>
-  group_by(subject_id, month_since_index) |>
-  summarise(visits = n(), .groups = 'drop') |>
-  mutate(month_col = paste0("month_", month_since_index)) |>
+unadj_visit_data_with_month <- visit_data %>%
+  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  mutate(across(c(index_date, follow_up_end, visit_detail_start_date), ymd)) %>%
+  left_join(cohort_data_omop %>%
+              mutate(across(c(index_date, follow_up_end), ymd)),
+            by = c("subject_id", "index_date", "follow_up_end")) %>%
+  mutate(month_since_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1) %>%
+  filter(month_since_index >= 1 & month_since_index <= 24) %>%
+  group_by(subject_id, month_since_index) %>%
+  summarise(visits = n(), .groups = 'drop') %>%
+  mutate(month_col = paste0("month_", month_since_index)) %>%
   select(subject_id, month_col, visits)
 
-visit_matrix_raw <- visit_data_with_month_raw |>
+visit_matrix_raw <- unadj_visit_data_with_month %>%
   pivot_wider(names_from = month_col, values_from = visits)
 
-# STEP 3: Merge and Coalesce Visit + Exposure Data
+# STEP 3: Merge and Prioritize Visit Data over Exposure Default (0)
 month_cols <- grep("^month_", names(cohort_grid_omop), value = TRUE)
 
-merged_matrix <- cohort_grid_omop |>
+merged_matrix <- cohort_grid_omop %>%
   left_join(visit_matrix_raw, by = "subject_id", suffix = c("_exp", "_visit"))
 
 for (col in month_cols) {
+  visit_col <- paste0(col, "_visit")
+  exp_col <- paste0(col, "_exp")
   merged_matrix[[col]] <- dplyr::coalesce(
-    merged_matrix[[paste0(col, "_visit")]],
-    merged_matrix[[paste0(col, "_exp")]]
+    merged_matrix[[visit_col]],
+    merged_matrix[[exp_col]],
+    0
   )
 }
 
-final_matrix_raw <- merged_matrix |>
+final_matrix_raw <- merged_matrix %>%
   select(subject_id, all_of(month_cols))
 
 # STEP 4: Convert to Long Format
-final_long_df_raw <- final_matrix_raw |>
-  mutate(across(starts_with("month_"), ~ replace_na(.x, 0))) |>
+final_long_df_raw <- final_matrix_raw %>%
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
     values_to = "visit_count"
-  ) |>
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  ) %>%
+  mutate(
+    visit_count = replace_na(visit_count, 0),
+    month_after_index = as.integer(gsub("month_", "", month))
+  )
 
 # STEP 5: Mean Visits Per Month (Unadjusted)
-mean_visits_per_month_r <- final_long_df_raw |>
-  group_by(month_after_index) |>
+mean_visits_per_month_r <- final_long_df_raw %>%
+  group_by(month_after_index) %>%
   summarise(
     mean_visits = sum(visit_count) / n_distinct(subject_id),
     .groups = "drop"
   )
 
-
 # STEP 6: Specialty-Specific Visit Proportions
-visit_data_reduced_user.1 <- visit_data_reduced_MIN %>%
+visit_data_reduced_user <- visit_data_reduced_MIN %>%
   filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
-  mutate(month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1) %>%
+  mutate(
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
+  ) %>%
+  filter(month_after_index >= 1 & month_after_index <= 24) %>%
   group_by(subject_id, month_after_index, specialty_reduced) %>%
   summarise(visit_count = n(), .groups = "drop")
 
 # Total visits per patient/month
-total_visits_per_patient_month.1 <- visit_data_reduced_user.1 %>%
+total_visits_per_patient_month <- visit_data_reduced_user %>%
   group_by(subject_id, month_after_index) %>%
   summarise(total_visits = sum(visit_count), .groups = "drop")
 
 # Proportion per specialty per patient per month
-visits_within_patient_month <- visit_data_reduced_user.1 %>%
-  left_join(total_visits_per_patient_month.1, by = c("subject_id", "month_after_index")) %>%
+visits_within_patient_month <- visit_data_reduced_user %>%
+  left_join(total_visits_per_patient_month, by = c("subject_id", "month_after_index")) %>%
   mutate(prop_within_patient = visit_count / total_visits)
 
-# Average proportions across patients
+# Average specialty proportions per month
 avg_prop_specialty_month <- visits_within_patient_month %>%
   group_by(month_after_index, specialty_reduced) %>%
   summarise(avg_prop = mean(prop_within_patient, na.rm = TRUE), .groups = "drop")
 
 # STEP 7: Combine with Mean Visit Counts
-
 final_combined_prop_df <- avg_prop_specialty_month %>%
   left_join(mean_visits_per_month_r, by = "month_after_index") %>%
   mutate(prop_mean = mean_visits * avg_prop)
@@ -134,7 +149,7 @@ final_combined_prop_df <- avg_prop_specialty_month %>%
       y = "Mean Visits per Healthcare Service User",
       fill = "Specialty"
     ) +
-    scale_y_continuous(limits = c(0, 6)) +
+    scale_y_continuous(limits = c(0, 8)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -202,6 +217,7 @@ ggsave(here::here(
 # Prepare data (remove "Not Clinically Relevant" and compute monthly bins)
 # Sense check: 55196220200
 # Create 24-Month Exposure Matrix Per Patient
+# Build Exposure Grid with 24 Months
 cohort_grid_omop <- cohort_data_omop %>%
   mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
   rowwise() %>%
@@ -214,7 +230,7 @@ cohort_grid_omop <- cohort_data_omop %>%
   select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
-# Adjusted Visit Count Calculation
+# Adjusted Visit Counts
 adjusted_visits_data_r <- visit_data %>%
   filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
   mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
@@ -222,64 +238,53 @@ adjusted_visits_data_r <- visit_data %>%
     days_exposed_total = as.numeric(follow_up_end - index_date),
     final_month_after_index = ceiling(days_exposed_total / 30.44),
     month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1,
-    days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
     died_in_final_month = !is.na(death_date) &
-      floor(as.numeric(death_date - index_date) / 30.44) + 1 == final_month_after_index
-  ) %>%
-  group_by(subject_id, month_after_index, specialty_reduced) %>%
-  summarise(visit_count = n(), .groups = "drop") %>%
-  left_join(
-    visit_data %>%
-      mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
-      mutate(
-        days_exposed_total = as.numeric(follow_up_end - index_date),
-        final_month_after_index = ceiling(days_exposed_total / 30.44),
-        days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
-        died_in_final_month = !is.na(death_date) &
-          floor(as.numeric(death_date - index_date) / 30.44) + 1 == final_month_after_index
-      ) %>%
-      distinct(subject_id, final_month_after_index, days_into_final_month, died_in_final_month),
-    by = "subject_id"
-  ) %>%
-  mutate(
-    adjusted_visits = case_when(
-      month_after_index != final_month_after_index ~ visit_count,
-      died_in_final_month ~ visit_count,
-      days_into_final_month >= 30.44 ~ visit_count,
-      days_into_final_month >= 15.22 ~ (visit_count / days_into_final_month) * 30.44,
+      floor(as.numeric(difftime(death_date, index_date, units = "days")) / 30.44) + 1 == final_month_after_index,
+    days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
+    adjusted_visit_count = case_when(
+      month_after_index != final_month_after_index ~ 1,
+      died_in_final_month ~ 1,
+      days_into_final_month >= 30.44 ~ 1,
+      days_into_final_month >= 15.22 ~ (1 / days_into_final_month) * 30.44,
       TRUE ~ 0
     )
   ) %>%
-  filter(adjusted_visits > 0)
+  filter(!(month_after_index == final_month_after_index & adjusted_visit_count == 0)) %>%
+  group_by(subject_id, month_after_index, specialty_reduced) %>%
+  summarise(adjusted_visits = sum(adjusted_visit_count), .groups = "drop")
 
-# Create Adjusted Visit Matrix (Wide Format)
+# Wide Format for Adjusted Visit Counts
 adjusted_visits_long <- adjusted_visits_data_r %>%
-  group_by(subject_id, month_after_index) %>%
-  summarise(adjusted_visits = sum(adjusted_visits), .groups = "drop") %>%
-  mutate(month_col = paste0("month_", month_after_index))
+  mutate(month_col = paste0("month_", month_after_index)) %>%
+  group_by(subject_id, month_col) %>%
+  summarise(adjusted_visits = sum(adjusted_visits), .groups = "drop")
 
-adjusted_visit_matrix <- adjusted_visits_long %>%
-  select(subject_id, month_col, adjusted_visits) %>%
+adjusted_visits_matrix <- adjusted_visits_long %>%
   pivot_wider(names_from = month_col, values_from = adjusted_visits)
 
-# Merge with Exposure Matrix and Coalesce
+# Merge with Exposure Grid and Coalesce
 month_cols <- grep("^month_", names(cohort_grid_omop), value = TRUE)
 
-merged_matrix <- cohort_grid_omop %>%
-  left_join(adjusted_visit_matrix, by = "subject_id", suffix = c("_exp", "_visit"))
+merged_matrix_v <- cohort_grid_omop %>%
+  left_join(adjusted_visits_matrix, by = "subject_id", suffix = c("_exp", "_visit"))
 
 for (col in month_cols) {
-  merged_matrix[[col]] <- dplyr::coalesce(
-    merged_matrix[[paste0(col, "_visit")]],
-    merged_matrix[[paste0(col, "_exp")]]
+  visit_col <- paste0(col, "_visit")
+  exp_col <- paste0(col, "_exp")
+  if (!(visit_col %in% names(merged_matrix_v))) {
+    merged_matrix_v[[visit_col]] <- NA_real_
+  }
+  merged_matrix_v[[col]] <- dplyr::coalesce(
+    as.numeric(merged_matrix_v[[visit_col]]),
+    as.numeric(merged_matrix_v[[exp_col]])
   )
 }
 
-final_matrix_adjusted <- merged_matrix %>%
+final_matrix_adjusted_visits <- merged_matrix_v %>%
   select(subject_id, all_of(month_cols))
 
 # Convert to Long Format
-final_long_df_adjusted <- final_matrix_adjusted %>%
+final_long_df_adjusted_visits <- final_matrix_adjusted_visits %>%
   mutate(across(starts_with("month_"), ~ replace_na(.x, 0))) %>%
   pivot_longer(
     cols = starts_with("month_"),
@@ -288,41 +293,35 @@ final_long_df_adjusted <- final_matrix_adjusted %>%
   ) %>%
   mutate(month_after_index = as.integer(gsub("month_", "", month)))
 
-# Accurate Mean Adjusted Visits per Month
-# Get patient-months with valid exposure
-# But first, let's filter for users only
+# Identify eligible users
 users_adj <- visit_data %>%
   filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
-  distinct(subject_id) %>% 
+  distinct(subject_id) %>%
   pull(subject_id)
 
-exposed_patient_months <- cohort_grid_omop %>%
-  filter(subject_id %in% users_adj) %>% 
-  pivot_longer(
-    cols = starts_with("month_"),
-    names_to = "month",
-    values_to = "exposure"
-  ) %>%
-  filter(!is.na(exposure)) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month))) %>%
-  select(subject_id, month_after_index)
+# Full 24-month grid for all users
+full_patient_month_grid <- cohort_data_omop %>%
+  filter(subject_id %in% users_adj) %>%
+  select(subject_id) %>%
+  distinct() %>%
+  crossing(month_after_index = 1:24)
 
-# Sum adjusted visits per patient-month
+# Summarise adjusted visits
 total_visits_per_patient_month <- adjusted_visits_data_r %>%
   group_by(subject_id, month_after_index) %>%
   summarise(total_visits = sum(adjusted_visits), .groups = "drop")
 
-# Join exposure data and fill 0s
-adjusted_visits_full <- exposed_patient_months %>%
+# Merge to full grid (fill missing with 0)
+adjusted_visits_full <- full_patient_month_grid %>%
   left_join(total_visits_per_patient_month, by = c("subject_id", "month_after_index")) %>%
   mutate(total_visits = replace_na(total_visits, 0))
 
-# Calculate mean visits using full exposed cohort
+# Mean visits per month across cohort
 mean_visits_per_month <- adjusted_visits_full %>%
   group_by(month_after_index) %>%
-  summarise(mean_visit_count = mean(total_visits), .groups = "drop")
+  summarise(mean_visit_count = sum(total_visits) / n_distinct(subject_id), .groups = "drop")
 
-# Specialty-Specific Proportions (Adjusted)
+# Specialty proportions (optional: for plots)
 visits_per_specialty_month <- adjusted_visits_data_r %>%
   group_by(month_after_index, specialty_reduced) %>%
   summarise(total_visits_specialty = sum(adjusted_visits), .groups = "drop")
@@ -450,26 +449,35 @@ visit_data_reduced_MIN_c <- visit_data_reduced %>%
   )
 
 ### PLOT costs per month/specialty   -------
-# Step 1: Create base 24-month matrix per patient
-cohort_grid_omop <- cohort_data_omop |>
-  mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) |>
-  rowwise() |>
-  mutate(month_vector = list(0:23)) |>
-  unnest(month_vector) |>
-  mutate(month_col = paste0("month_", month_vector + 1),
-         value = ifelse(month_vector < months_exposed, 0, NA_integer_)) |>
-  select(subject_id, month_col, value) |>
+# STEP 0: Identify users
+users_adj <- visit_data %>%
+  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  distinct(subject_id) %>%
+  pull(subject_id)
+
+# STEP 1: Build 24-Month Exposure Grid
+cohort_grid_omop <- cohort_data_omop %>%
+  filter(subject_id %in% users_adj) %>%
+  mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
+  rowwise() %>%
+  mutate(month_vector = list(0:23)) %>%
+  unnest(month_vector) %>%
+  mutate(
+    month_col = paste0("month_", month_vector + 1),
+    value = ifelse(month_vector < months_exposed, 0, NA_integer_)
+  ) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
-# Step 2: Calculate month of visit relative to index date
-costs_visit_data_with_month_omop <- visit_data |>
-  filter(specialty != "Not Clinically Relevant", 
-         user_status == "User") |> 
-  mutate(index_date = ymd(index_date),
-         follow_up_end = ymd(follow_up_end)) |> 
-  left_join(cohort_data_omop |> mutate(index_date = ymd(index_date),
-                                       follow_up_end = ymd(follow_up_end)), by = c("subject_id", "follow_up_end", "index_date")) |>
-  mutate(month_since_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) |>
+# STEP 2: Create Visit Matrix
+cost_data_with_month <- visit_data %>%
+  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  mutate(across(c(index_date, follow_up_end, visit_detail_start_date), ymd)) %>%
+  left_join(cohort_data_omop %>%
+              mutate(across(c(index_date, follow_up_end), ymd)),
+            by = c("subject_id", "index_date", "follow_up_end")) %>%
+  mutate(month_since_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1) %>%
+  # filter(month_since_index >= 1 & month_since_index <= 24) %>%
   group_by(subject_id, month_since_index, specialty) |>
   summarise(visits = n(), 
             unit_cost = unit_cost,  
@@ -477,21 +485,20 @@ costs_visit_data_with_month_omop <- visit_data |>
   mutate(visits_costs = visits * unit_cost) |> 
   distinct() |> 
   group_by(subject_id, month_since_index) |> 
-  summarise(total_visits_cost = sum(visits_costs),
-            .groups = "drop") |> 
-  mutate(month_col = paste0("month_", month_since_index)) |>
-  select(subject_id, month_col, total_visits_cost)
+  summarise(visit_costs = sum(visits_costs),
+            .groups = "drop") %>% 
+  mutate(month_col = paste0("month_", month_since_index)) %>%
+  select(subject_id, month_col, visit_costs) 
 
-# Convert visit counts to wide format
-costs_matrix_omop <- costs_visit_data_with_month_omop |>
-  pivot_wider(names_from = month_col, values_from = total_visits_cost)
 
-# Identify original month columns
+cost_matrix_raw <- cost_data_with_month %>%
+  pivot_wider(names_from = month_col, values_from = visit_costs)
+
+# STEP 3: Merge and Prioritize Visit Data over Exposure Default (0)
 month_cols <- grep("^month_", names(cohort_grid_omop), value = TRUE)
 
-# Join with suffixes (_exp and _visit)
-merged_matrix_cost_o <- cohort_grid_omop |>
-  left_join(costs_matrix_omop, by = "subject_id", suffix = c("_exp", "_visit"))
+merged_matrix_c <- cohort_grid_omop %>%
+  left_join(cost_matrix_raw, by = "subject_id", suffix = c("_exp", "_visit"))
 
 # Create new final columns by coalescing visit over exposure
 for (col in month_cols) {
@@ -499,72 +506,68 @@ for (col in month_cols) {
   cost_col <- paste0(col, "_visit")
   
   # Create or overwrite the base column with coalesced value
-  merged_matrix_cost_o[[col]] <- dplyr::coalesce(merged_matrix_cost_o[[cost_col]], merged_matrix_cost_o[[exp_col]])
+  merged_matrix_c[[col]] <- dplyr::coalesce(merged_matrix_c[[cost_col]], merged_matrix_c[[exp_col]])
 }
 
-# Keep only final result
-final_matrix_cost_omop <- merged_matrix_cost_o |>
+final_matrix_costs <- merged_matrix_c %>%
   select(subject_id, all_of(month_cols))
 
-final_long_df_cost_omop <- final_matrix_cost_omop |>
-  # Replace all NAs with 0
-  mutate(across(starts_with("month_"), ~ replace_na(.x, 0))) |>
-  
-  # Pivot to long format
+# STEP 4: Convert to Long Format
+final_long_df_costs <- final_matrix_costs %>%
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
-    values_to = "visits_cost_count"
-  ) |>
-  
-  # Optionally, convert month column to numeric (e.g., "month_1" -> 1)
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+    values_to = "visit_costs"
+  ) %>%
+  mutate(
+    visit_costs = replace_na(visit_costs, 0),
+    month_after_index = as.integer(gsub("month_", "", month))
+  )
 
-exposed_patient_months_cost <- cohort_grid_omop %>%
-  pivot_longer(
-    cols = starts_with("month_"),
-    names_to = "month",
-    values_to = "exposure") %>%
-  filter(!is.na(exposure)) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month))) %>%
-  select(subject_id, month_after_index)
-
-# Compute the mean number of visits per month across fully contributing patients
-# Source: https://online.stat.psu.edu/stat500/lesson/5/5.4
-# Modified version
-mean_costs_per_month_o <- final_long_df_cost_omop |>
-  left_join(exposed_patient_months_cost |> distinct(subject_id, month_after_index), 
-            by = c("subject_id", "month_after_index")) |> 
-  group_by(month_after_index) |>
+# STEP 5: Mean Visits Per Month (Unadjusted)
+mean_costs_per_month <- final_long_df_costs %>%
+  group_by(month_after_index) %>%
   summarise(
-    mean_costs = sum(visits_cost_count) / n(),  # Average per exposed patient-month
+    mean_visit_cost = sum(visit_costs) / n_distinct(subject_id),
     .groups = "drop"
   )
 
-unadj_visit_data_reduced_user <- visit_data_reduced_MIN_c %>%
+# STEP 6: Specialty-Specific Visit Proportions
+cost_data_reduced_user <- visit_data_reduced_MIN_c %>%
   filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
-  mutate(month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1) %>%
+  mutate(
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
+  ) %>%
+  filter(month_after_index >= 1 & month_after_index <= 24) %>%
   group_by(subject_id, month_after_index, specialty_reduced) %>%
   summarise(visit_count = n(), 
             visit_costs = visit_count * unit_cost,
-            .groups = 'drop') |>
+            .groups = "drop") %>% 
   distinct()
 
-# Step 3: Compute the total number of visits per specialty per month
-unadj_costs_per_specialty_month <- unadj_visit_data_reduced_user %>%
+# Total costs per patient/month
+total_costs_per_patient_month <- cost_data_reduced_user %>%
+  group_by(subject_id, month_after_index) %>%
+  summarise(total_visit_costs = sum(visit_costs), .groups = "drop")
+
+# Proportion per specialty per patient per month
+cost_within_patient_month <- cost_data_reduced_user %>%
+  left_join(total_costs_per_patient_month, by = c("subject_id", "month_after_index")) %>%
+  mutate(prop_within_patient = visit_costs / total_visit_costs)
+
+# Average specialty proportions per month
+avg_cost_prop_specialty_month <- cost_within_patient_month %>%
   group_by(month_after_index, specialty_reduced) %>%
-  summarise(total_costs_specialty = sum(visit_costs), .groups = "drop")
+  summarise(avg_prop = mean(prop_within_patient, na.rm = TRUE), .groups = "drop")
 
-# Step 4: Merge the total mean visits per month
-unadj_plots_users_mean_costs_specialty <- unadj_costs_per_specialty_month %>%
-  left_join(mean_costs_per_month_o, by = "month_after_index") %>%
-  group_by(month_after_index) %>% 
-  mutate(proportion = total_costs_specialty / sum(total_costs_specialty, na.rm = TRUE),
-         prop_mean = proportion * mean_costs)
+# STEP 7: Combine with Mean Visit Counts
+cost_final_combined_prop_df <- avg_cost_prop_specialty_month %>%
+  left_join(mean_costs_per_month, by = "month_after_index") %>%
+  mutate(prop_mean = mean_visit_cost * avg_prop)
 
-# STEP 7: Plot
+# STEP 8: Plot
 (plot_costs_unadjusted <- ggplot(
-  unadj_plots_users_mean_costs_specialty,
+  cost_final_combined_prop_df,
   aes(x = factor(month_after_index), y = prop_mean, fill = specialty_reduced)
 ) +
     geom_bar(stat = "identity", position = "stack", width = 0.8) +
@@ -579,7 +582,7 @@ unadj_plots_users_mean_costs_specialty <- unadj_costs_per_specialty_month %>%
       y = "Mean Costs per User",
       fill = "Specialty"
     ) +
-    scale_y_continuous(limits = c(0, 130)) +
+    scale_y_continuous(limits = c(0, 250)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5, size = 18),
@@ -650,128 +653,6 @@ ggsave(here::here(
 
 
 ### PLOT exposure weighted ------
-# Build Exposure Grid with 24 Months
-cohort_grid_omop <- cohort_data_omop %>%
-  mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
-  rowwise() %>%
-  mutate(month_vector = list(0:23)) %>%
-  unnest(month_vector) %>%
-  mutate(
-    month_col = paste0("month_", month_vector + 1),
-    value = ifelse(month_vector < months_exposed, 0, NA_real_)
-  ) %>%
-  select(subject_id, month_col, value) %>%
-  pivot_wider(names_from = month_col, values_from = value)
-
-# Adjust Visit Counts
-adjusted_costs_data_r <- visit_data_reduced_MIN_c %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
-  mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
-  mutate(
-    days_exposed_total = as.numeric(follow_up_end - index_date),
-    final_month_after_index = ceiling(days_exposed_total / 30.44),
-    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1,
-    died_in_final_month = !is.na(death_date) &
-      floor(as.numeric(difftime(death_date, index_date, units = "days")) / 30.44) + 1 == final_month_after_index,
-    days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
-    adjusted_visit_count = case_when(
-      month_after_index != final_month_after_index ~ 1,
-      died_in_final_month ~ 1,
-      days_into_final_month >= 30.44 ~ 1,
-      days_into_final_month >= 15.22 ~ (1 / days_into_final_month) * 30.44,
-      TRUE ~ 0
-    )
-  ) %>%
-  filter(!(month_after_index == final_month_after_index & adjusted_visit_count == 0)) %>%
-  group_by(subject_id, month_after_index, specialty_reduced) %>%
-  summarise(
-    unit_cost = unit_cost,
-    adjusted_visits = sum(adjusted_visit_count),
-    .groups = "drop") %>% 
-  distinct() %>% 
-  mutate(adjust_visit_costs = unit_cost * adjusted_visits)
-
-# Wide Format for Adjusted Visits (cleaned, 1 value per patient/month)
-adjusted_costs_long <- adjusted_costs_data_r %>%
-  mutate(month_col = paste0("month_", month_after_index)) %>%
-  group_by(subject_id, month_col) %>%
-  summarise(adjust_visit_costs = sum(adjust_visit_costs), .groups = "drop")
-
-adjusted_costs_matrix <- adjusted_costs_long %>%
-  pivot_wider(names_from = month_col, values_from = adjust_visit_costs)
-
-# Merge Adjusted Visits with Exposure Grid
-month_cols <- grep("^month_", names(cohort_grid_omop), value = TRUE)
-
-merged_matrix_c <- cohort_grid_omop %>%
-  left_join(adjusted_costs_matrix, by = "subject_id", suffix = c("_exp", "_visit"))
-
-# Coalesce exposure and adjusted visits
-for (col in month_cols) {
-  visit_col <- paste0(col, "_visit")
-  exp_col <- paste0(col, "_exp")
-  if (!(visit_col %in% names(merged_matrix_c))) {
-    merged_matrix_c[[visit_col]] <- NA_real_
-  }
-  merged_matrix_c[[col]] <- dplyr::coalesce(
-    as.numeric(merged_matrix_c[[visit_col]]),
-    as.numeric(merged_matrix_c[[exp_col]])
-  )
-}
-
-final_matrix_adjusted_costs <- merged_matrix_c %>%
-  select(subject_id, all_of(month_cols))
-
-# Convert to long format
-final_long_df_adjusted_costs <- final_matrix_adjusted_costs %>%
-  mutate(across(starts_with("month_"), ~ replace_na(.x, 0))) %>%
-  pivot_longer(
-    cols = starts_with("month_"),
-    names_to = "month",
-    values_to = "adjusted_visit_costs"
-  ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
-
-# But first, let's filter for users only
-users_adj <- visit_data %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
-  distinct(subject_id) %>% 
-  pull(subject_id)
-
-# Full patient-month grid (for all 24 months and all patients)
-full_patient_month_grid_cost <- cohort_data_omop %>%
-  filter(subject_id %in% users_adj) %>% 
-  select(subject_id) %>%
-  distinct() %>%
-  crossing(month_after_index = 1:24)  # Ensures all 24 months per patient
-
-# Summarise costs
-total_costs_per_patient_month <- adjusted_costs_data_r %>%
-  group_by(subject_id, month_after_index) %>%
-  summarise(total_costs = sum(adjust_visit_costs), .groups = "drop")
-
-# Merge to the full grid so missing patient-months get zero
-adjusted_costs_full <- full_patient_month_grid_cost %>%
-  left_join(total_costs_per_patient_month, by = c("subject_id", "month_after_index")) %>%
-  mutate(total_costs = replace_na(total_costs, 0))
-
-mean_costs_per_month <- adjusted_costs_full %>%
-  group_by(month_after_index) %>%
-  summarise(mean_visit_cost = sum(total_costs)/n_distinct(subject_id), .groups = "drop")
-
-# Proportions per Specialty (Optional: for plotting)
-costs_per_specialty_month <- adjusted_costs_data_r %>%
-  group_by(month_after_index, specialty_reduced) %>%
-  summarise(total_costs_specialty = sum(adjust_visit_costs), .groups = "drop")
-
-plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
-  left_join(mean_costs_per_month, by = "month_after_index") %>%
-  group_by(month_after_index) %>%
-  mutate(
-    proportion = total_costs_specialty / sum(total_costs_specialty, na.rm = TRUE),
-    prop_mean = mean_visit_cost * proportion
-  ) %>%
-  ungroup()
 # Build Exposure Grid with 24 Months
 cohort_grid_omop <- cohort_data_omop %>%
   mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
