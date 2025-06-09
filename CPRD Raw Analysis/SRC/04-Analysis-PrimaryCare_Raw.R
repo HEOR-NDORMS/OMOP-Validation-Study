@@ -42,12 +42,12 @@ visit_data <- inner_join(cohort_table_raw, validation_consultation,
 visit_data <- left_join(
   cohort_table_raw, visit_data,
   by = c(
-    "patid", "gender", "yob", "death", "death_date",
+    "patid", "death", "death_date",
     "aurum_min_accept_date", "aurum_max_accept_date", "site",
-    "fx_date", "days_prior_obs", "days_after_obs", "age_fracture",
-    "type", "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
-    "after_index", "fracture_after_index", "follow_up_end",
-    "follow_up_reason", "follow_up_time", "exposed_days", "excluded_flag"
+    "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
+    "fracture_after_index", "follow_up_end",
+    "follow_up_reason", "follow_up_time", "two_yrs_after_index",
+    "study_end"
   )
 )
 
@@ -57,9 +57,8 @@ visit_data <- left_join(visit_data, validation_staff, by = "staffid") %>%
   distinct(consdate, patid, description, .keep_all = TRUE) %>%
   ## Deselect columns not needed
   select(!c(
-    gender, yob, fx_date, cancer_fa_index_dt, paget_fa_index_dt,
-    days_after_obs, days_prior_obs, aurum_min_accept_date,
-    aurum_max_accept_date, type, after_index
+    cancer_fa_index_dt, paget_fa_index_dt,aurum_min_accept_date,
+    aurum_max_accept_date
   )) %>%
   rename("fracture_site" = "site")
 
@@ -1065,7 +1064,7 @@ write_xlsx(boot_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_c
 cohort_summary_raw <- cohort_summary(visit_data)
 
 # Write to an Excel file
-# rio::export(cohort_summary_raw, here::here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
+rio::export(cohort_summary_raw, here::here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
 
 
 
