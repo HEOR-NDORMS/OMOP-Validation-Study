@@ -31,22 +31,22 @@ joined_visit_provider_tables <- cdm$visit_detail %>%
 # cdm[["visit_data"]] <- NULL
 # to remove the visit_data table from the cdm object
 
-cdm[["visit_data"]] <- joined_visit_provider_tables %>%
-  dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include_standard == "1"),
-                   by = "specialty_concept_id", copy=TRUE) %>% # Filter for only meaningful specialties
-  dplyr::select(person_id, provider_id, specialty_concept_id, concept_name, specialty_concept_summarised, 
-                visit_detail_start_date, visit_detail_id, unit_cost, visit_detail_concept_id) %>%
-  dplyr::filter(visit_detail_start_date >= study_start_date & # include only visits in the study period
-                  visit_detail_start_date <= study_end_date) %>%
-  # Filter for only primary care visits
-  dplyr::filter(visit_detail_concept_id == 581477) %>% 
-  dplyr::rename(subject_id=person_id) %>% # just renaming for consistency with cohort data
-  dplyr::distinct(visit_detail_start_date, subject_id, specialty_concept_id, .keep_all=TRUE) %>% # Keep only distinct rows - eliminate all visits in the same day with the same specialist by the same patient
-  dplyr::rename(specialty = concept_name,
-                specialty_reduced =  specialty_concept_summarised) %>%  # renaming for consistency with other countries as this variable is used for the HCRU and costs too
-  computeQuery()
-
-visit_data_df <- cdm[["visit_data"]] %>% dplyr::collect()
+# cdm[["visit_data"]] <- joined_visit_provider_tables %>%
+#   dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include_standard == "1"),
+#                    by = "specialty_concept_id", copy=TRUE) %>% # Filter for only meaningful specialties
+#   dplyr::select(person_id, provider_id, specialty_concept_id, concept_name, specialty_concept_summarised, 
+#                 visit_detail_start_date, visit_detail_id, unit_cost, visit_detail_concept_id) %>%
+#   dplyr::filter(visit_detail_start_date >= study_start_date & # include only visits in the study period
+#                   visit_detail_start_date <= study_end_date) %>%
+#   # Filter for only primary care visits
+#   dplyr::filter(visit_detail_concept_id == 581477) %>% 
+#   dplyr::rename(subject_id=person_id) %>% # just renaming for consistency with cohort data
+#   dplyr::distinct(visit_detail_start_date, subject_id, specialty_concept_id, .keep_all=TRUE) %>% # Keep only distinct rows - eliminate all visits in the same day with the same specialist by the same patient
+#   dplyr::rename(specialty = concept_name,
+#                 specialty_reduced =  specialty_concept_summarised) %>%  # renaming for consistency with other countries as this variable is used for the HCRU and costs too
+#   computeQuery()
+# 
+# visit_data_df <- cdm[["visit_data"]] %>% dplyr::collect()
 
 # merge the cohort data to this visit_data_df
 visit_data <- left_join(cohort_data_omop, visit_data_df, 
@@ -65,21 +65,18 @@ specialty_source_value_ids <- unique(provider_cost_inputs_relev$concept_name)
 # So it is simpler if you prepare the visit data first, with visits in the exposure time and then join back to the list of patients to identify users as those who have at last one visit during that time (and with a relevant staff) and non-users are all the others (i.e., zero visits or only non-relevant visits).
 visit_data <- cohort_data_omop %>% 
   left_join(visit_data, by = c("subject_id", "cohort_start_date", 
-                                              "cohort_end_date", "condition_concept_id",
-                                              "condition_start_date", "fracture_site", 
-                                              "class", "index_date", "after_index", 
-                                              "observation_period_end_date", "cancer_date", 
-                                              "mbd_date", "fracture_after_index", "death_date",
-                                              "follow_up_end", "follow_up_reason", 
-                                              "follow_up_time", "gender_concept_id", 
-                                              "year_of_birth", "month_of_birth", "day_of_birth",
-                                              "birth_datetime", "race_concept_id",
-                                              "ethnicity_concept_id", "location_id", 
-                                              "care_site_id", "person_source_value", 
-                                              "gender_source_value", "gender_source_concept_id",
-                                              "race_source_value", "race_source_concept_id", 
-                                              "ethnicity_source_value", "ethnicity_source_concept_id", 
-                                              "age_fracture", "excluded_flag"
+                               "cohort_end_date", "condition_concept_id",
+                               "fracture_site", "index_date", "cancer_date", 
+                               "mbd_date", "fracture_after_index", "death_date",
+                               "follow_up_end", "follow_up_reason", 
+                               "follow_up_time", "gender_concept_id", 
+                               "year_of_birth", "month_of_birth", "day_of_birth",
+                               "birth_datetime", "race_concept_id",
+                               "ethnicity_concept_id", "location_id", 
+                               "care_site_id", "person_source_value", 
+                               "gender_source_value", "gender_source_concept_id",
+                               "race_source_value", "race_source_concept_id", 
+                               "ethnicity_source_value", "ethnicity_source_concept_id"
   ), copy = T) %>% 
   mutate(
     specialty = case_when(
@@ -737,7 +734,7 @@ unadjusted_costs_list <- list(
 
 write_xlsx(unadjusted_costs_list, here::here("OMOP Analysis", "Results", "Output_costs_OMOP-Unadjusted.xlsx"))
 
-#### Adjusted ----
+### Adjusted ----
 adjusted_users_costs_overall <- visit_data %>%
   filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
   mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
