@@ -37,27 +37,23 @@
 table_one_omop <- cohort_table %>% 
   mutate(fracture_site = recode(fracture_site, NHNS = "NHNV")) %>% 
   mutate(follow_up_reason = case_when(
-    follow_up_reason %in% c("after_index, observation_period_end_date, death_date",
-                            "death_date",
-                            "observation_period_end_date, cancer_date, death_date",
-                            "observation_period_end_date, death_date") ~ "Death",
-    follow_up_reason == "after_index" ~ "Max of 730 days from index date",
-    follow_up_reason == "after_index, cancer_date" ~ "Max of 730 days from index date, Cancer",
-    follow_up_reason == "after_index, fracture_after_index" ~ "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
-    follow_up_reason == "after_index, mbd_date" ~ "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
-    follow_up_reason == "after_index, observation_period_end_date" ~ "Max of 730 days from index date, End of data collection period",
+    follow_up_reason %in% c("observation_period_end_date, cancer_date, death_date",
+                            "observation_period_end_date, death_date",
+                            "observation_period_end_date, death_date, study_end",
+                            "two_yrs_after_index, observation_period_end_date, death_date") ~ "Death",
     follow_up_reason == "cancer_date" ~ "Cancer",
     follow_up_reason == "cancer_date, fracture_after_index" ~ "Cancer, Fracture ensuing incident (index) fracture",
-    follow_up_reason == "cancer_date, mbd_date" ~ "Cancer, Paget’s disease of the bone, or other metabolic bone diseases",
     follow_up_reason == "fracture_after_index" ~ "Fracture ensuing incident (index) fracture",
+    follow_up_reason == "fracture_after_index, study_end" ~ "Fracture ensuing incident (index) fracture, End of Study",
     follow_up_reason == "mbd_date" ~ "Paget’s disease of the bone, or other metabolic bone diseases",
-    follow_up_reason == "mbd_date, fracture_after_index" ~ "Paget’s disease of the bone, or other metabolic bone diseases, Fracture ensuing incident (index) fracture",
     follow_up_reason == "observation_period_end_date" ~ "End of data collection period",
-    follow_up_reason == "observation_period_end_date, cancer_date" ~ "End of data collection period, Cancer",
-    follow_up_reason == "observation_period_end_date, fracture_after_index" ~ "End of data collection period, Fracture ensuing incident (index) fracture")) %>% 
-  dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>% 
-  dplyr::mutate(age_fracture = lubridate::year(condition_start_date) - year_of_birth)
-
+    follow_up_reason == "observation_period_end_date, fracture_after_index" ~ "End of data collection period, Fracture ensuing incident (index) fracture",
+    follow_up_reason == "study_end" ~ "End of Study",
+    follow_up_reason == "two_yrs_after_index" ~ "Max of 730 days from index date",
+    follow_up_reason == "two_yrs_after_index, fracture_after_index" ~ "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
+    follow_up_reason == "two_yrs_after_index, study_end" ~ "Max of 730 days from index date, End of Study"
+  )) %>% 
+  dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) 
 
 # Remove the visits that are not clinically relevance
 # the costs are to be updated
@@ -101,9 +97,7 @@ specialty_source_value_ids <- unique(provider_cost_inputs$concept_name)
 table_one_omop_visit_data <- table_one_omop %>% 
   left_join(table_one_omop_visit_data, by = c("subject_id", "cohort_start_date", 
                                "cohort_end_date", "condition_concept_id",
-                               "condition_start_date", "fracture_site", 
-                               "class", "index_date", "after_index", 
-                               "observation_period_end_date", "cancer_date", 
+                               "fracture_site", "index_date", "cancer_date", 
                                "mbd_date", "fracture_after_index", "death_date",
                                "follow_up_end", "follow_up_reason", 
                                "follow_up_time", "gender_concept_id", 
@@ -113,8 +107,7 @@ table_one_omop_visit_data <- table_one_omop %>%
                                "care_site_id", "person_source_value", 
                                "gender_source_value", "gender_source_concept_id",
                                "race_source_value", "race_source_concept_id", 
-                               "ethnicity_source_value", "ethnicity_source_concept_id", 
-                               "age_fracture", "excluded_flag"
+                               "ethnicity_source_value", "ethnicity_source_concept_id"
   ), copy = T) %>% 
   mutate(
     specialty = case_when(
@@ -157,11 +150,10 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
 (gt_summary_table <- table_one_omop_visit_data %>% 
    gtsummary::tbl_summary(
      # select the variables of interest
-     include = c(age_fracture, fracture_site, follow_up_reason, follow_up_time,
+     include = c(fracture_site, follow_up_reason, follow_up_time,
                  user_status, not_users_status),
      # rename the variable names
      label = list(
-       age_fracture = "Age at Fracture Occurrence",
        fracture_site = "Fracture Site", 
        follow_up_reason = "Censoring Event",
        follow_up_time = "Follow up time",
@@ -181,9 +173,9 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
 (number_of_patients <- n_distinct(table_one_omop_visit_data$subject_id))
 
 ## Age (median, IQR) ----
-(median_age <- median(table_one_omop_visit_data$age_fracture))
-(iqr_age <- IQR(table_one_omop_visit_data$age_fracture))
-(results_age <- paste0(median_age, "(", iqr_age, ")"))
+# (median_age <- median(table_one_omop_visit_data$age_fracture))
+# (iqr_age <- IQR(table_one_omop_visit_data$age_fracture))
+# (results_age <- paste0(median_age, "(", iqr_age, ")"))
 
 ## Site of index fracture ----
 # hip (n%)
@@ -218,7 +210,7 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
   rename("Variable" = "**Variable**",
-         "N = 17,705" = "**N = 17,705**") %>% 
+         "N = 22,900" = "**N = 22,900**") %>% 
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 rio::export(gt_summary_table_df, here::here("OMOP Analysis", "Results", "Table1_OMOP.xlsx"))
