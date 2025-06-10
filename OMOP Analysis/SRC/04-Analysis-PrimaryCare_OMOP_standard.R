@@ -76,7 +76,8 @@ visit_data <- cohort_data_omop %>%
                                "care_site_id", "person_source_value", 
                                "gender_source_value", "gender_source_concept_id",
                                "race_source_value", "race_source_concept_id", 
-                               "ethnicity_source_value", "ethnicity_source_concept_id"
+                               "ethnicity_source_value", "ethnicity_source_concept_id",
+                               "study_end"
   ), copy = T) %>% 
   mutate(
     specialty = case_when(
