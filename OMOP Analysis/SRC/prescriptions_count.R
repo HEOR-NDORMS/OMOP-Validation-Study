@@ -25,5 +25,5 @@ drug_exposure_table <-joined_visit_provider_tables %>%
   dplyr::filter(drug_exposure_start_date >= study_start_date & drug_exposure_end_date	<= study_end_date) %>% 
   dplyr::group_by(drug_source_value) %>% 
   dplyr::summarise(n_drugs = n()) %>% 
-  dplyr::slice(n = 20) %>% 
+  dplyr::slice_min(n = 20, order_by = n_drugs) %>% 
   computeQuery()
