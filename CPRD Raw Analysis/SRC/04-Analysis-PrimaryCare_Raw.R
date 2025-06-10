@@ -38,7 +38,6 @@ visit_data <- inner_join(cohort_table_raw, validation_consultation,
 # Merge cohort data
 # merge back to cohort data, inorder to have patients have been filtered out 
 # in the previous step
-
 visit_data <- left_join(
   cohort_table_raw, visit_data,
   by = c(
@@ -202,61 +201,6 @@ all_summary_reduced <- visits_results_raw_reduced$all_summary_reduced
 # Filter user visits and relevant specialties
 user_visits <- visit_data %>%
   filter(user_status == "User", specialty != "Not Clinically Relevant")
-
-# # We then compute visits per year per patient
-# user_yearly_visits <- user_visits %>%
-#   group_by(patid, specialty) %>%
-#   summarise(visits_count = first(visit_count),
-#             exposed_yrs = first(exposed_yrs),
-#             .groups = "drop") %>%
-#   group_by(patid) %>%
-#   summarise(
-#     total_patient_visits = sum(visits_count, na.rm = TRUE),
-#     total_exposed_yrs = first(exposed_yrs),
-#     visits_per_year = total_patient_visits / total_exposed_yrs,
-#     .groups = "drop"
-#   )
-# 
-# # mean(user_yearly_visits$visits_per_year)
-# 
-# user_only_summary_statistics_overall <- tibble(
-#   mean_visit_per_year = round(sum(user_yearly_visits$total_patient_visits) / sum(user_yearly_visits$total_exposed_yrs), 2),
-#   min_visit_per_year = round(min(user_yearly_visits$visits_per_year), 2),
-#   max_visit_per_year = round(max(user_yearly_visits$visits_per_year), 2),
-#   sd_visit_per_year = round(sd(user_yearly_visits$visits_per_year), 2),
-#   median_visit_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.5)), 2),
-#   lower_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.25)), 2),
-#   upper_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.75)), 2)
-# )
-# 
-# 
-# 
-# # All patients
-# 
-# # We then compute visits per year per patient
-# all_yearly_visits <- visit_data %>%
-#   group_by(patid, specialty) %>%
-#   summarise(visits_count = first(visit_count),
-#             exposed_yrs = first(exposed_yrs),
-#             .groups = "drop") %>%
-#   group_by(patid) %>%
-#   summarise(
-#     total_patient_visits = sum(visits_count, na.rm = TRUE),
-#     total_exposed_yrs = first(exposed_yrs),
-#     visits_per_year = total_patient_visits / total_exposed_yrs,
-#     .groups = "drop"
-#   )
-# 
-# all_summary_statistics_overall <- tibble(
-#   mean_visit_per_year = round(sum(all_yearly_visits$total_patient_visits) / sum(all_yearly_visits$total_exposed_yrs), 2),
-#   min_visit_per_year = round(min(all_yearly_visits$visits_per_year), 2),
-#   max_visit_per_year = round(max(all_yearly_visits$visits_per_year), 2),
-#   sd_visit_per_year = round(sd(all_yearly_visits$visits_per_year), 2),
-#   median_visit_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.5)), 2),
-#   lower_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.25)), 2),
-#   upper_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.75)), 2)
-# )
-
 
 # Export the output
 library(writexl)
