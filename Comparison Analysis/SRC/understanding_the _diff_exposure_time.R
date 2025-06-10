@@ -28,38 +28,55 @@ visits_data_raw <- visits_data_raw |>
   )
 
 visits_raw_min <- visits_data_raw |> 
-  group_by(patid, index_date) %>%
+  group_by(patid, specialty) %>%
   summarise(visit_count_source = n(), .groups = "drop") |> 
-  rename(index_date_source = index_date)
+  mutate(visit_count_source = if_else(specialty == "Not Clinically Relevant", 0, visit_count_source)) |> 
+  group_by(patid) |> 
+  summarise(total_visits_source = sum(visit_count_source), .groups = "drop")
+# |> 
+#   rename(index_date_source = index_date)
 
 visits_data_raw.1 <- left_join(visits_raw_min, visits_data_raw |> select(patid, follow_up_reason,
-                                                                         follow_up_end),
+                                                                         follow_up_end, index_date),
                                by = "patid") |> 
   distinct() |> 
   rename("follow_up_reason_source" = "follow_up_reason",
-         "follow_up_end_source" = "follow_up_end")
+         "follow_up_end_source" = "follow_up_end",
+         "index_date_source" = "index_date")
 
 visit_omop_min <- visit_data_omop |> 
-  group_by(subject_id, index_date) %>%
-  summarise(visit_count_omop = n(), .groups = "drop") |> 
-  rename(index_date_omop = index_date)
+  group_by(subject_id, specialty) %>%
+  summarise(visit_count_source = n(), .groups = "drop") |> 
+  mutate(visit_count_source = if_else(specialty == "Not Clinically Relevant", 0, visit_count_source)) |> 
+  group_by(subject_id) |> 
+  summarise(total_visits_omop = sum(visit_count_source), .groups = "drop")
 
 visit_data_omop.1 <- left_join(visit_omop_min, visit_data_omop |> select(subject_id, follow_up_reason,
-                                                                         follow_up_end),
+                                                                         follow_up_end, index_date),
                                by = "subject_id") |> 
   distinct() |> 
   rename("follow_up_reason_omop" = "follow_up_reason",
          "follow_up_end_omop" = "follow_up_end",
-         "patid" = "subject_id")
+         "patid" = "subject_id",
+          "index_date_omop" = "index_date")
 
 merged_visits_data <- inner_join(visit_data_omop.1, visits_data_raw.1, by = "patid") |> 
-  mutate(diff_visits = visit_count_omop - visit_count_source) |> 
+  mutate(diff_visits = total_visits_omop - total_visits_source) |> 
   mutate_at(c("follow_up_end_source", "follow_up_end_omop", "index_date_source",
               "index_date_omop"), as.Date) |> 
   mutate(follow_up_time_source = (follow_up_end_source - index_date_source),
          follow_up_time_omop = as.numeric(follow_up_end_omop - index_date_omop)) |> 
   mutate(diff_exposure_time = as.numeric(follow_up_time_omop-follow_up_time_source))
-rio::export(merged_visits_data, "H:/Projects/Validation/Data/merged_visits_data_updated.xlsx")
+
+# following GL
+subject_ids_df <- rio::import("H:/Projects/Validation/Data/subject_ids.xlsx") |> 
+  distinct(subject_id) %>% 
+  pull(subject_id)
+
+merged_visits_data.1 <- merged_visits_data |> 
+  filter(patid %in% subject_ids_df)
+
+rio::export(merged_visits_data.1, "H:/Projects/Validation/Data/merged_visits_data_final.xlsx")
 
 merged_visits_data <- visit_data_omop |>  
   select(subject_id, index_date, visit_detail_start_date, follow_up_reason, follow_up_end_omop,
