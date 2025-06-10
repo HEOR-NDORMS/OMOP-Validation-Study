@@ -351,7 +351,7 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
       x = "Month After Index",
       y = "Adjusted Mean Visits per Healthcare Service User",
       fill = "Specialty",
-      caption = "Adjusted for partial follow-up: included patients with ≥15.22 days/month.\nPartial months scaled by exposure;/n full months or death-months used raw counts."
+      caption = "Adjusted for partial follow-up: included patients with ≥15.22 days/month.\nPartial months scaled by exposure;\n full months or death-months used raw counts."
     ) +
     scale_y_continuous(limits = c(0, 4)) +
     theme_minimal() +
@@ -796,7 +796,7 @@ plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
       x = "Month After Index",
       y = "Adjusted Mean Costs per Healthcare Service User",
       fill = "Specialty",
-      caption = "Adjusted for partial follow-up: included patients with ≥15.22 days/month.\nPartial months scaled by exposure;/n full months or death-months used raw counts."
+      caption = "Adjusted for partial follow-up: included patients with ≥15.22 days/month.\nPartial months scaled by exposure;\n full months or death-months used raw counts."
     ) +
     scale_y_continuous(limits = c(0, 130)) +
     theme_minimal() +
