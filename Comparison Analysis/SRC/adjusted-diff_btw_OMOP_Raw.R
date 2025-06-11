@@ -14,6 +14,7 @@ library(rio)
 library(boot)
 library(tidytable)
 library(lubridate)
+library(writexl)
 
 # Import data ----
 visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_omop.csv")
@@ -371,6 +372,12 @@ ggsave(here::here(
   bg = "white"
 )
 
+### Save the output datasets ----
+adjusted_visits_list <- list(
+  mean_visits_combined_o = mean_visits_combined_o,
+  mean_visits_combined_r = mean_visits_combined_r
+)
+write_xlsx(adjusted_visits_list, here::here("Comparison Analysis", "Results", "Output_monthly_mean_visits-Adjusted.xlsx"))
 
 # Adjusted Costs ----
 ## Source ----
@@ -655,6 +662,7 @@ adj_omop_costs_by_month <- mean_costs_combined_o |>
 adj_combined_costs <- bind_rows(adj_raw_costs_by_month, adj_omop_costs_by_month)
 
 
+
 ### Plot ----
 (plot_costs_adj <- ggplot(adj_combined_costs, 
                        aes(x = month_after_index, 
@@ -665,7 +673,6 @@ adj_combined_costs <- bind_rows(adj_raw_costs_by_month, adj_omop_costs_by_month)
                      ymax=upper_ci), width = 0.4)+
    labs(
      title = "Mean Costs of Primary Care Visit by Data Source",
-     subtitle = "Adjusted Primary Care Visits Analysis",
      x = "Month After Index Fracture",
      y = "Mean Costs of Primary Care Visits (£)",
      color = "Data Source",
@@ -693,6 +700,14 @@ ggsave(here::here(
   dpi = 300,
   bg = "white"
 )
+
+### Save the output datasets ----
+adjusted_costs_list <- list(
+  mean_costs_combined_o = mean_costs_combined_o,
+  mean_costs_combined_r = mean_costs_combined_r
+)
+write_xlsx(adjusted_costs_list, here::here("Comparison Analysis", "Results", "Output_monthly_mean_costs-Adjusted.xlsx"))
+
 
 df_test_r <- full_join(adjusted_visits_data_r, adjusted_costs_data_r_c, by = c("patid", "month_after_index", "specialty_reduced")) |>
   mutate(adjusted_visits.x =  round(adjusted_visits.x, 4),
