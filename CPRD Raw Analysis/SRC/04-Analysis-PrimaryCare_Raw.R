@@ -38,16 +38,15 @@ visit_data <- inner_join(cohort_table_raw, validation_consultation,
 # Merge cohort data
 # merge back to cohort data, inorder to have patients have been filtered out 
 # in the previous step
-
 visit_data <- left_join(
   cohort_table_raw, visit_data,
   by = c(
-    "patid", "gender", "yob", "death", "death_date",
+    "patid", "death", "death_date",
     "aurum_min_accept_date", "aurum_max_accept_date", "site",
-    "fx_date", "days_prior_obs", "days_after_obs", "age_fracture",
-    "type", "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
-    "after_index", "fracture_after_index", "follow_up_end",
-    "follow_up_reason", "follow_up_time", "exposed_days", "excluded_flag"
+    "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
+    "fracture_after_index", "follow_up_end",
+    "follow_up_reason", "follow_up_time", "two_yrs_after_index",
+    "study_end"
   )
 )
 
@@ -57,9 +56,8 @@ visit_data <- left_join(visit_data, validation_staff, by = "staffid") %>%
   distinct(consdate, patid, description, .keep_all = TRUE) %>%
   ## Deselect columns not needed
   select(!c(
-    gender, yob, fx_date, cancer_fa_index_dt, paget_fa_index_dt,
-    days_after_obs, days_prior_obs, aurum_min_accept_date,
-    aurum_max_accept_date, type, after_index
+    cancer_fa_index_dt, paget_fa_index_dt,aurum_min_accept_date,
+    aurum_max_accept_date
   )) %>%
   rename("fracture_site" = "site")
 
@@ -203,61 +201,6 @@ all_summary_reduced <- visits_results_raw_reduced$all_summary_reduced
 # Filter user visits and relevant specialties
 user_visits <- visit_data %>%
   filter(user_status == "User", specialty != "Not Clinically Relevant")
-
-# # We then compute visits per year per patient
-# user_yearly_visits <- user_visits %>%
-#   group_by(patid, specialty) %>%
-#   summarise(visits_count = first(visit_count),
-#             exposed_yrs = first(exposed_yrs),
-#             .groups = "drop") %>%
-#   group_by(patid) %>%
-#   summarise(
-#     total_patient_visits = sum(visits_count, na.rm = TRUE),
-#     total_exposed_yrs = first(exposed_yrs),
-#     visits_per_year = total_patient_visits / total_exposed_yrs,
-#     .groups = "drop"
-#   )
-# 
-# # mean(user_yearly_visits$visits_per_year)
-# 
-# user_only_summary_statistics_overall <- tibble(
-#   mean_visit_per_year = round(sum(user_yearly_visits$total_patient_visits) / sum(user_yearly_visits$total_exposed_yrs), 2),
-#   min_visit_per_year = round(min(user_yearly_visits$visits_per_year), 2),
-#   max_visit_per_year = round(max(user_yearly_visits$visits_per_year), 2),
-#   sd_visit_per_year = round(sd(user_yearly_visits$visits_per_year), 2),
-#   median_visit_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.5)), 2),
-#   lower_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.25)), 2),
-#   upper_q_visits_per_year = round(quantile(user_yearly_visits$visits_per_year, probs = (.75)), 2)
-# )
-# 
-# 
-# 
-# # All patients
-# 
-# # We then compute visits per year per patient
-# all_yearly_visits <- visit_data %>%
-#   group_by(patid, specialty) %>%
-#   summarise(visits_count = first(visit_count),
-#             exposed_yrs = first(exposed_yrs),
-#             .groups = "drop") %>%
-#   group_by(patid) %>%
-#   summarise(
-#     total_patient_visits = sum(visits_count, na.rm = TRUE),
-#     total_exposed_yrs = first(exposed_yrs),
-#     visits_per_year = total_patient_visits / total_exposed_yrs,
-#     .groups = "drop"
-#   )
-# 
-# all_summary_statistics_overall <- tibble(
-#   mean_visit_per_year = round(sum(all_yearly_visits$total_patient_visits) / sum(all_yearly_visits$total_exposed_yrs), 2),
-#   min_visit_per_year = round(min(all_yearly_visits$visits_per_year), 2),
-#   max_visit_per_year = round(max(all_yearly_visits$visits_per_year), 2),
-#   sd_visit_per_year = round(sd(all_yearly_visits$visits_per_year), 2),
-#   median_visit_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.5)), 2),
-#   lower_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.25)), 2),
-#   upper_q_visits_per_year = round(quantile(all_yearly_visits$visits_per_year, probs = (.75)), 2)
-# )
-
 
 # Export the output
 library(writexl)
@@ -1065,7 +1008,7 @@ write_xlsx(boot_costs_list, here::here("CPRD Raw Analysis", "Results", "Output_c
 cohort_summary_raw <- cohort_summary(visit_data)
 
 # Write to an Excel file
-# rio::export(cohort_summary_raw, here::here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
+rio::export(cohort_summary_raw, here::here("CPRD Raw Analysis", "Results", "cohort_summary_raw.xlsx"))
 
 
 

@@ -37,23 +37,22 @@
 table_one_raw <- cohort_table %>% 
   mutate(site = recode(site, hip = "Hip", vert = "Vertebra", nhnv = "NHNV")) %>% 
   mutate(follow_up_reason = case_when(
-    follow_up_reason %in% c("after_index, observation_period_end_date, death_date",
-                            "death_date",
-                            "observation_period_end_date, cancer_date, death_date",
-                            "observation_period_end_date, death_date") ~ "Death",
-    follow_up_reason == "after_index" ~ "Max of 730 days from index date",
-    follow_up_reason == "after_index, cancer_date" ~ "Max of 730 days from index date, Cancer",
-    follow_up_reason == "after_index, fracture_after_index" ~ "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
-    follow_up_reason == "after_index, mbd_date" ~ "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
-    follow_up_reason == "after_index, observation_period_end_date" ~ "Max of 730 days from index date, End of data collection period",
+    follow_up_reason %in% c(
+      "death_date", "observation_period_end_date, cancer_date, death_date", 
+      "observation_period_end_date, death_date", "two_yrs_after_index, observation_period_end_date, death_date",
+      "observation_period_end_date, death_date, study_end") ~ "Death",
     follow_up_reason == "cancer_date" ~ "Cancer",
     follow_up_reason == "cancer_date, fracture_after_index" ~ "Cancer, Fracture ensuing incident (index) fracture",
     follow_up_reason == "fracture_after_index" ~ "Fracture ensuing incident (index) fracture",
+    follow_up_reason == "fracture_after_index, study_end" ~ "Fracture ensuing incident (index) fracture, End of Study",
     follow_up_reason == "mbd_date" ~ "Paget’s disease of the bone, or other metabolic bone diseases",
     follow_up_reason == "observation_period_end_date" ~ "End of data collection period",
-    follow_up_reason == "observation_period_end_date, cancer_date" ~ "End of data collection period, Cancer",
-    follow_up_reason == "observation_period_end_date, fracture_after_index" ~ "End of data collection period, Fracture ensuing incident (index) fracture"))
-
+    follow_up_reason == "observation_period_end_date, fracture_after_index" ~ "End of data collection period, Fracture ensuing incident (index) fracture",
+    follow_up_reason == "study_end" ~ "End of Study",
+    follow_up_reason == "two_yrs_after_index" ~ "Max of 730 days from index date",
+    follow_up_reason == "two_yrs_after_index, fracture_after_index" ~ "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
+    follow_up_reason == "two_yrs_after_index, study_end" ~ "Max of 730 days from index date, End of Study"
+    ))
 
 ## Import the staff and consultation tables
 # this is to be used for the specialty
@@ -78,12 +77,11 @@ table_one_raw_visit_data <- inner_join(table_one_raw, validation_consultation,
 table_one_raw_visit_data <- left_join(
   table_one_raw, table_one_raw_visit_data,
   by = c(
-    "patid", "gender", "yob", "death", "death_date",
+    "patid", "death", "death_date",
     "aurum_min_accept_date", "aurum_max_accept_date", "site",
-    "fx_date", "days_prior_obs", "days_after_obs", "age_fracture",
-    "type", "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
-    "after_index", "fracture_after_index", "follow_up_end",
-    "follow_up_reason", "follow_up_time", "exposed_days", "excluded_flag"
+    "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
+    "fracture_after_index", "follow_up_end",
+    "follow_up_reason", "follow_up_time", "two_yrs_after_index"
   )
 )
 
@@ -225,10 +223,9 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
 
 (gt_summary_table <- table_one_raw_visit_data %>% 
   gtsummary::tbl_summary(
-    include = c(age_fracture, site, follow_up_reason, 
+    include = c(site, follow_up_reason, 
                 follow_up_time, user_status),
     label = list(
-      age_fracture = "Age at Fracture Occurrence",
       site = "Fracture Site", 
       follow_up_reason = "Censoring Event",
       follow_up_time = "Follow up time",
@@ -248,9 +245,9 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
 (number_of_patients <- n_distinct(table_one_raw_visit_data$patid))
 
 ## Age (median, IQR) ----
-(median_age <- median(table_one_raw_visit_data$age_fracture))
-(iqr_age <- IQR(table_one_raw_visit_data$age_fracture))
-(results_age <- paste0(median_age, "(", iqr_age, ")"))
+# (median_age <- median(table_one_raw_visit_data$age_fracture))
+# (iqr_age <- IQR(table_one_raw_visit_data$age_fracture))
+# (results_age <- paste0(median_age, "(", iqr_age, ")"))
 
 table_one_raw_pt <- table_one_raw_visit_data %>% 
   distinct(patid, .keep_all = TRUE)
@@ -291,7 +288,7 @@ table_one_raw_pt <- table_one_raw_visit_data %>%
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
   rename("Variable" = "**Variable**",
-         "N = 18,133" = "**N = 18,133**") %>% 
+         "N = 23,106" = "**N = 23,106**") %>% 
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 rio::export(gt_summary_table_df, here::here("CPRD Raw Analysis", "Results", "Table1_Raw.xlsx"))

@@ -34,9 +34,9 @@ cat("Subjects only in OMOP:", length(only_in_omop), "\n")
 cat("Subjects only in Source:", length(only_in_raw), "\n") 
 
 ## Venn Diagram ----
-venn_plot <- draw.pairwise.venn(area1 = nrow(visit_data_omop), area2 = nrow(visit_data_raw), cross.area = length(overlap_subjects),
-                                category = c("OMOP", "Source"), fill = c("#1E90FF", "#FF34B3"), alpha = 0.4)
-grid.draw(venn_plot)
+# venn_plot <- draw.pairwise.venn(area1 = nrow(visit_data_omop), area2 = nrow(visit_data_raw), cross.area = length(overlap_subjects),
+#                                 category = c("OMOP", "Source"), fill = c("#1E90FF", "#FF34B3"), alpha = 0.4)
+# grid.draw(venn_plot)
 
 
 # 2*2 table of patients ----
@@ -119,7 +119,7 @@ row.names(user_table)
 user_df <- as.data.frame.matrix(user_table)
 user_df <- tibble::rownames_to_column(user_df, var = "Source")  # Now 'OMOP' is a column
 
-export(user_df, here("Comparison Analysis", "Results", "contigency_table_for_user_status.xlsx"))
+rio::export(user_df, here("Comparison Analysis", "Results", "contigency_table_for_user_status.xlsx"))
 
 # Monthly  Visits plot -----
 visit_data_reduced_min_raw <- rio::import("H:/Projects/Validation/Data/visit_data_reduced_min_raw.csv")
@@ -815,96 +815,6 @@ top_20_o <- specialty_count_o |>
 #   height = 7,
 #   bg = "white"
 # )
-
-# Unadjusted plots ----
-## Visits ----
-# Add a source label to each
-mean_visits_raw  <- mean_visits_combined_r  %>% mutate(source = "Source")
-mean_visits_omop <- mean_visits_combined_o %>% mutate(source = "OMOP")
-
-# Combine into one long-format dataframe
-combined_mean_visits <- bind_rows(mean_visits_raw, mean_visits_omop)
-
-library(ggplot2)
-
-# Plot
-(plot1 <- ggplot(combined_mean_visits, 
-                 aes(x = month_after_index, 
-                     y = mean_visits_boot, color = source)) +
-    geom_line(size = 0.8) +
-    geom_point(size = 1.0) +
-    geom_errorbar(aes(ymin=lower_ci,
-                    ymax=upper_ci), width = 0.4)+
-    labs(
-      title = "Mean Primary Care Visits by Data Source",
-      x = "Month After Index Fracture",
-      y = "Mean Primary Care Visits",
-      color = "Data Source"
-    ) +
-    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-    scale_y_continuous(breaks = seq(0, 3, by = 1), limits = c(0, 3)) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(face = "bold", hjust = 0.5),
-      axis.title = element_text(size = 12),
-      axis.text = element_text(size = 10),
-      legend.title = element_text(size = 11),
-      legend.text = element_text(size = 10)
-    ))
-
-ggsave(here::here(
-  "Comparison Analysis", "Results", "Plots",
-  "Mean_visits_per_data_source_unadjusted_no_washout.PNG"),
-  plot = plot1,
-  width = 6.5,
-  height = 5,
-  dpi = 300,
-  bg = "white"
-)
-
-## Costs ----
-raw_costs_by_month <- mean_costs_combined_r |> 
-  mutate(source = "Source")
-
-omop_costs_by_month <- mean_costs_combined_o |> 
-  mutate(source = "OMOP")
-
-# Combine into one long-format dataframe
-combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
-
-(plot_costs1 <- ggplot(combined_costs, 
-                       aes(x = month_after_index, 
-                           y = mean_costs, color = source)) +
-    geom_line(size = 0.8) +
-    geom_point(size = 1.0) +
-    geom_errorbar(aes(ymin=lower_ci,
-                      ymax=upper_ci), width = 0.4)+
-    labs(
-      title = "Mean Costs of Primary Care Visit by Data Source",
-      x = "Month After Index Fracture",
-      y = "Mean Costs of Primary Care Visits (£)",
-      color = "Data Source"
-    ) +
-    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-    scale_y_continuous(breaks = seq(0, 100, by = 20), limits = c(0, 100)) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(face = "bold", hjust = 0.5),
-      axis.title = element_text(size = 12),
-      axis.text = element_text(size = 10),
-      legend.title = element_text(size = 11),
-      legend.text = element_text(size = 10)
-    ))
-
-ggsave(here::here(
-  "Comparison Analysis", "Results", "Plots",
-  "Mean_costs_per_data_source_unadjusted_no_washout.PNG"),
-  plot = plot_costs1,
-  width = 6.5,
-  height = 5,
-  dpi = 300,
-  bg = "white"
-)
 
 ## Distribution of visits ----
 visits_raw <- visits_data_raw |> 
