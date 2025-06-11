@@ -383,7 +383,7 @@ grid.arrange(Exposure_Time_Raw_g_with_title, Exposure_Time_OMOP_g_with_title, nc
 
 ### Total Number of Primary Care Consultations
 
-Figure 2: Total number of primary care consultations
+Figure 2: Total number of primary care consultations, unadjusted
 
 ```{r fig.width=12, fig.height=4}
 # Read your images
@@ -487,18 +487,23 @@ grid.arrange(Mean_visits_per_specialty_weighted_Raw_g_with_title, Mean_visits_pe
 
 ### Comparison Plots for Visits between Source and OMOP
 
-Figure 1: Mean visits per month after index, unweighted.
+Figure 1: Mean visits per month after index by data source.
 
-```{r fig.height=6, fig.width=6}
-Mean_visits_per_specialty_unweighted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_visits_per_data_source_unadjusted_no_washout.PNG"))
-grid.raster(Mean_visits_per_specialty_unweighted_rp)
-```
+```{r fig.height=3, fig.width=8}
+# Read images
+Mean_visits_per_specialty_unadjusted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_visits_per_data_source_unadjusted.PNG"))
+Mean_visits_per_specialty_adjusted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_visits_per_data_source_adjusted.PNG"))
 
-Figure 2: Distribution of Total Primary Care Visits by Data Source
+# Wrap them in rasterGrob
+Mean_visits_per_specialty_unadjusted_rp_g <- rasterGrob(Mean_visits_per_specialty_unadjusted_rp, interpolate = TRUE)
+Mean_visits_per_specialty_adjusted_rp_g <- rasterGrob(Mean_visits_per_specialty_adjusted_rp, interpolate = TRUE)
 
-```{r fig.height=6, fig.width=6}
-Tot_visits_per_data_source_unadjusted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Tot_visits_per_data_source_unadjusted_no_washout-hist.PNG"))
-grid.raster(Tot_visits_per_data_source_unadjusted_rp)
+# Add titles with arrangeGrob 
+Mean_visits_per_specialty_unadjusted_rp_g_with_title <- arrangeGrob(Mean_visits_per_specialty_unadjusted_rp_g, top = textGrob("Unadjusted Analysis", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Mean_visits_per_specialty_adjusted_rp_g_with_title <- arrangeGrob(Mean_visits_per_specialty_adjusted_rp_g, top = textGrob("Adjusted Analysis", gp = gpar(fontsize = 12, fontface = "bold"))) 
+
+grid.arrange(Mean_visits_per_specialty_unadjusted_rp_g_with_title, Mean_visits_per_specialty_adjusted_rp_g_with_title, ncol = 2)
+
 ```
 
 ### HCRU Year 1/2 Summary Tables
@@ -1066,18 +1071,22 @@ grid.arrange(Mean_costs_per_specialty_weighted_Raw_g_with_title, Mean_costs_per_
 
 Figure 1: Mean visit costs per month after index, unweighted.
 
-```{r fig.height=6, fig.width=6}
-Mean_costs_per_specialty_unweighted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_costs_per_specialty_unweighted.PNG"))
-grid.raster(Mean_costs_per_specialty_unweighted_rp)
+```{r fig.height=3, fig.width=8}
+# Read images
+Mean_costs_per_specialty_unadjusted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_costs_per_data_source_unadjusted.PNG"))
+Mean_costs_per_specialty_adjusted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Mean_costs_per_data_source_adjusted.PNG"))
+
+# Wrap them in rasterGrob
+Mean_costs_per_specialty_unadjusted_rp_g <- rasterGrob(Mean_costs_per_specialty_unadjusted_rp, interpolate = TRUE)
+Mean_costs_per_specialty_adjusted_rp_g <- rasterGrob(Mean_costs_per_specialty_adjusted_rp, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Mean_costs_per_specialty_unadjusted_rp_g_with_title <- arrangeGrob(Mean_costs_per_specialty_unadjusted_rp_g, top = textGrob("Unadjusted Analysis", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Mean_costs_per_specialty_adjusted_rp_g_with_title <- arrangeGrob(Mean_costs_per_specialty_adjusted_rp_g, top = textGrob("Adjusted Analysis", gp = gpar(fontsize = 12, fontface = "bold"))) 
+
+grid.arrange(Mean_costs_per_specialty_unadjusted_rp_g_with_title, Mean_costs_per_specialty_adjusted_rp_g_with_title, ncol = 2)
+
 ```
-
-Figure 2: Distribution of Total Visit Costs by Data Source
-
-```{r fig.height=6, fig.width=6}
-Tot_costs_per_data_source_unadjusted_rp <- readPNG(here("Comparison Analysis", "Results", "Plots", "Tot_costs_per_data_source_unadjusted_no_washout-hist.PNG"))
-grid.raster(Tot_costs_per_data_source_unadjusted_rp)
-```
-
 
 ### Costs Year 1/2 Summary Tables
 
@@ -1672,7 +1681,7 @@ datatable(all_cost_summary_rp_raw,
 
 ## OMOP {.tabset}
 
-### HCRU by Monthly (Unweighted) - Users
+### HCRU by Monthly (Unadjusted) - Users
 
 ```{r}
 monthly_visits_users_summary_rp_unweighted_omop <- import(here("OMOP Analysis", "Results", "Output_monthly_visits_OMOP.xlsx"), sheet = "monthly_visit_unweighted")
@@ -1707,7 +1716,7 @@ datatable(monthly_visits_users_summary_rp_unweighted_omop,
 )
 ```
 
-### HCRU by Monthly (Weighted) - Users
+### HCRU by Monthly (Adjusted) - Users
 
 ```{r}
 monthly_visits_users_summary_rp_weighted_omop <- import(here("OMOP Analysis", "Results", "Output_monthly_visits_OMOP.xlsx"), sheet = "monthly_visit_weighted")
@@ -1812,7 +1821,7 @@ datatable(all_summary_rp_omop,
 )
 ```
 
-### Costs by Monthly (Unweighted) - Users
+### Costs by Monthly (Unadjusted) - Users
 
 ```{r}
 monthly_costs_users_summary_rp_unweighted_omop <- import(here("OMOP Analysis", "Results", "Output_monthly_costs_OMOP.xlsx"), sheet = "monthly_costs_unweighted")
@@ -1847,7 +1856,7 @@ datatable(monthly_costs_users_summary_rp_unweighted_raw,
 )
 ```
 
-### Costs by Monthly (Weighted) - Users
+### Costs by Monthly (Adjusted) - Users
 
 ```{r}
 monthly_costs_users_summary_rp_weighted_omop <- import(here("OMOP Analysis", "Results", "Output_monthly_costs_OMOP.xlsx"), sheet = "monthly_costs_weighted")
