@@ -267,7 +267,7 @@ adjusted_yearly_visits_list <- list(
 )
 
 # Write to an Excel file
-write_xlsx(adjusted_yearly_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_OMOP-Adjusted.xlsx"))
+write_xlsx(adjusted_yearly_visits_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Adjusted.xlsx"))
 
 ##### Boostrap ----
 ###### Unadjusted User ----
