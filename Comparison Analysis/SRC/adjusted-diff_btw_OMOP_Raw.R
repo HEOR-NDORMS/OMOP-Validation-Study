@@ -343,7 +343,6 @@ adj_combined_mean_visits <- bind_rows(adj_mean_visits_raw, adj_mean_visits_omop)
                       ymax=upper_ci), width = 0.4)+
     labs(
       title = "Mean Primary Care Visits by Data Source",
-      subtitle = "Adjusted Primary Care Visits Analysis",
       x = "Month After Index Fracture",
       y = "Mean Primary Care Visits",
       color = "Data Source",
