@@ -146,6 +146,7 @@ adjusted_user_visits_yr <- visit_data %>%
       TRUE ~ 0  # drop if < 6 months and not died
     )
   ) %>%
+  # filter(!(year_after_index == final_year_after_index & adjusted_visits == 0))
   filter(adjusted_visits > 0)  # drop years with <6 months and not adjusted
 # filter(!(year_after_index == final_year_after_index & days_into_final_year == 0))
 
@@ -221,6 +222,7 @@ adjusted_all_visits_yr <- visit_data %>%
   mutate(
     adjusted_visits = if_else(specialty == "Not Clinically Relevant", 0L, adjusted_visits)
   ) %>% 
+  # filter(!(year_after_index == final_year_after_index & adjusted_visits == 0| specialty == "Not Clinically Relevant"))
   filter(adjusted_visits > 0 | specialty == "Not Clinically Relevant") # drop years with <6 months and not adjusted
 
 # Sense check using this patient: 1016820018
