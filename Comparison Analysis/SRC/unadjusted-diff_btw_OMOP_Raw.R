@@ -299,6 +299,12 @@ ggsave(here::here(
   dpi = 300,
   bg = "white"
 )
+### Save the output datasets ----
+unadjusted_visits_list <- list(
+  mean_visits_combined_o = mean_visits_combined_o,
+  mean_visits_combined_r = mean_visits_combined_r
+)
+write_xlsx(unadjusted_visits_list, here::here("Comparison Analysis", "Results", "Output_monthly_mean_visits-Unadjusted.xlsx"))
 
 # Unadjusted costs ----
 ## Source ----
@@ -580,3 +586,10 @@ ggsave(here::here(
   dpi = 300,
   bg = "white"
 )
+
+### Save the output datasets ----
+unadjusted_costs_list <- list(
+  mean_costs_combined_o = mean_costs_combined_o,
+  mean_costs_combined_r = mean_costs_combined_r
+)
+write_xlsx(unadjusted_costs_list, here::here("Comparison Analysis", "Results", "Output_monthly_mean_costs-Unadjusted.xlsx"))
