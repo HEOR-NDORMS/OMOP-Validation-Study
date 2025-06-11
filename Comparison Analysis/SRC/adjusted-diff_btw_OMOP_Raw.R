@@ -4,6 +4,7 @@
 # Date: 09.06.2025
 # Last date edited: 09.06.2025
 # ****************************************************************************** #
+
 # Load packages ----
 library(here)
 library(dplyr)
@@ -45,35 +46,57 @@ adjusted_visits_data_r <- visits_data_raw %>%
     days_exposed_total = as.numeric(follow_up_end - index_date),
     final_month_after_index = ceiling(days_exposed_total / 30.44),
     month_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1,
-    days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
     died_in_final_month = !is.na(death_date) &
-      floor(as.numeric(death_date - index_date) / 30.44) + 1 == final_month_after_index
-  ) %>%
-  group_by(patid, month_after_index, specialty_reduced) %>%
-  summarise(visit_count = n(), .groups = "drop") %>%
-  left_join(
-    visits_data_raw %>%
-      mutate(across(c(index_date, follow_up_end, consdate, death_date), ymd)) %>%
-      mutate(
-        days_exposed_total = as.numeric(follow_up_end - index_date),
-        final_month_after_index = ceiling(days_exposed_total / 30.44),
-        days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
-        died_in_final_month = !is.na(death_date) &
-          floor(as.numeric(death_date - index_date) / 30.44) + 1 == final_month_after_index
-      ) %>%
-      distinct(patid, final_month_after_index, days_into_final_month, died_in_final_month),
-    by = "patid"
-  ) %>%
-  mutate(
-    adjusted_visits = case_when(
-      month_after_index != final_month_after_index ~ visit_count,
-      died_in_final_month ~ visit_count,
-      days_into_final_month >= 30.44 ~ visit_count,
-      days_into_final_month >= 15.22 ~ (visit_count / days_into_final_month) * 30.44,
+      floor(as.numeric(difftime(death_date, index_date, units = "days")) / 30.44) + 1 == final_month_after_index,
+    days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
+    adjusted_visit_count = case_when(
+      month_after_index != final_month_after_index ~ 1,
+      died_in_final_month ~ 1,
+      days_into_final_month >= 30.44 ~ 1,
+      days_into_final_month >= 15.22 ~ (1 / days_into_final_month) * 30.44,
       TRUE ~ 0
     )
   ) %>%
-  filter(adjusted_visits > 0)
+  filter(!(month_after_index == final_month_after_index & adjusted_visit_count == 0)) %>%
+  group_by(patid, month_after_index, specialty_reduced) %>%
+  summarise(adjusted_visits = sum(adjusted_visit_count), .groups = "drop")
+
+# adjusted_visits_data_r <- visits_data_raw %>%
+#   filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+#   mutate(across(c(index_date, follow_up_end, consdate, death_date), ymd)) %>%
+#   mutate(
+#     days_exposed_total = as.numeric(follow_up_end - index_date),
+#     final_month_after_index = ceiling(days_exposed_total / 30.44),
+#     month_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1,
+#     days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
+#     died_in_final_month = !is.na(death_date) &
+#       floor(as.numeric(death_date - index_date) / 30.44) + 1 == final_month_after_index
+#   ) %>%
+#   group_by(patid, month_after_index, specialty_reduced) %>%
+#   summarise(visit_count = n(), .groups = "drop") %>%
+#   left_join(
+#     visits_data_raw %>%
+#       mutate(across(c(index_date, follow_up_end, consdate, death_date), ymd)) %>%
+#       mutate(
+#         days_exposed_total = as.numeric(follow_up_end - index_date),
+#         final_month_after_index = ceiling(days_exposed_total / 30.44),
+#         days_into_final_month = days_exposed_total - 30.44 * (final_month_after_index - 1),
+#         died_in_final_month = !is.na(death_date) &
+#           floor(as.numeric(death_date - index_date) / 30.44) + 1 == final_month_after_index
+#       ) %>%
+#       distinct(patid, final_month_after_index, days_into_final_month, died_in_final_month, days_exposed_total),
+#     by = "patid"
+#   ) %>%
+#   mutate(
+#     adjusted_visits = case_when(
+#       month_after_index != final_month_after_index ~ visit_count,
+#       died_in_final_month ~ visit_count,
+#       days_into_final_month >= 30.44 ~ visit_count,
+#       days_into_final_month >= 15.22 ~ (visit_count / days_into_final_month) * 30.44,
+#       TRUE ~ 0
+#     )
+#   ) %>%
+#   filter(adjusted_visits > 0)
 
 # Create Adjusted Visit Matrix (Wide Format)
 adjusted_visits_long_r <- adjusted_visits_data_r %>%
@@ -284,7 +307,7 @@ fc_grouped_visits <- function(data, indices) {
 
 set.seed(626)
 
-boot_user_visits_summary_per_month_r <- adjusted_visits_full_o |>
+boot_user_visits_summary_per_month_o <- adjusted_visits_full_o |>
   group_by(month_after_index) |>
   group_split() |>
   map_df(function(df_month) {
@@ -341,8 +364,8 @@ adj_combined_mean_visits <- bind_rows(adj_mean_visits_raw, adj_mean_visits_omop)
 
 ggsave(here::here(
   "Comparison Analysis", "Results", "Plots",
-  "Mean_visits_per_data_source_unadjusted_no_washout.PNG"),
-  plot = plot1,
+  "Mean_visits_per_data_source_adjusted.PNG"),
+  plot = adj_plot_visits,
   width = 6.5,
   height = 5,
   dpi = 300,
@@ -397,7 +420,8 @@ adjusted_costs_data_r_c <- visits_data_raw %>%
 adjusted_costs_long_r <- adjusted_costs_data_r_c %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
   group_by(patid, month_col) %>%
-  summarise(adjust_visit_costs = sum(adjust_visit_costs), .groups = "drop")
+  summarise(adjust_visit_costs = sum(adjust_visit_costs), 
+            .groups = "drop")
 
 adjusted_costs_matrix_r <- adjusted_costs_long_r %>%
   pivot_wider(names_from = month_col, values_from = adjust_visit_costs)
@@ -664,9 +688,24 @@ adj_combined_costs <- bind_rows(adj_raw_costs_by_month, adj_omop_costs_by_month)
 ggsave(here::here(
   "Comparison Analysis", "Results", "Plots",
   "Mean_costs_per_data_source_adjusted.PNG"),
-  plot = plot_costs1,
+  plot = plot_costs_adj,
   width = 6.5,
   height = 5,
   dpi = 300,
   bg = "white"
 )
+
+df_test_r <- full_join(adjusted_visits_data_r, adjusted_costs_data_r_c, by = c("patid", "month_after_index", "specialty_reduced")) |>
+  mutate(adjusted_visits.x =  round(adjusted_visits.x, 4),
+         adjusted_visits.y =  round(adjusted_visits.y, 4)) |> 
+  mutate(check_visits = if_else(adjusted_visits.x == adjusted_visits.y, TRUE, FALSE))
+
+df_test_o <- full_join(adjusted_visits_data_o, adjusted_costs_data_o, by = c("subject_id", "month_after_index", "specialty_reduced")) |>
+  mutate(adjusted_visits.x =  round(adjusted_visits.x, 4),
+         adjusted_visits.y =  round(adjusted_visits.y, 4)) |> 
+  mutate(check_visits = if_else(adjusted_visits.x == adjusted_visits.y, TRUE, FALSE))
+
+df_combo_t <- inner_join(adjusted_costs_data_r_c, adjusted_costs_data_o |> rename("patid" = "subject_id"),
+                         by = c("patid", "month_after_index", "specialty_reduced")) |> 
+  mutate(diff_adjusted_visits = adjusted_visits.y - adjusted_visits.x,
+         diff_adjusted_costs = adjust_visit_costs.y - adjust_visit_costs.x)
