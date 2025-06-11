@@ -18,9 +18,12 @@ knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
 
 To assess the validity of primary and hospital care resource use and costs estimated based on OMOP-mapped CPRD data against its corresponding source data using a cohort of women with postmenopausal fragility fractures in the UK.
 
-The cohort of interest is made of women aged >50 years with an incident fragility fracture in any site except the face, skull or digits and no history of fracture in the two years prior. The outcomes of interest are *primary* and *secondary healthcare resource utilisation* and *direct costs* associated to first incident fracture measured during the 730 days post index date or until a censoring event occurs and expressed as values per person/year. A detailed analysis plan for this study is available [here](https://github.com/LucyNjokiNjuki/OMOP-Validation-Study/raw/refs/heads/main/Analysis_plan_V.2_final.docx).
+The cohort of interest is made of women aged >50 years with an incident fragility fracture in any site except the face, skull or digits and no history of fracture in the two years prior. The outcomes of interest are **primary** and **secondary healthcare resource utilisation** and **direct costs** associated to first incident fracture measured during the 730 days post index date or until a censoring event occurs and expressed as values per person/year. A detailed analysis plan for this study is available [here](https://github.com/LucyNjokiNjuki/OMOP-Validation-Study/raw/refs/heads/main/Analysis_plan_V.2_final.docx).
 
-This RMarkdown reports the data preparation and results for the analysis conducted on the *source CPRD-HES* dataset. 
+In line with the [HE Analysis Reporting Framework](https://github.com/HEOR-NDORMS/OMOP-Validation-Study/raw/refs/heads/main/HE_analysis_reporting_framework_updated.docx), both unadjusted and adjusted analyses were conducted.
+
+This RMarkdown reports the data preparation and results for the unadjusted and adjusted analyses conducted on the **Source CPRD-HES** and **OMOP-mapped CPRD** datasets. 
+
 
 # Data Preparation
 
@@ -1397,9 +1400,9 @@ unadj_users_costs_transposed %>%
 
 # Appendix 
 
-## Source CPRD {.tabset}
+## Source {.tabset}
 
-### HCRU by Monthly (Unweighted) - Users
+### HCRU by Monthly (Unadjusted) - Users
 
 ```{r}
 monthly_visits_users_summary_rp_unweighted_raw <- import(here("CPRD Raw Analysis", "Results", "Output_monthly_visits_Raw.xlsx"), sheet = "monthly_visit_unweighted")
@@ -1434,7 +1437,7 @@ datatable(monthly_visits_users_summary_rp_unweighted_raw,
 )
 ```
 
-### HCRU by Monthly (Weighted) - Users
+### HCRU by Monthly (Adjusted) - Users
 
 ```{r}
 monthly_visits_users_summary_rp_weighted_raw <- import(here("CPRD Raw Analysis", "Results", "Output_monthly_visits_Raw.xlsx"), sheet = "monthly_visit_weighted")
@@ -1539,7 +1542,9 @@ datatable(all_summary_rp_raw,
 )
 ```
 
-### Costs by Monthly (Unweighted) - Users
+
+
+### Costs by Monthly (Unadjusted) - Users
 
 ```{r}
 monthly_costs_users_summary_rp_unweighted_raw <- import(here("CPRD Raw Analysis", "Results", "Output_monthly_costs_Raw.xlsx"), sheet = "monthly_costs_unweighted")
@@ -1574,7 +1579,7 @@ datatable(monthly_costs_users_summary_rp_unweighted_raw,
 )
 ```
 
-### Costs by Monthly (Weighted) - Users
+### Costs by Monthly (Adjusted) - Users
 
 ```{r}
 monthly_costs_users_summary_rp_weighted_raw <- import(here("CPRD Raw Analysis", "Results", "Output_monthly_costs_Raw.xlsx"), sheet = "monthly_costs_weighted")
@@ -1960,21 +1965,298 @@ datatable(all_cost_summary_rp_omop,
 )
 ```
 
+## Comparison Analysis {.tabset}
 
-## Assumptions Underlying Cost Calculations
+### Unadjusted Mean Visits - Source
 
 ```{r}
-provider_cost_inputs_rp <- rio::import(here("CPRD Raw Analysis", "SRC",  "provider_specialty_cprd_V.0.3.xlsx")) %>%
-  janitor::clean_names() %>% 
-  select(!include) %>% 
-  select(specialty_source_value, specialty_source_value_summarised, everything())
-
-colnames(provider_cost_inputs_rp) <- c("Specialty", "Specialty Reduced", "Unit Cost", "Source PSSRU 2023 Unless Stated Otherwise (Assumptions)")
+unadj_mean_visits_summary_rp_raw <- import(here("Comparison Analysis", "Results", "Output_monthly_mean_visits-Unadjusted.xlsx"), sheet = "mean_visits_combined_r") %>% 
+  mutate(across(where(is.numeric), round, 2)) %>% 
+  select(!mean_visits_boot)
 ```
 
 
 ```{r}
-datatable(provider_cost_inputs_rp,
+colnames(unadj_mean_visits_summary_rp_raw) <- c("Month After Index", "Mean Visits Per Month", "Lower CI", "Upper CI")
+
+datatable(unadj_mean_visits_summary_rp_raw,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Unadjusted Mean Visits - OMOP
+
+```{r}
+unadj_mean_visits_summary_rp_omop <- import(here("Comparison Analysis", "Results", "Output_monthly_mean_visits-Unadjusted.xlsx"), sheet = "mean_visits_combined_o") %>% 
+  mutate(across(where(is.numeric), round, 2)) %>% 
+  select(!mean_visits_boot)
+```
+
+
+```{r}
+colnames(unadj_mean_visits_summary_rp_omop) <- c("Month After Index", "Mean Visits Per Month", "Lower CI", "Upper CI")
+
+datatable(unadj_mean_visits_summary_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Adjusted Mean Visits - Source
+
+```{r}
+adj_mean_visits_summary_rp_raw <- import(here("Comparison Analysis", "Results", "Output_monthly_mean_visits-Adjusted.xlsx"), sheet = "mean_visits_combined_r") %>% 
+  mutate(across(where(is.numeric), round, 2)) %>% 
+  select(!mean_visits_boot)
+```
+
+
+```{r}
+colnames(adj_mean_visits_summary_rp_raw) <- c("Month After Index", "Mean Visits Per Month", "Lower CI", "Upper CI")
+
+datatable(adj_mean_visits_summary_rp_raw,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Adjusted Mean Visits - OMOP
+
+```{r}
+adj_mean_visits_summary_rp_omop <- import(here("Comparison Analysis", "Results", "Output_monthly_mean_visits-Adjusted.xlsx"), sheet = "mean_visits_combined_o") %>% 
+  mutate(across(where(is.numeric), round, 2)) %>% 
+  select(!mean_visits_boot)
+```
+
+
+```{r}
+colnames(adj_mean_visits_summary_rp_omop) <- c("Month After Index", "Mean Visits Per Month", "Lower CI", "Upper CI")
+
+datatable(adj_mean_visits_summary_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+
+### Unadjusted Mean Visits Costs - Source
+
+```{r}
+unadj_mean_costs_summary_rp_raw <- import(here("Comparison Analysis", "Results", "Output_monthly_mean_costs-Unadjusted.xlsx"), sheet = "mean_costs_combined_r") %>% 
+  mutate(across(where(is.numeric), round, 2)) %>% 
+  select(!mean_costs_boot)
+```
+
+
+```{r}
+colnames(unadj_mean_costs_summary_rp_raw) <- c("Month After Index", "Mean Visits Costs Per Month", "Lower CI", "Upper CI")
+
+datatable(unadj_mean_costs_summary_rp_raw,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Unadjusted Mean Visits Costs - OMOP
+
+```{r}
+unadj_mean_costs_summary_rp_omop <- import(here("Comparison Analysis", "Results", "Output_monthly_mean_costs-Unadjusted.xlsx"), sheet = "mean_costs_combined_o") %>% 
+  mutate(across(where(is.numeric), round, 2)) %>% 
+  select(!mean_costs_boot)
+```
+
+
+```{r}
+colnames(unadj_mean_costs_summary_rp_omop) <- c("Month After Index", "Mean Visits Costs Per Month", "Lower CI", "Upper CI")
+
+datatable(unadj_mean_costs_summary_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Adjusted Mean Visits Costs - Source
+
+```{r}
+adj_mean_costs_summary_rp_raw <- import(here("Comparison Analysis", "Results", "Output_monthly_mean_costs-Adjusted.xlsx"), sheet = "mean_costs_combined_r") %>% 
+  mutate(across(where(is.numeric), round, 2)) %>% 
+  select(!mean_costs_boot)
+```
+
+
+```{r}
+colnames(adj_mean_costs_summary_rp_raw) <- c("Month After Index", "Mean Visits Costs Per Month", "Lower CI", "Upper CI")
+
+datatable(adj_mean_costs_summary_rp_raw,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+### Adjusted Mean Visits Costs - OMOP
+
+```{r}
+adj_mean_costs_summary_rp_omop <- import(here("Comparison Analysis", "Results", "Output_monthly_mean_costs-Adjusted.xlsx"), sheet = "mean_costs_combined_o") %>% 
+  mutate(across(where(is.numeric), round, 2)) %>% 
+  select(!mean_costs_boot)
+```
+
+
+```{r}
+colnames(adj_mean_costs_summary_rp_omop) <- c("Month After Index", "Mean Visits Costs Per Month", "Lower CI", "Upper CI")
+
+datatable(adj_mean_costs_summary_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        ),
+        initComplete = JS(
+            "function(settings, json) {",
+            "$(this.api().table().body()).css({'font-family': 'Times New Roman', 'font-size': '16px'});",
+            "}"
+        )
+    )
+)
+```
+
+
+## Assumptions Underlying Cost Calculations {.tabset}
+
+### Source
+
+```{r}
+provider_cost_inputs_rp_raw <- rio::import(here("CPRD Raw Analysis", "SRC",  "provider_specialty_cprd_V.0.4.xlsx")) %>%
+  janitor::clean_names() %>% 
+  select(!include_source) %>% 
+  select(specialty_source_value, specialty_source_value_summarised, everything())
+
+colnames(provider_cost_inputs_rp_raw) <- c("Specialty", "Specialty Reduced", "Unit Cost", "Source PSSRU 2023 Unless Stated Otherwise (Assumptions)")
+```
+
+
+```{r}
+datatable(provider_cost_inputs_rp_raw,
     rownames = FALSE, 
     filter = 'top', 
     options = list(
@@ -1991,3 +2273,32 @@ datatable(provider_cost_inputs_rp,
 )
 ```
 
+### OMOP
+
+```{r}
+provider_cost_inputs_rp_omop <- rio::import(here("CPRD Raw Analysis", "SRC",  "provider_specialty_cprd_V.0.4_omop2.xlsx")) %>%
+  janitor::clean_names() %>% 
+  select(!include_source) %>% 
+  select(specialty_source_value, specialty_source_value_summarised, everything())
+
+colnames(provider_cost_inputs_rp_omop) <- c("Specialty", "Specialty Reduced", "Unit Cost", "Source PSSRU 2023 Unless Stated Otherwise (Assumptions)")
+```
+
+
+```{r}
+datatable(provider_cost_inputs_rp_omop,
+    rownames = FALSE, 
+    filter = 'top', 
+    options = list(
+        scrollX = TRUE,  # Allow user to scroll wide tables horizontally
+        search = list(regex = FALSE, caseInsensitive = TRUE),
+        autoWidth = TRUE,  # Automatically adjust column widths
+        columnDefs = list(
+            list(
+                targets = "_all",  # Apply to all columns
+                className = "dt-center"  # Center align all columns
+            )
+        )
+    )
+)
+```
