@@ -38,12 +38,14 @@ library(png)
 library(grid)
 library(patchwork)
 library(gridExtra)
+library(stringr)
+library(readxl)
 ```
 
 ## Attrition Report {.tabset}
 
 ```{r}
-# Import and preprocess the raw attrition report
+# Load and preprocess raw attrition report
 attrition_report_raw <- import(here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx")) %>%
   mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>%
   mutate(
@@ -58,7 +60,7 @@ attrition_report_raw <- import(here("CPRD Raw Analysis", "Results", "AttritionRe
   ) %>%
   select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded)
 
-# Import and preprocess the OMOP attrition report
+# Load and preprocess OMOP attrition report
 attrition_report_omop <- import(here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx")) %>%
   mutate(
     subjects_excluded = as.numeric(subjects_excluded),
@@ -72,31 +74,36 @@ attrition_report_omop <- import(here("OMOP Analysis", "Results", "AttritionRepor
   ) %>%
   select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded)
 
-# Merge datasets with suffixes
-merged_attrition <- full_join(attrition_report_raw, attrition_report_omop, by = "reason", suffix = c("_raw", "_omop"))
+# Extract and prepare top rows from raw
+special_top_rows <- attrition_report_raw %>%
+  filter(reason %in% c("Starting Population - Female individuals", "Anyone With Fracture(s)")) %>%
+  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded) %>%
+  rename_with(~ paste0(., "_raw"), -reason)
 
-# Reorder: move the last 2 rows to the top
-reordered_attrition <- merged_attrition %>%
-  {
-    top_two <- tail(., 2)
-    middle <- head(., -2)
-    bind_rows(top_two[2,], top_two[1,], middle)
-  }
+# Merge rest of the data
+merged_attrition <- full_join(
+  attrition_report_raw %>% filter(!reason %in% special_top_rows$reason),
+  attrition_report_omop,
+  by = "reason",
+  suffix = c("_raw", "_omop")
+)
 
-# Add indentation for visual grouping
-reordered_attrition <- reordered_attrition %>%
+# Combine top rows with merged attrition table
+reordered_attrition <- bind_rows(
+  special_top_rows,
+  merged_attrition
+) %>%
   mutate(row_id = row_number()) %>%
   mutate(
     reason = case_when(
-      row_id == 1 ~ "Starting Population - Female individuals",
-      row_id == 2 ~ "Anyone With Fracture(s)",
+      row_id <= 2 ~ reason,
       TRUE ~ paste0("  ", reason)
     )
-  ) %>%
-  slice(3:n())
-# Table 1: Starting population
+  )
+
+# Table 1: Starting Population
 starting_population_table <- reordered_attrition %>%
-  filter(str_detect(reason, "Had their 1st fx.*> 50 years old"))
+  filter(str_detect(reason, "Had their.*fracture.*> ?50 years old"))
 
 starting_population_table %>%
   gt() %>%
@@ -115,22 +122,23 @@ starting_population_table %>%
   ) %>%
   cols_hide(columns = c(contains("excluded"), contains("records"), row_id)) %>% 
   opt_stylize(style = 2)
+
 ```
 
 
 ```{r}
 # Table 2: Exclusions (row 2 to 15)
 exclusion_table <- reordered_attrition %>%
-  slice(2:15)
+  slice(2:14)
 
 # Get raw count from row 16
 eligible_count_raw <- reordered_attrition %>%
-  slice(15) %>%
+  slice(14) %>%
   pull(number_subjects_raw)
 
 # Get omop count from row 18
 eligible_count_omop <- reordered_attrition %>%
-  slice(15) %>%
+  slice(14) %>%
   pull(number_subjects_omop)
 
 # Create final row with eligible counts mapped to visible columns
@@ -218,19 +226,17 @@ parent_vars <- c("Fracture Site", "Censoring Event",
                  "Heathcare Service User Status") 
 
 subcategories <- c("Hip", "Vertebra", "NHNV", 
-                   "Cancer", "Cancer, Fracture ensuing incident (index) fracture",
-                   "Death", "End of data collection period",
-                   "End of data collection period, Cancer",
-                   "End of data collection period, Fracture ensuing incident (index) fracture",
+                   "Death", "Cancer",
+                   "Cancer, Fracture ensuing incident (index) fracture",
                    "Fracture ensuing incident (index) fracture",
+                   "Fracture ensuing incident (index) fracture, End of Study",
+                   "Paget’s disease of the bone, or other metabolic bone diseases",
+                   "End of data collection period",
+                   "End of data collection period, Fracture ensuing incident (index) fracture",
+                   "End of Study",
                    "Max of 730 days from index date",
-                   "Max of 730 days from index date, Cancer",
-                   "Max of 730 days from index date, End of data collection period",
                    "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
-                   "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
-                   "Paget’s disease of the bone, or other metabolic bone diseases", 
-                   "Cancer, Paget’s disease of the bone, or other metabolic bone diseases", 
-                   "Paget’s disease of the bone, or other metabolic bone diseases, Fracture ensuing incident (index) fracture", 
+                   "Max of 730 days from index date, End of Study",
                    "Non-User", "User")
 
 
@@ -258,11 +264,11 @@ merged_data %>%
   # Add spanner headers for CPRD Raw and OMOP Analysis
   tab_spanner(
     label = "Source Analysis",
-    columns = c("N = 17,705")
+    columns = c("N = 23,106")
   ) %>%
   tab_spanner(
     label = "OMOP Analysis",
-    columns = c("N = 18,133")
+    columns = c("N = 22,900")
   ) %>%
 
 
@@ -1210,61 +1216,40 @@ adj_user_transposed_costs_per_year_rp %>%
 
 ```{r}
 # Add a column to identify the source
-overall_all_costs_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "overall_all_only_costs") %>%
+unadj_overall_all_costs_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw-Unadjusted.xlsx"), sheet = "unadjusted_all_costs_summary") %>%
   mutate(Source = "Source")
 
-overall_all_costs_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "overall_all_only_costs") %>%
+unadj_overall_all_costs_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP-Unadjusted.xlsx"), sheet = "unadjusted_all_costs_summary") %>%
   mutate(Source = "OMOP")
 
 # Combine the data
-all_combined_costs_rp <- bind_rows(overall_all_costs_only_rp_raw, overall_all_costs_only_rp_omop) %>% 
+unadj_all_combined_costs_rp <- bind_rows(unadj_overall_all_costs_only_rp_raw, unadj_overall_all_costs_only_rp_omop) %>% 
   select(Source, everything())
 
-# # Step 3: Create the gt table
-# all_combined_costs_rp %>%
-#   gt() %>%
-#   tab_header(
-#     title = md("**All Patients - Visit Costs Per Patient Per Year**"),
-#     subtitle = md("*Healthcare Service Users and Non-users*")
-#   ) %>%
-#   opt_all_caps() %>% 
-#   tab_options(
-#     table.width = px(800),
-#     heading.align = "left",
-#     table.font.size = px(14)
-#   ) |> 
-#   opt_stylize(style = 3) %>% 
-#   cols_label(
-#     Source = "Data Source",
-#     mean_visit_cost_per_year = "Mean Visit Costs per Year",
-#     min_visit_cost_per_year = "Minimum Visit Costs per Year",
-#     max_visit_cost_per_year = "Maximum Visit Costs per Year",
-#     sd_visit_cost_per_year = "SD Visit Costs per Year",
-#     median_visit_cost_per_year = "Median Visit Costs per Year",
-#     lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-#     upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-#   )
-
 # Transpose the costs table
-all_costs_transposed <- all_combined_costs_rp %>%
+unadj_all_costs_transposed <- unadj_all_combined_costs_rp %>%
   pivot_longer(-Source, names_to = "Metric", values_to = "Value") %>%
   pivot_wider(names_from = Source, values_from = Value) %>%
   mutate(Metric = recode(Metric,
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+    mean_visits_cost = "Mean Visit Costs per Year",
+    min_visits_cost = "Minimum Visit Costs per Year",
+    max_visits_cost = "Maximum Visit Costs per Year",
+    sd_visits_cost = "SD Visit Costs per Year",
+    median_visits_cost = "Median Visit Costs per Year",
+    q1_visits_cost = "Lower Quartile Visit Costs Per Year",
+    q3_visits_cost = "Upper Quartile Visit Costs Per Year",
+    lower = "Lower CI",
+    upper = "Upper CI",
+    n = "No. of Patients",
+    se = "Standard Error"
   )) %>%
   rename(Statistic = Metric)
 
 # Create the gt table
-all_costs_transposed %>%
+unadj_all_costs_transposed %>%
   gt() %>%
   tab_header(
-    title = md("**All Patients - Visit Costs Per Patient Per Year**"),
+    title = md("**Unadjusted Analysis: All Patients - Visit Costs Per Patient Per Year**"),
     subtitle = md("*Healthcare Service Users and Non-users*")
   ) %>%
   cols_label(
@@ -1286,63 +1271,100 @@ all_costs_transposed %>%
 
 ```
 
+
 ```{r}
 # Add a column to identify the source
-overall_user_costs_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw.xlsx"), sheet = "overall_user_only_costs") %>%
+adj_overall_all_costs_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw-Adjusted.xlsx"), sheet = "adjusted_all_costs_summary") %>%
   mutate(Source = "Source")
 
-overall_user_costs_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP.xlsx"), sheet = "overall_user_only_costs") %>%
+adj_overall_all_costs_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP-Adjusted.xlsx"), sheet = "adjusted_all_costs_summary") %>%
   mutate(Source = "OMOP")
 
 # Combine the data
-user_combined_costs_rp <- bind_rows(overall_user_costs_only_rp_raw, overall_user_costs_only_rp_omop) %>% 
+adj_all_combined_costs_rp <- bind_rows(adj_overall_all_costs_only_rp_raw, adj_overall_all_costs_only_rp_omop) %>% 
   select(Source, everything())
 
-# Create the gt table
-# user_combined_costs_rp %>%
-#   gt() %>%
-#   tab_header(
-#     title = md("**Healthcare Service Users - Visit Costs Per Patient Per Year**"),
-#     subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
-#   ) %>%
-#   opt_all_caps() %>% 
-#   tab_options(
-#     table.width = px(800),
-#     heading.align = "left",
-#     table.font.size = px(14)
-#   ) |> 
-#   opt_stylize(style = 3) %>% 
-#   cols_label(
-#     Source = "Data Source",
-#     mean_visit_cost_per_year = "Mean Visit Costs per Year",
-#     min_visit_cost_per_year = "Minimum Visit Costs per Year",
-#     max_visit_cost_per_year = "Maximum Visit Costs per Year",
-#     sd_visit_cost_per_year = "SD Visit Costs per Year",
-#     median_visit_cost_per_year = "Median Visit Costs per Year",
-#     lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-#     upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
-#   )
-
-# Transpose the users' costs table
-users_costs_transposed <- user_combined_costs_rp %>%
+# Transpose the costs table
+adj_all_costs_transposed <- adj_all_combined_costs_rp %>%
   pivot_longer(-Source, names_to = "Metric", values_to = "Value") %>%
   pivot_wider(names_from = Source, values_from = Value) %>%
   mutate(Metric = recode(Metric,
-    mean_visit_cost_per_year = "Mean Visit Costs per Year",
-    min_visit_cost_per_year = "Minimum Visit Costs per Year",
-    max_visit_cost_per_year = "Maximum Visit Costs per Year",
-    sd_visit_cost_per_year = "SD Visit Costs per Year",
-    median_visit_cost_per_year = "Median Visit Costs per Year",
-    lower_q_visits_cost_per_year = "Lower Quartile Visit Costs per Year",
-    upper_q_visits_cost_per_year = "Upper Quartile Visit Costs per Year"
+    mean_visits_cost = "Mean Visit Costs per Year",
+    min_visits_cost = "Minimum Visit Costs per Year",
+    max_visits_cost = "Maximum Visit Costs per Year",
+    sd_visits_cost = "SD Visit Costs per Year",
+    median_visits_cost = "Median Visit Costs per Year",
+    q1_visits_cost = "Lower Quartile Visit Costs Per Year",
+    q3_visits_cost = "Upper Quartile Visit Costs Per Year",
+    lower = "Lower CI",
+    upper = "Upper CI",
+    n = "No. of Patients",
+    se = "Standard Error"
   )) %>%
   rename(Statistic = Metric)
 
 # Create the gt table
-users_costs_transposed %>%
+adj_all_costs_transposed %>%
   gt() %>%
   tab_header(
-    title = md("**Healthcare Service Users - Visit Costs Per Patient Per Year**"),
+    title = md("**Adjusted Analysis: All Patients - Visit Costs Per Patient Per Year**"),
+    subtitle = md("*Healthcare Service Users and Non-users*")
+  ) %>%
+  cols_label(
+    Statistic = "Statistic",
+    Source = "Source",
+    OMOP = "OMOP"
+  ) %>%
+  opt_all_caps() %>%
+  tab_options(
+    table.width = px(800),
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  opt_stylize(style = 3) %>% 
+  fmt_number(
+    columns = c("Source", "OMOP"), 
+    sep_mark = ","
+  )
+```
+
+
+```{r}
+# Add a column to identify the source
+unadj_overall_user_costs_only_rp_raw <- import(here("CPRD Raw Analysis", "Results", "Output_costs_Raw-Unadjusted.xlsx"), sheet = "unadjusted_user_only_costs") %>%
+  mutate(Source = "Source")
+
+unadj_overall_user_costs_only_rp_omop <- import(here("OMOP Analysis", "Results", "Output_costs_OMOP-Unadjusted.xlsx"), sheet = "unadjusted_user_only_costs") %>%
+  mutate(Source = "OMOP")
+
+# Combine the data
+unadj_user_combined_costs_rp <- bind_rows(unadj_overall_user_costs_only_rp_raw, unadj_overall_user_costs_only_rp_omop) %>% 
+  select(Source, everything())
+
+# Transpose the users' costs table
+unadj_users_costs_transposed <- unadj_user_combined_costs_rp %>%
+  pivot_longer(-Source, names_to = "Metric", values_to = "Value") %>%
+  pivot_wider(names_from = Source, values_from = Value) %>%
+  mutate(Metric = recode(Metric,
+    mean_visits_cost = "Mean Visit Costs per Year",
+    min_visits_cost = "Minimum Visit Costs per Year",
+    max_visits_cost = "Maximum Visit Costs per Year",
+    sd_visits_cost = "SD Visit Costs per Year",
+    median_visits_cost = "Median Visit Costs per Year",
+    q1_visits_cost = "Lower Quartile Visit Costs Per Year",
+    q3_visits_cost = "Upper Quartile Visit Costs Per Year",
+    lower = "Lower CI",
+    upper = "Upper CI",
+    n = "No. of Patients",
+    se = "Standard Error"
+  )) %>%
+  rename(Statistic = Metric)
+
+# Create the gt table
+unadj_users_costs_transposed %>%
+  gt() %>%
+  tab_header(
+    title = md("**Unadjusted Analysis: Healthcare Service Users - Visit Costs Per Patient Per Year**"),
     subtitle = md("*Subjects with >=1 visit with a clinically relevant healthcare provider*")
   ) %>%
   cols_label(
