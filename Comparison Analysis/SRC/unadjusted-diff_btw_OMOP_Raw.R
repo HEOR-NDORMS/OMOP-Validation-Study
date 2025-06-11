@@ -292,7 +292,7 @@ library(ggplot2)
 
 ggsave(here::here(
   "Comparison Analysis", "Results", "Plots",
-  "Mean_visits_per_data_source_unadjusted_no_washout.PNG"),
+  "Mean_visits_per_data_source_unadjusted.PNG"),
   plot = plot1,
   width = 6.5,
   height = 5,
@@ -573,7 +573,7 @@ combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
 
 ggsave(here::here(
   "Comparison Analysis", "Results", "Plots",
-  "Mean_costs_per_data_source_unadjusted_no_washout.PNG"),
+  "Mean_costs_per_data_source_unadjustedt.PNG"),
   plot = plot_costs1,
   width = 6.5,
   height = 5,
