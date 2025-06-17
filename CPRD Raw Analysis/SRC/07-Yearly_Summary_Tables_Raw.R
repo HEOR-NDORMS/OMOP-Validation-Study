@@ -363,7 +363,7 @@ boot_visits_list_per_year <- list(
   boot_user_summary_stats = boot_user_summary_statistics_per_year
 )
 
-write_xlsx(boot_visits_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_OMOP-Unadjusted_Boot.xlsx"))
+write_xlsx(boot_visits_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Raw-Unadjusted_Boot.xlsx"))
 
 
 ###### Adjusted All ----
