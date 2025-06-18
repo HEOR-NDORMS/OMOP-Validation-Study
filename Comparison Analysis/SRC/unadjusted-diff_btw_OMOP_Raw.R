@@ -14,6 +14,7 @@ library(rio)
 library(boot)
 library(tidytable)
 library(lubridate)
+library(writexl)
 
 # Import data ----
 visit_data_omop <- rio::import("H:/Projects/Validation/Data/visit_data_omop.csv")
@@ -579,7 +580,7 @@ combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
 
 ggsave(here::here(
   "Comparison Analysis", "Results", "Plots",
-  "Mean_costs_per_data_source_unadjustedt.PNG"),
+  "Mean_costs_per_data_source_unadjusted.PNG"),
   plot = plot_costs1,
   width = 6.5,
   height = 5,
