@@ -81,7 +81,8 @@ table_one_raw_visit_data <- left_join(
     "aurum_min_accept_date", "aurum_max_accept_date", "site",
     "cancer_fa_index_dt", "paget_fa_index_dt", "index_date",
     "fracture_after_index", "follow_up_end",
-    "follow_up_reason", "follow_up_time", "two_yrs_after_index"
+    "follow_up_reason", "follow_up_time", "two_yrs_after_index",
+    "study_end"
   )
 )
 
@@ -94,24 +95,20 @@ table_one_raw_visit_data <- left_join(table_one_raw_visit_data, validation_staff
 # the costs are to be updated
 # file changed to include the specialty source values that have been grouped 
 # into 3: GP, Nurse, Nurse
-provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.4_omop2_RPV2.xlsx") %>%
+provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.4_source_RPV.xlsx") %>%
   janitor::clean_names() %>%
-  # include those with 1 which are clinically relevant
-  #filter(include_source == 1) %>%
   select(!notes)
 
 # Join visits with specialties
-specialty_source_value_ids <- unique(provider_cost_inputs$specialty_source_value)
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
   left_join(provider_cost_inputs, by = c("description" = "specialty_source_value")) 
 
 # Classify clinically relevant visits and define user status
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
   rename("specialty_source_value" = "description") %>%
-  # mutate(specialty_source_value = case_when(
-  #   is_clinically_relevant == 1 ~ specialty_source_value,
-  #   TRUE ~ "Not Clinically Relevant"
-  # ))%>%
+  mutate(is_clinically_relevant = case_when(
+    specialty_source_value_summarised == "Administrative Non-clinical" ~ 0,
+      specialty_source_value != "Administrative Non-clinical" ~ 1)) %>%
   group_by(patid) %>%
   mutate(user_status = case_when(
     any(is_clinically_relevant == 1, na.rm = TRUE) ~ "User",
@@ -123,55 +120,7 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
   distinct(patid, user_status, .keep_all = TRUE)
 
 
- # Summary table ----
-# # Using gtsummary::tbl_summary, we can summarise the table as follows
-# (gt_summary_table <- table_one_raw_visit_data %>% 
-#    gtsummary::tbl_summary(
-#      # select the variables of interest
-#      include = c(age_fracture, site, follow_up_reason, 
-#                  follow_up_time, user_status, not_users_status),
-#      # rename the variable names
-#      label = list(
-#        age_fracture = "Age at Fracture Occurrence",
-#        site = "Fracture Site", 
-#        follow_up_reason = "Censoring Event",
-#        follow_up_time = "Follow up Time",
-#        user_status = "User Status",
-#        not_users_status = "Non-user Visit Status"
-#      ),
-#      # indicate whether we want the missing values to be seen in the summary table
-#      missing = "no"
-#    ) %>%
-#    gtsummary::modify_header(label = "**Variable**"))
-#    
-
-# Reorder factor by frequency
-# table_one_raw_visit_data <- table_one_raw_visit_data %>%
-#   mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason)) %>% 
-#   mutate(follow_up_time = as.numeric(follow_up_time))
-
 # Summary table ----
-# Using gtsummary::tbl_summary, we can summarise the table as follows
-# (gt_summary_table <- table_one_raw_visit_data %>% 
-#    gtsummary::tbl_summary(
-#      # select the variables of interest
-#      include = c(age_fracture, site, follow_up_reason, 
-#                  follow_up_time, user_status, not_users_status),
-#      # rename the variable names
-#      label = list(
-#        age_fracture = "Age at Fracture Occurrence",
-#        site = "Fracture Site", 
-#        follow_up_reason = "Censoring Event",
-#        follow_up_time = "Follow up Time",
-#        user_status = "Heathcare Service User Status",
-#        not_users_status = "Heathcare Service Non-user Visit Status"
-#      ),
-#      # indicate whether we want the missing values to be seen in the summary table
-#      missing = "no"
-#    ) %>%
-#    gtsummary::modify_header(label = "**Variable**"))
-#    
-
 # Reorder factor by frequency
 table_one_raw_visit_data <- table_one_raw_visit_data %>%
   mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason)) %>% 
@@ -241,6 +190,13 @@ table_one_raw_pt <- table_one_raw_visit_data %>%
 ## Follow-up time in days ----
 (median_followup_time <- median(table_one_raw_visit_data$follow_up_time))
 (iqr_followup_time <- IQR(table_one_raw_visit_data$follow_up_time))
+
+## Count of users/non-users -----
+(u_n_summary_t1 <- table_one_raw_visit_data %>%
+    group_by(user_status) %>%
+    summarise(count_of_pts = n_distinct(patid)) %>%
+    ungroup())
+
 
 # Export ----
 gt_summary_table_df <- as_tibble(gt_summary_table) %>% 
