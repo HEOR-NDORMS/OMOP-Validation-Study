@@ -16,14 +16,14 @@ options(scipen = 999)
 library(tidylog)
 
 visit_data_reduced_MIN <- visit_data_reduced %>% select(
-  subject_id, index_date, visit_detail_start_date, user_status,
+  subject_id, index_date, visit_detail_start_date, user_status, is_clinically_relevant,
   specialty_reduced, follow_up_end, death_date
 )
 
 ### PLOT visits per month/specialty   -------
 # STEP 0: Identify users
 users_adj <- visit_data %>%
-  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   distinct(subject_id) %>%
   pull(subject_id)
 
@@ -43,7 +43,7 @@ cohort_grid_omop <- cohort_data_omop %>%
 
 # STEP 2: Create Visit Matrix
 unadj_visit_data_with_month <- visit_data %>%
-  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(across(c(index_date, follow_up_end, visit_detail_start_date), ymd)) %>%
   left_join(cohort_data_omop %>%
               mutate(across(c(index_date, follow_up_end), ymd)),
@@ -99,7 +99,7 @@ mean_visits_per_month_r <- final_long_df_raw %>%
 
 # STEP 6: Specialty-Specific Visit Proportions
 visit_data_reduced_user <- visit_data_reduced_MIN %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(
     month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
@@ -149,7 +149,7 @@ final_combined_prop_df <- avg_prop_specialty_month %>%
       y = "Mean Visits per Healthcare Service User",
       fill = "Specialty"
     ) +
-    scale_y_continuous(limits = c(0, 8)) +
+    scale_y_continuous(limits = c(0, 30)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -174,7 +174,7 @@ ggsave(here::here(
 ### PLOT Tot Visits ------
 
 visit_data_reduced_user2 <- visit_data_reduced_MIN %>%
-  filter(specialty_reduced != "Not Clinically Relevant") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
   group_by(month_after_index) %>%
   summarise(visit_count = n(), .groups = "drop")
@@ -195,7 +195,7 @@ visit_data_reduced_user2 <- visit_data_reduced_MIN %>%
       y = "Total Visits (Healthcare Service Users)"
     ) +
     scale_y_continuous(labels = scales::comma,
-                       limits = c(0, 65000)) +
+                       limits = c(0, 250000)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -232,7 +232,7 @@ cohort_grid_omop <- cohort_data_omop %>%
 
 # Adjusted Visit Counts
 adjusted_visits_data_r <- visit_data %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
   mutate(
     days_exposed_total = as.numeric(follow_up_end - index_date),
@@ -295,7 +295,7 @@ final_long_df_adjusted_visits <- final_matrix_adjusted_visits %>%
 
 # Identify eligible users
 users_adj <- visit_data %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   distinct(subject_id) %>%
   pull(subject_id)
 
@@ -353,7 +353,7 @@ plots_users_mean_visits_specialty <- visits_per_specialty_month %>%
       fill = "Specialty",
       caption = "Adjusted for partial follow-up: included patients with ≥15.22 days/month.\nPartial months scaled by exposure;\n full months or death-months used raw counts."
     ) +
-    scale_y_continuous(limits = c(0, 4)) +
+    scale_y_continuous(limits = c(0, 10)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -394,8 +394,8 @@ pt_count_visits <- visit_data_MIN %>%
     ggplot(aes(x = total_patient_visits, y = Percent_Subjects)) +
     geom_bar(stat = "identity", fill="#A52A2A", alpha=0.9) +
     labs(x = "Total Number of Visits", y = "% of Subjects") +
-    scale_y_continuous(limits = c(0, 6) ,
-                       breaks = seq(0, 6, by = 1))+
+    scale_y_continuous(limits = c(0, 3) ,
+                       breaks = seq(0, 3, by = 1))+
     coord_cartesian(xlim = c(0, 250)) +
     theme_minimal(base_family = 20) +
     theme(
@@ -441,17 +441,16 @@ ggsave(here::here("OMOP Analysis", "Results", "Plots", "Exposure_Time.PNG"),
 )
 
 ## Cost ----
-
 visit_data_reduced_MIN_c <- visit_data_reduced %>% 
   select(
-    subject_id, index_date, visit_detail_start_date, user_status,
+    subject_id, index_date, visit_detail_start_date, user_status, is_clinically_relevant,
     specialty_reduced, follow_up_end, unit_cost, death_date
   )
 
 ### PLOT costs per month/specialty   -------
 # STEP 0: Identify users
 users_adj <- visit_data %>%
-  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   distinct(subject_id) %>%
   pull(subject_id)
 
@@ -471,7 +470,7 @@ cohort_grid_omop <- cohort_data_omop %>%
 
 # STEP 2: Create Visit Matrix
 cost_data_with_month <- visit_data %>%
-  filter(specialty != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(across(c(index_date, follow_up_end, visit_detail_start_date), ymd)) %>%
   left_join(cohort_data_omop %>%
               mutate(across(c(index_date, follow_up_end), ymd)),
@@ -534,7 +533,7 @@ mean_costs_per_month <- final_long_df_costs %>%
 
 # STEP 6: Specialty-Specific Visit Proportions
 cost_data_reduced_user <- visit_data_reduced_MIN_c %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(
     month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
@@ -582,7 +581,7 @@ cost_final_combined_prop_df <- avg_cost_prop_specialty_month %>%
       y = "Mean Costs per User",
       fill = "Specialty"
     ) +
-    scale_y_continuous(limits = c(0, 250)) +
+    scale_y_continuous(limits = c(0, 800)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5, size = 18),
@@ -606,7 +605,7 @@ ggsave(here::here(
 ### PLOT Tot Costs ------
 
 visit_data_reduced_user_c2 <- visit_data_reduced_MIN_c %>%
-  filter(specialty_reduced != "Not Clinically Relevant") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) %>%
   group_by(subject_id, month_after_index, specialty_reduced) %>%
   summarise(visit_count = n(),
@@ -634,7 +633,7 @@ visit_data_reduced_user_c2 <- visit_data_reduced_MIN_c %>%
       y = "Total Costs (Healthcare Service Users)"
     ) +
     scale_y_continuous(labels = scales::comma,
-                       limits = c(0, 2500000)) +
+                       limits = c(0, 8000000)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -668,7 +667,7 @@ cohort_grid_omop <- cohort_data_omop %>%
 
 # Adjust Visit Counts
 adjusted_costs_data_r <- visit_data_reduced_MIN_c %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), ymd)) %>%
   mutate(
     days_exposed_total = as.numeric(follow_up_end - index_date),
@@ -737,7 +736,7 @@ final_long_df_adjusted_costs <- final_matrix_adjusted_costs %>%
 
 # But first, let's filter for users only
 users_adj <- visit_data %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   distinct(subject_id) %>% 
   pull(subject_id)
 
@@ -798,7 +797,7 @@ plots_users_mean_costs_specialty <- costs_per_specialty_month %>%
       fill = "Specialty",
       caption = "Adjusted for partial follow-up: included patients with ≥15.22 days/month.\nPartial months scaled by exposure;\n full months or death-months used raw counts."
     ) +
-    scale_y_continuous(limits = c(0, 130)) +
+    scale_y_continuous(limits = c(0, 350)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
