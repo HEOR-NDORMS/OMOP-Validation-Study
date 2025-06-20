@@ -1,10 +1,9 @@
 # Visits ----
-## Users ----
 
 ## Unadjusted ----
 # Assign visits to year 1 or year 2 based on consult date
 unadjusted_user_visits_yr <- visit_data %>%
-  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(
     visit_yr_from_index = as.numeric(difftime(visit_detail_start_date, index_date, units = "days")),
     year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25 + 1)) %>% 
@@ -110,7 +109,7 @@ write_xlsx(unadjusted_yearly_visits_list, here::here("OMOP Analysis", "Results",
 ## Adjusted ----
 # Filter for users
 adjusted_user_visits_yr <- visit_data %>%
-  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   
   # Calculate year index of each visit
   mutate(
@@ -395,120 +394,10 @@ adj_boot_all_summary_statistics_per_year <- adjusted_final_df_all %>%
   })
 
 # Costs ----
-## Users ----
-# user_costs_yr <- visit_data %>%
-#   filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
-#   mutate(
-#     visit_yr_from_index = as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25,
-#     year_after_index = case_when(
-#       visit_yr_from_index < 1 ~ 1,
-#       visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
-#       TRUE ~ NA_real_
-#     )
-#   ) %>%
-#   inner_join(eligible_patients, by = "subject_id") %>%
-#   filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%
-#   group_by(subject_id, year_after_index, specialty) %>%
-#   summarise(
-#     visit_count = n(),
-#     unit_cost = first(unit_cost),
-#     visits_cost = visit_count * unit_cost,
-#     .groups = "drop"
-#   )
-# 
-# # Total cost per user per year, adjusted by exposure
-# user_total_costs_per_patient_yr <- user_costs_yr %>%
-#   group_by(subject_id, year_after_index) %>%
-#   summarise(total_costs = sum(visits_cost), .groups = "drop") %>%
-#   left_join(
-#     eligible_patients %>%
-#       pivot_longer(cols = c(year1_exposure, year2_exposure),
-#                    names_to = "exposure_label",
-#                    values_to = "exposure_time") %>%
-#       mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
-#       select(subject_id, year_after_index, exposure_time),
-#     by = c("subject_id", "year_after_index")
-#   ) %>%
-#   mutate(visit_costs_per_yr = total_costs / exposure_time)
-# 
-# # Summary stats for user cost per year
-# user_summary_costs_per_year <- user_total_costs_per_patient_yr %>%
-#   group_by(year_after_index) %>%
-#   summarise(
-#     mean_visits_cost = round(mean(visit_costs_per_yr, na.rm = TRUE), 2),
-#     min_visits_cost = round(min(visit_costs_per_yr, na.rm = TRUE), 2),
-#     max_visits_cost = round(max(visit_costs_per_yr, na.rm = TRUE), 2),
-#     sd_visits_cost = round(sd(visit_costs_per_yr, na.rm = TRUE), 2),
-#     median_visits_cost = round(median(visit_costs_per_yr, na.rm = TRUE), 2),
-#     q1_visits_cost = round(quantile(visit_costs_per_yr, 0.25, na.rm = TRUE), 2),
-#     q3_visits_cost = round(quantile(visit_costs_per_yr, 0.75, na.rm = TRUE), 2),
-#     .groups = "drop"
-#   )
-# 
-# ## All Patients ----
-# all_costs_yr <- visit_data %>%
-#   mutate(
-#     visit_yr_from_index = as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25,
-#     year_after_index = case_when(
-#       visit_yr_from_index < 1 ~ 1,
-#       visit_yr_from_index >= 1 & visit_yr_from_index < 2 ~ 2,
-#       TRUE ~ NA_real_
-#     )
-#   ) %>%
-#   inner_join(eligible_patients, by = "subject_id") %>%
-#   filter(year_after_index == 1 | (year_after_index == 2 & included_second_year)) %>%
-#   group_by(subject_id, year_after_index, specialty) %>%
-#   summarise(
-#     visit_count = n(),
-#     unit_cost = first(unit_cost),
-#     visits_cost = visit_count * unit_cost,
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     visit_count = if_else(specialty == "Not Clinically Relevant", 0L, visit_count),
-#     visits_cost = if_else(specialty == "Not Clinically Relevant", 0, visits_cost)
-#   )
-# 
-# # Total cost per patient per year, adjusted by exposure
-# all_total_costs_per_patient_yr <- all_costs_yr %>%
-#   group_by(subject_id, year_after_index) %>%
-#   summarise(total_costs = sum(visits_cost), .groups = "drop") %>%
-#   left_join(
-#     eligible_patients %>%
-#       pivot_longer(cols = c(year1_exposure, year2_exposure),
-#                    names_to = "exposure_label",
-#                    values_to = "exposure_time") %>%
-#       mutate(year_after_index = ifelse(exposure_label == "year1_exposure", 1, 2)) %>%
-#       select(subject_id, year_after_index, exposure_time),
-#     by = c("subject_id", "year_after_index")
-#   ) %>%
-#   mutate(visit_costs_per_yr = total_costs / exposure_time)
-# 
-# # Summary stats for all-patient cost per year
-# all_summary_costs_per_year <- all_total_costs_per_patient_yr %>%
-#   group_by(year_after_index) %>%
-#   summarise(
-#     mean_visits_cost = round(mean(visit_costs_per_yr, na.rm = TRUE), 2),
-#     min_visits_cost = round(min(visit_costs_per_yr, na.rm = TRUE), 2),
-#     max_visits_cost = round(max(visit_costs_per_yr, na.rm = TRUE), 2),
-#     sd_visits_cost = round(sd(visit_costs_per_yr, na.rm = TRUE), 2),
-#     median_visits_cost = round(median(visit_costs_per_yr, na.rm = TRUE), 2),
-#     q1_visits_cost = round(quantile(visit_costs_per_yr, 0.25, na.rm = TRUE), 2),
-#     q3_visits_cost = round(quantile(visit_costs_per_yr, 0.75, na.rm = TRUE), 2),
-#     .groups = "drop"
-#   )
-# 
-# # Export
-# yearly_costs_list <- list(
-#   user_summary_costs = user_summary_costs_per_year,
-#   all_summary_costs = all_summary_costs_per_year
-# )
-# # Write to an Excel file
-# write_xlsx(yearly_costs_list, here::here("OMOP Analysis", "Results", "Output_yearly_costs_OMOP.xlsx"))
 
 ## Unadjusted ----
 unadjusted_user_costs_yr <- visit_data %>%
-  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(
     visit_yr_from_index = as.numeric(difftime(visit_detail_start_date, index_date, units = "days")),
     year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25 + 1)) %>%
@@ -629,7 +518,7 @@ write_xlsx(unadjusted_yearly_costs_list, here::here("OMOP Analysis", "Results", 
 ## Adjusted ----
 # Filter for users
 adjusted_user_costs_yr <- visit_data %>%
-  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   
   # Calculate year index of each visit
   mutate(
@@ -948,3 +837,48 @@ write_xlsx(boot_costs_list_per_year, here::here("OMOP Analysis", "Results", "Out
 sum(visits_per_specialty$n_percent)
 
 rio::export(visits_per_specialty, here::here("OMOP Analysis", "Results", "Output_visits_per_specialty_OMOP.xlsx"))
+
+
+# Specialty count ----
+yearly_category_count <- visit_data %>% 
+  mutate(year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25 + 1)) %>% 
+  group_by(year_after_index, specialty_reduced) %>% 
+  summarise(count_category = n(),
+            .groups = "drop") %>% 
+  mutate(percent_category = round(count_category / sum(count_category) * 100, 2))
+
+yearly_specific_role_count <- visit_data %>% 
+  mutate(year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25 + 1)) %>%
+  group_by(year_after_index, specialty_reduced, specialty) %>% 
+  summarise(count_specific_role = n(),
+            .groups = "drop") %>% 
+  mutate(percent_specific_role = count_specific_role / sum(count_specific_role) * 100) 
+
+
+yearly_healthcare_role_list <- list(
+  yearly_category_count = monthly_category_count,
+  yearly_specific_role_count = monthly_specific_role_count
+)
+
+write_xlsx(yearly_healthcare_role_list, here::here("OMOP Analysis", "Results", "Output_yearly_healthcare_roles-OMOP.xlsx"))
+
+library(gtsummary)
+
+(gt_yearly_healthcare_roles_count <- visit_data %>%
+    mutate(year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25 + 1)) %>%
+    tbl_summary(
+      by = year_after_index,
+      include = c(specialty_reduced, specialty),
+      label = list(
+        specialty_reduced = "Healthcare Category", 
+        specialty = "Healthcare Specific Role"
+      ),
+      statistic = all_categorical() ~ "{n} ({p}%)",
+      sort = all_categorical() ~ "frequency"
+    ) %>%
+    modify_header(label ~ "**Table of Healthcare Roles**") %>%
+    bold_labels())
+
+gt_yearly_healthcare_roles_count_df <- as_tibble(gt_yearly_healthcare_roles_count)
+
+rio::export(gt_yearly_healthcare_roles_count_df, here::here("OMOP Analysis", "Results", "Output_GT_yearly_healthcare_roles-OMOP.xlsx"))
