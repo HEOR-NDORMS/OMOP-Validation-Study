@@ -44,7 +44,7 @@ visit_data_with_month_raw <- visits_data_raw |>
             by = c("patid", "follow_up_end", "index_date")) |>
   mutate(month_since_index = trunc((as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1)) |>
   group_by(patid, month_since_index) |>
-  summarise(visits = sum(if_else(specialty == "Not Clinically Relevant", 0L, 1L)), .groups = 'drop') |>
+  summarise(visits = n(), .groups = 'drop') |>
   mutate(month_col = paste0("month_", month_since_index)) |>
   select(patid, month_col, visits)
 
@@ -146,7 +146,7 @@ cohort_grid_omop <- cohort_data_omop |>
 
 # Step 2: Calculate month of visit relative to index date
 visit_data_with_month_omop <- visit_data_omop |>
-  # filter(specialty != "Not Clinically Relevant", user_status == "User") |> 
+  filter(is_clinically_relevant == 1, user_status == "User") |>
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end)
@@ -169,7 +169,7 @@ visit_data_with_month_omop <- visit_data_with_month_omop |>
   mutate(month_since_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date,units = "days"))/30.44) + 1)) |>
   # filter(month_since_index >= 0, month_since_index < 24) |>
   group_by(subject_id, month_since_index) |>
-  summarise(visits = sum(if_else(specialty == "Not Clinically Relevant", 0L, 1L)), .groups = 'drop') |>
+  summarise(visits = n(), .groups = 'drop') |>
   mutate(month_col = paste0("month_", month_since_index)) |>
   select(subject_id, month_col, visits)
 
@@ -281,7 +281,7 @@ library(ggplot2)
       color = "Data Source"
     ) +
     scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-    scale_y_continuous(breaks = seq(0, 3, by = 1), limits = c(0, 3)) +
+    scale_y_continuous(breaks = seq(0, 10, by = 2), limits = c(0, 10)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -322,8 +322,8 @@ cohort_grid_raw <- cohort_data_raw |>
 
 # Step 2: Calculate month of visit relative to index date
 costs_visit_data_with_month_raw <- visits_data_raw |>
-  # filter(specialty != "Not Clinically Relevant", 
-  #        user_status == "User") |> 
+  filter(is_clinically_relevant == 1,
+         user_status == "User") |>
   mutate(index_date = ymd(index_date),
          follow_up_end = ymd(follow_up_end)) |> 
   left_join(cohort_data_raw |> mutate(index_date = ymd(index_date),
@@ -336,7 +336,7 @@ costs_visit_data_with_month_raw <- visits_data_raw |>
             unit_cost = unit_cost,  
             .groups = 'drop') |>
   mutate(visits_costs = visits * unit_cost) |>
-  mutate(visits_costs = if_else(specialty == "Not Clinically Relevant", 0, visits_costs)) |> 
+  # mutate(visits_costs = if_else(specialty == "Not Clinically Relevant", 0, visits_costs)) |> 
   distinct() |> 
   group_by(patid, month_since_index) |> 
   summarise(total_visits_cost = sum(visits_costs),
@@ -441,7 +441,7 @@ cohort_grid_omop <- cohort_data_omop |>
 
 # Step 2: Calculate month of visit relative to index date
 costs_visit_data_with_month_omop <- visit_data_omop |>
-  filter(specialty != "Not Clinically Relevant", 
+  filter(is_clinically_relevant == 1, 
          user_status == "User") |> 
   mutate(index_date = ymd(index_date),
          follow_up_end = ymd(follow_up_end)) |> 
@@ -568,7 +568,7 @@ combined_costs <- bind_rows(raw_costs_by_month, omop_costs_by_month)
       color = "Data Source"
     ) +
     scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-    scale_y_continuous(breaks = seq(0, 100, by = 20), limits = c(0, 100)) +
+    scale_y_continuous(breaks = seq(0, 400, by = 40), limits = c(0, 400)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
