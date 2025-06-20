@@ -1,6 +1,6 @@
 # Visits ----
 visit_data_reduced_MIN <- visit_data_reduced %>% select(
-  subject_id, index_date, visit_detail_start_date, user_status,
+  subject_id, index_date, visit_detail_start_date, user_status,is_clinically_relevant,
   specialty_reduced, follow_up_end, death_date
 )
 ## Unweighted ----
@@ -18,7 +18,7 @@ cohort_grid_omop <- cohort_data_omop |>
 # Calculate month of visit and total visit cost
 # Only for users, so we filter out non-users
 unadj_user_visits_summary <- visit_data |>
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(is_clinically_relevant == 1, user_status == "User") %>%
   mutate(index_date = ymd(index_date),
          follow_up_end = ymd(follow_up_end)) |>
   left_join(cohort_data_omop |> mutate(index_date = ymd(index_date),
@@ -69,7 +69,7 @@ final_long_df_visits <- final_matrix_visits |>
 
 # But first, let's filter for users only
 users_ids <- visit_data %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(is_clinically_relevant == 1, user_status == "User") %>%
   distinct(subject_id) %>% 
   pull(subject_id)
 
@@ -140,7 +140,7 @@ patient_months <- visit_data_reduced_MIN_c %>%
 
 # Adjusted visit counts
 adjusted_visits <- visit_data_reduced_MIN %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(is_clinically_relevant == 1, user_status == "User") %>%
   mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), lubridate::ymd)) %>%
   mutate(
     days_exposed_total = as.numeric(follow_up_end - index_date),
@@ -213,7 +213,7 @@ write_xlsx(monthly_visits_list, here::here("OMOP Analysis", "Results", "Output_m
 # Costs ----
 visit_data_reduced_MIN_c <- visit_data_reduced %>% 
   select(
-    subject_id, index_date, visit_detail_start_date, user_status,
+    subject_id, index_date, visit_detail_start_date, user_status, is_clinically_relevant,
     specialty_reduced, follow_up_end, unit_cost, death_date
   )
 
@@ -237,9 +237,18 @@ visit_data_with_month_omop <- visit_data |>
                                        follow_up_end = ymd(follow_up_end)),
             by = c("subject_id", "follow_up_end", "index_date")) |>
   mutate(month_since_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1)) |>
-  group_by(subject_id, month_since_index) |>
+  group_by(subject_id, month_since_index, specialty_reduced) |>
   summarise(
-    total_visit_cost = sum(if_else(specialty == "Not Clinically Relevant", 0, unit_cost)),
+    visit_count = n(),
+    unit_cost = unit_cost,
+    .groups = 'drop') %>% 
+  distinct() %>% 
+  mutate(
+    visit_cost = visit_count * unit_cost
+  )|>
+  group_by(subject_id, month_since_index) %>% 
+  summarise(
+    total_visit_cost = sum(visit_cost),
     .groups = 'drop'
   ) |>
   mutate(month_col = paste0("month_", month_since_index)) |>
@@ -278,7 +287,7 @@ final_long_df_costs <- final_matrix_costs |>
 
 # But first, let's filter for users only
 users_ids <- visit_data %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(is_clinically_relevant == 1, user_status == "User") %>%
   distinct(subject_id) %>% 
   pull(subject_id)
 
@@ -317,7 +326,6 @@ m12_24o <- monthly_summary_costs_unweighted |>
 sum(m12_24o$mean_cost)
 rm(m12_24o)
 
-
 ## Weighted ----
 patient_months <- visit_data_reduced_MIN_c %>%
   filter(user_status == "User") %>%
@@ -347,7 +355,7 @@ patient_months <- visit_data_reduced_MIN_c %>%
 
 # Adjusted visit counts
 adjusted_costs_monthly <- visit_data_reduced_MIN_c %>%
-  filter(specialty_reduced != "Not Clinically Relevant", user_status == "User") %>%
+  filter(is_clinically_relevant == 1, user_status == "User") %>%
   mutate(across(c(index_date, follow_up_end, visit_detail_start_date, death_date), lubridate::ymd)) %>%
   mutate(
     days_exposed_total = as.numeric(follow_up_end - index_date),
@@ -411,3 +419,47 @@ monthly_costs_list <- list(
 
 # Write to an Excel file
 write_xlsx(monthly_costs_list, here::here("OMOP Analysis", "Results", "Output_monthly_costs_OMOP.xlsx"))
+
+# Specialty count ----
+monthly_category_count <- visit_data %>% 
+  mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1)) |>
+  group_by(month_after_index, specialty_reduced) %>% 
+  summarise(count_category = n(),
+            .groups = "drop") %>% 
+  mutate(percent_category = round(count_category / sum(count_category) * 100, 2))
+
+monthly_specific_role_count <- visit_data %>% 
+  mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1)) |>
+  group_by(month_after_index, specialty_reduced, specialty) %>% 
+  summarise(count_specific_role = n(),
+            .groups = "drop") %>% 
+  mutate(percent_specific_role = count_specific_role / sum(count_specific_role) * 100) 
+
+
+monthly_healthcare_role_list <- list(
+  monthly_category_count = monthly_category_count,
+  monthly_specific_role_count = monthly_specific_role_count
+)
+
+write_xlsx(monthly_healthcare_role_list, here::here("OMOP Analysis", "Results", "Output_monthly_healthcare_roles-OMOP.xlsx"))
+
+library(gtsummary)
+
+(gt_monthly_healthcare_roles_count <- visit_data %>%
+    mutate(month_after_index = trunc((as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1)) |>
+    tbl_summary(
+      by = month_after_index,
+      include = c(specialty_reduced, specialty),
+      label = list(
+        specialty_reduced = "Healthcare Category", 
+        specialty = "Healthcare Specific Role"
+      ),
+      statistic = all_categorical() ~ "{n} ({p}%)",
+      sort = all_categorical() ~ "frequency"
+    ) %>%
+    modify_header(label ~ "**Table of Healthcare Roles**") %>%
+    bold_labels())
+
+gt_monthly_healthcare_roles_count_df <- as_tibble(gt_monthly_healthcare_roles_count)
+
+rio::export(gt_monthly_healthcare_roles_count_df, here::here("OMOP Analysis", "Results", "Output_GT_monthly_healthcare_roles-OMOP.xlsx"))
