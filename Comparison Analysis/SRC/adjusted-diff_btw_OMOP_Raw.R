@@ -352,7 +352,7 @@ adj_combined_mean_visits <- bind_rows(adj_mean_visits_raw, adj_mean_visits_omop)
      \n full months or death-months used raw counts."
     ) +
     scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-    scale_y_continuous(breaks = seq(0, 3, by = 1), limits = c(0, 3)) +
+    scale_y_continuous(breaks = seq(0, 30, by = 2), limits = c(0, 30)) +
     theme_minimal() +
     theme(
       plot.title = element_text(face = "bold", hjust = 0.5),
@@ -681,7 +681,7 @@ adj_combined_costs <- bind_rows(adj_raw_costs_by_month, adj_omop_costs_by_month)
      \n full months or death-months used raw counts."
    ) +
    scale_color_manual(values = c("Source" = "#377eb8", "OMOP" = "#e41a1c")) +
-   scale_y_continuous(breaks = seq(0,120 , by = 20), limits = c(0, 120)) +
+   scale_y_continuous(breaks = seq(0,450 , by = 50), limits = c(0, 450)) +
    theme_minimal() +
    theme(
      plot.title = element_text(face = "bold", hjust = 0.5),
