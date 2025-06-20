@@ -57,7 +57,7 @@ table_one_omop <- cohort_table %>%
 
 # Remove the visits that are not clinically relevance
 # the costs are to be updated
-provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.4_omop.xlsx") 
+provider_cost_inputs <- rio::import("provider_specialty_cprd_V.0.4_omop_RPV.xlsx") 
 
 # Join visit_detail and provider tables
 joined_visit_provider_tables <- cdm$visit_detail %>% 
@@ -66,7 +66,7 @@ joined_visit_provider_tables <- cdm$visit_detail %>%
 ## Sub-setting the visit data
 # cdm[["visit_data"]] <- NULL
 cdm[["visit_data"]] <- joined_visit_provider_tables %>%
-  dplyr::left_join(provider_cost_inputs %>% dplyr::filter(Include_standard == "1"),
+  dplyr::left_join(provider_cost_inputs,
                    by = "specialty_concept_id", copy=TRUE) %>% # Filter for only meaningful specialties
   dplyr::select(person_id, provider_id, specialty_concept_id, concept_name, specialty_concept_summarised, 
                 visit_detail_start_date, visit_detail_id, unit_cost, visit_detail_concept_id) %>%
@@ -75,27 +75,27 @@ cdm[["visit_data"]] <- joined_visit_provider_tables %>%
   # Filter for only primary care visits
   dplyr::filter(visit_detail_concept_id == 581477) %>% 
   dplyr::rename(subject_id=person_id) %>% # just renaming for consistency with cohort data
-  dplyr::distinct(visit_detail_start_date, subject_id, specialty_concept_id, .keep_all=TRUE) %>% # Keep only distinct rows - eliminate all visits in the same day with the same specialist by the same patient
+  # dplyr::distinct(visit_detail_start_date, subject_id, specialty_concept_id, .keep_all=TRUE) %>% # Keep only distinct rows - eliminate all visits in the same day with the same specialist by the same patient
   dplyr::rename(specialty = concept_name,
                 specialty_reduced =  specialty_concept_summarised) %>%  # renaming for consistency with other countries as this variable is used for the HCRU and costs too
   computeQuery()
 
 visit_data_df <- cdm[["visit_data"]] %>% dplyr::collect()
 
+specialty_names <- unique(provider_cost_inputs$concept_name)
+
 # merge the cohort data to this visit_data_df
 table_one_omop_visit_data <- left_join(table_one_omop, visit_data_df, 
                         by = "subject_id") %>% 
   # in order to count all the visits from index date until follow-up end date
-  filter(visit_detail_start_date >= index_date & visit_detail_start_date <= follow_up_end)
-
-## Clinically Relevant Consultations
-specialty_source_value_ids <- unique(provider_cost_inputs$concept_name)
+  filter(visit_detail_start_date >= index_date & visit_detail_start_date <= follow_up_end) %>% 
+  filter(specialty %in% specialty_names)
 
 ### Filter the data with these clinically relevant
 # This would make it easier to identify users/non-users as well. Bc technically, if a patient had only visits before index but not during the exposure time, that is a non-user. 
 # So it is simpler if you prepare the visit data first, with visits in the exposure time and then join back to the list of patients to identify users as those who have at last one visit during that time (and with a relevant staff) and non-users are all the others (i.e., zero visits or only non-relevant visits).
-table_one_omop_visit_data <- table_one_omop %>% 
-  left_join(table_one_omop_visit_data, by = c("subject_id", "cohort_start_date", 
+table_one_omop_visit_data <- table_one_omop %>%
+    left_join(table_one_omop_visit_data, by = c("subject_id", "cohort_start_date", 
                                "cohort_end_date", "condition_concept_id",
                                "fracture_site", "index_date", "cancer_date", 
                                "mbd_date", "fracture_after_index", "death_date",
@@ -109,20 +109,18 @@ table_one_omop_visit_data <- table_one_omop %>%
                                "race_source_value", "race_source_concept_id", 
                                "ethnicity_source_value", "ethnicity_source_concept_id"
   ), copy = T) %>% 
-  %>%
-  mutate(specialty_source_value = case_when(
-    is_clinically_relevant == 1 ~ specialty_source_value,
-    TRUE ~ "Not Clinically Relevant"
-  ))%>%
-  group_by(patid) %>%
+  mutate(is_clinically_relevant = case_when(
+    specialty_reduced == "Administrative Non-clinical" ~ 0,
+    specialty_reduced != "Administrative Non-clinical" ~ 1)) %>%
+  group_by(subject_id) %>%
   mutate(user_status = case_when(
     any(is_clinically_relevant == 1, na.rm = TRUE) ~ "User",
-    all(is_clinically_relevant == 0 | is.na(is_clinically_relevant)) & all(is.na(consdate)) ~ "Non-User",
+    all(is_clinically_relevant == 0 | is.na(is_clinically_relevant)) & all(is.na(visit_detail_start_date)) ~ "Non-User",
     all(is_clinically_relevant == 0 | is.na(is_clinically_relevant)) ~ "Non-User",
     TRUE ~ "Unknown"
   )) %>%
   ungroup() %>% 
-  distinct(patid, user_status, .keep_all = TRUE)
+  distinct(subject_id, user_status, .keep_all = TRUE)
 
 
 
@@ -138,14 +136,13 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
    gtsummary::tbl_summary(
      # select the variables of interest
      include = c(fracture_site, follow_up_reason, follow_up_time,
-                 user_status, not_users_status),
+                 user_status),
      # rename the variable names
      label = list(
        fracture_site = "Fracture Site", 
        follow_up_reason = "Censoring Event",
        follow_up_time = "Follow up time",
-       user_status = "Heathcare Service User Status",
-       not_users_status = "Heathcare Service Non-user Visit Status"
+       user_status = "Heathcare Service User Status"
      ),
      # indicate whether we want the missing values to be seen in the summary table
      missing = "no"
