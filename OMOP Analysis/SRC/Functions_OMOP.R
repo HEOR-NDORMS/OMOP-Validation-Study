@@ -153,7 +153,7 @@ analyse_visits <- function(visit_data) {
     pull(tot_exposed_yrs)
   
   tot_exposed_yrs_user <- visit_data %>%
-    filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+    filter(user_status == "User", is_clinically_relevant == 1) %>%
     group_by(subject_id, index_date) %>%
     filter(row_number() == 1) %>%
     ungroup() %>%
@@ -161,7 +161,7 @@ analyse_visits <- function(visit_data) {
     pull(tot_exposed_yrs)
   
   user_only_summary <- visit_data %>%
-    # filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+    filter(user_status == "User", is_clinically_relevant == 1) %>%
     group_by(subject_id, specialty) %>%
     summarise(total_patient_visits = first(visit_count),
               total_exposed_yrs = first(exposed_yrs),
@@ -191,12 +191,10 @@ analyse_visits <- function(visit_data) {
               max_visits_per_year = round(max(visits_per_year, na.rm = TRUE), 2),
               num_subjects_visited = n_distinct(subject_id),
               num_non_users = sum(user_status == "Non-User"),
-              .groups = "drop") %>%
-    mutate(num_subjects_visited = ifelse(specialty == "Not Clinically Relevant", num_non_users, num_subjects_visited)) %>%
-    select(-num_non_users) 
+              .groups = "drop") 
   
   non_service_users <- visit_data %>%
-    filter(user_status == "Non-User", visit_count == 0) %>%
+    filter(user_status == "Non-User") %>%
     summarise(n = n_distinct(subject_id)) %>%
     rename(nonservice = n)
   
@@ -219,7 +217,7 @@ analyse_visits_reduced <- function(visit_data_reduced) {
     pull(tot_exposed_yrs)
   
   tot_exposed_yrs_user <- visit_data_reduced %>%
-    filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+    filter(user_status == "User", is_clinically_relevant == 1) %>%
     group_by(subject_id, index_date) %>%
     filter(row_number() == 1) %>%
     ungroup() %>%
@@ -227,7 +225,7 @@ analyse_visits_reduced <- function(visit_data_reduced) {
     pull(tot_exposed_yrs)
   
   user_only_summary_reduced <- visit_data_reduced %>%
-    filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+    filter(user_status == "User", is_clinically_relevant == 1) %>%
     group_by(subject_id, specialty_reduced) %>%
     summarise(total_patient_visits = first(visit_count),
               total_exposed_yrs = first(exposed_yrs),
@@ -258,12 +256,10 @@ analyse_visits_reduced <- function(visit_data_reduced) {
               max_visits_per_year = round(max(visits_per_year, na.rm = TRUE), 2),
               num_subjects_visited = n_distinct(subject_id),
               num_non_users = sum(user_status == "Non-User"),
-              .groups = "drop") %>%
-    mutate(num_subjects_visited = ifelse(specialty_reduced == "Not Clinically Relevant", num_non_users, num_subjects_visited)) %>%
-    select(-num_non_users) 
+              .groups = "drop") 
   
   non_service_users_reduced <- visit_data_reduced %>%
-    filter(user_status == "Non-User", visit_count == 0) %>%
+    filter(user_status == "Non-User") %>%
     summarise(n = n_distinct(subject_id)) %>%
     rename(nonservice = n)
   
@@ -287,7 +283,7 @@ analyse_visits_cost <- function(visit_data) {
     pull(tot_exposed_yrs)
   
   tot_exposed_yrs_user <- visit_data %>%
-    filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+    filter(user_status == "User", is_clinically_relevant == 1) %>%
     group_by(subject_id, index_date) %>%
     filter(row_number() == 1) %>%
     ungroup() %>%
@@ -295,7 +291,7 @@ analyse_visits_cost <- function(visit_data) {
     pull(tot_exposed_yrs)
   
   user_only_cost_summary <- visit_data %>%
-    filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+    filter(user_status == "User", is_clinically_relevant == 1) %>%
     filter(visit_cost > 0) %>%
     group_by(subject_id, specialty) %>% 
     summarise(
@@ -335,9 +331,7 @@ analyse_visits_cost <- function(visit_data) {
       num_subjects_visited = n_distinct(subject_id),
       num_non_users = sum(user_status == "Non-User"),
       .groups = "drop"
-    ) %>% 
-    mutate(num_subjects_visited = ifelse(specialty == "Not Clinically Relevant", num_non_users, num_subjects_visited)) %>%
-    select(!num_non_users) 
+    ) 
   
   return(list(user_only_cost_summary = user_only_cost_summary, 
               all_cost_summary = all_cost_summary, 
@@ -356,7 +350,7 @@ analyse_visits_cost_reduced <- function(visit_data_reduced) {
     pull(tot_exposed_yrs)
   
   tot_exposed_yrs_user <- visit_data_reduced %>%
-    filter(user_status == "User", specialty_reduced != "Not Clinically Relevant") %>%
+    filter(user_status == "User", is_clinically_relevant == 1) %>%
     group_by(subject_id, index_date) %>%
     filter(row_number() == 1) %>%
     ungroup() %>%
@@ -364,8 +358,7 @@ analyse_visits_cost_reduced <- function(visit_data_reduced) {
     pull(tot_exposed_yrs)
   
   user_only_cost_summary_reduced <- visit_data_reduced %>%
-    filter(user_status == "User", specialty_reduced != "Not Clinically Relevant") %>%
-    filter(visit_cost > 0) %>%
+    filter(user_status == "User", is_clinically_relevant == 1) %>%
     group_by(subject_id, specialty_reduced) %>% 
     summarise(
       total_patient_cost = first(visit_cost),
@@ -404,9 +397,7 @@ analyse_visits_cost_reduced <- function(visit_data_reduced) {
       num_subjects_visited = n_distinct(subject_id),
       num_non_users = sum(user_status == "Non-User"),
       .groups = "drop"
-    ) %>% 
-    mutate(num_subjects_visited = ifelse(specialty_reduced == "Not Clinically Relevant", num_non_users, num_subjects_visited)) %>%
-    select(!num_non_users) 
+    )  
   
   return(list(user_only_cost_summary_reduced = user_only_cost_summary_reduced, 
               all_cost_summary_reduced = all_cost_summary_reduced, 
