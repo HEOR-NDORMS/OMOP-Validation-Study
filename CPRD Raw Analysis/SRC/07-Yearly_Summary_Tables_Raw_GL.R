@@ -1,11 +1,8 @@
 # Visits ----
-
-## Users ----
-
 ## Unadjusted ----
 # Assign visits to year 1 or year 2 based on consult date
 unadjusted_user_visits_yr <- visit_data %>%
-  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(
     visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")),
     year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)) %>% 
@@ -55,10 +52,7 @@ unadjusted_all_visits_yr <- visit_data %>%
     visit_yr_from_index = as.numeric(difftime(consdate, index_date, units = "days")),
     year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)) %>%
   group_by(patid, year_after_index, specialty) %>%
-  summarise(visit_count = n(), .groups = "drop") #%>%
-  # mutate(
-  #   visit_count = if_else(specialty == "Not Clinically Relevant", 0L, visit_count)
-#
+  summarise(visit_count = n(), .groups = "drop")
 
 # Total visits per patient per year, merged with exposure time
 unadjusted_all_total_visits_per_patient_yr <- unadjusted_all_visits_yr %>%
@@ -111,7 +105,7 @@ write_xlsx(unadjusted_yearly_visits_list, here::here("CPRD Raw Analysis", "Resul
 ## Adjusted ----
 # Filter for users
 adjusted_user_visits_yr <- visit_data %>%
-  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   
   # Calculate year index of each visit
   mutate(
@@ -205,7 +199,7 @@ adjusted_all_visits_yr <- visit_data %>%
     died_in_final_year = first(died_in_final_year),
     .groups = "drop"
   ) %>%
-  mutate(total_visits = if_else(specialty == "Not Clinically Relevant", 0, total_visits)) %>% 
+  # mutate(total_visits = if_else(specialty == "Not Clinically Relevant", 0, total_visits)) %>% 
   # Adjust visits
   # If a patient died during the year → Do not adjust visits.
   # If a patient was censored for other reasons (e.g., end of follow-up, other events) → Adjust visits based on the number of days they were exposed.
@@ -219,11 +213,11 @@ adjusted_all_visits_yr <- visit_data %>%
       TRUE ~ 0  # drop if < 6 months and not died
       )
     )  %>%
-  mutate(
-    adjusted_visits = if_else(specialty == "Not Clinically Relevant", 0L, adjusted_visits)
-  ) %>% 
+  # mutate(
+  #   adjusted_visits = if_else(specialty == "Not Clinically Relevant", 0L, adjusted_visits)
+  # ) %>% 
   # filter(!(year_after_index == final_year_after_index & adjusted_visits == 0| specialty == "Not Clinically Relevant"))
-  filter(adjusted_visits > 0 | specialty == "Not Clinically Relevant") # drop years with <6 months and not adjusted
+  filter(adjusted_visits > 0) # drop years with <6 months and not adjusted
 
 # Sense check using this patient: 1016820018
 adjusted_all_visits_yr <- adjusted_all_visits_yr %>% 
@@ -358,14 +352,6 @@ boot_all_summary_statistics_per_year <- unadjusted_all_pts_final_df %>%
     )
   })
 
-boot_visits_list_per_year <- list(
-  boot_all_summary_stats = boot_all_summary_statistics_per_year,
-  boot_user_summary_stats = boot_user_summary_statistics_per_year
-)
-
-write_xlsx(boot_visits_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_OMOP-Unadjusted_Boot.xlsx"))
-
-
 ###### Adjusted All ----
 # Define the statistic function
 # This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
@@ -393,6 +379,16 @@ adj_boot_all_summary_statistics_per_year <- adjusted_final_df_all %>%
       upper_ci = round(as.numeric(boot_ci$normal[3]), 3)
     )
   })
+
+boot_visits_list_per_year <- list(
+  boot_all_summary_stats = boot_all_summary_statistics_per_year,
+  boot_user_summary_stats = boot_user_summary_statistics_per_year,
+  adj_boot_user_summary_stats = adj_boot_user_summary_statistics_per_year,
+  adj_boot_all_summary_stats = adj_boot_all_summary_statistics_per_year
+)
+
+write_xlsx(boot_visits_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_visits_Boot-Raw.xlsx"))
+
 
 # Costs ----
 ## Unadjusted ----
@@ -518,7 +514,7 @@ write_xlsx(unadjusted_yearly_costs_list, here::here("CPRD Raw Analysis", "Result
 ## Adjusted ----
 # Filter for users
 adjusted_user_costs_yr <- visit_data %>%
-  filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
+  filter(user_status == "User", is_clinically_relevant == 1) %>%
   
   # Calculate year index of each visit
   mutate(
@@ -636,10 +632,10 @@ adjusted_all_costs_yr <- visit_data %>%
       TRUE ~ 0  # drop if < 6 months and not died
     )
   ) %>%
-  mutate(
-    adjusted_visits = if_else(specialty == "Not Clinically Relevant", 0L, adjusted_visits)
-  ) %>% 
-  filter(adjusted_visits > 0 | specialty == "Not Clinically Relevant") # drop years with <6 months and not adjusted
+  # mutate(
+  #   adjusted_visits = if_else(specialty == "Not Clinically Relevant", 0L, adjusted_visits)
+  # ) %>% 
+  filter(adjusted_visits > 0) # drop years with <6 months and not adjusted
 
 # Sense check using this patient: 1016820018
 adjusted_all_costs_yr <- adjusted_all_costs_yr %>% 
@@ -818,15 +814,6 @@ boot_costs_list_per_year <- list(
 
 write_xlsx(boot_costs_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw-Boot.xlsx"))
 
-
-boot_costs_list_per_year <- list(
-  boot_all_summary_stats = boot_all_summary_statistics_costs_per_year,
-  boot_user_summary_stats = boot_user_summary_statistics_costs_per_year
-)
-
-write_xlsx(boot_costs_list_per_year, here::here("CPRD Raw Analysis", "Results", "Output_yearly_costs_Raw-Unadjusted_Boot.xlsx"))
-
-
 # Visits per specialty ----
 (visits_per_specialty <- visit_data %>% 
    filter(user_status == "User", specialty != "Not Clinically Relevant") %>%
@@ -836,3 +823,47 @@ write_xlsx(boot_costs_list_per_year, here::here("CPRD Raw Analysis", "Results", 
 sum(visits_per_specialty$n_percent)
 
 rio::export(visits_per_specialty, here::here("CPRD Raw Analysis", "Results", "Output_visits_per_specialty_Raw.xlsx"))
+
+# Specialty count ----
+yearly_category_count <- visit_data %>% 
+  mutate(year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)) %>% 
+  group_by(year_after_index, specialty_reduced) %>% 
+  summarise(count_category = n(),
+            .groups = "drop") %>% 
+  mutate(percent_category = round(count_category / sum(count_category) * 100, 2))
+
+yearly_specific_role_count <- visit_data %>% 
+  mutate(year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)) %>%
+  group_by(year_after_index, specialty_reduced, specialty) %>% 
+  summarise(count_specific_role = n(),
+            .groups = "drop") %>% 
+  mutate(percent_specific_role = count_specific_role / sum(count_specific_role) * 100) 
+
+
+yearly_healthcare_role_list <- list(
+  yearly_category_count = monthly_category_count,
+  yearly_specific_role_count = monthly_specific_role_count
+)
+
+write_xlsx(yearly_healthcare_role_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_healthcare_roles-Raw.xlsx"))
+
+library(gtsummary)
+
+(gt_yearly_healthcare_roles_count <- visit_data %>%
+    mutate(year_after_index = trunc(as.numeric(difftime(consdate, index_date, units = "days")) / 365.25 + 1)) %>%
+    tbl_summary(
+      by = year_after_index,
+      include = c(specialty_reduced, specialty),
+      label = list(
+        specialty_reduced = "Healthcare Category", 
+        specialty = "Healthcare Specific Role"
+      ),
+      statistic = all_categorical() ~ "{n} ({p}%)",
+      sort = all_categorical() ~ "frequency"
+    ) %>%
+    modify_header(label ~ "**Table of Healthcare Roles**") %>%
+    bold_labels())
+
+gt_yearly_healthcare_roles_count_df <- as_tibble(gt_yearly_healthcare_roles_count)
+
+rio::export(gt_yearly_healthcare_roles_count_df, here::here("CPRD Raw Analysis", "Results", "Output_GT_yearly_healthcare_roles-Raw.xlsx"))
