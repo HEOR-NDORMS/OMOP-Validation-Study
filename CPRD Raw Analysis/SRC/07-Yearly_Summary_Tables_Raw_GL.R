@@ -841,8 +841,8 @@ yearly_specific_role_count <- visit_data %>%
 
 
 yearly_healthcare_role_list <- list(
-  yearly_category_count = monthly_category_count,
-  yearly_specific_role_count = monthly_specific_role_count
+  yearly_category_count = yearly_category_count,
+  yearly_specific_role_count = yearly_specific_role_count
 )
 
 write_xlsx(yearly_healthcare_role_list, here::here("CPRD Raw Analysis", "Results", "Output_yearly_healthcare_roles-Raw.xlsx"))
