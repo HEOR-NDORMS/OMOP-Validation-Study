@@ -70,7 +70,7 @@ rm(appts_no)
 
 appts_per_patient <- appts_data_final %>%
   group_by(patid) %>%                     # group data per patient
-  summarise(n_appts = max(appt_no)) %>%  # derive total number of appointments by picking max value of apptorder
+  summarise(n_appts = max(appt_no)) %>%   # derive total number of appointments by picking max value of apptorder
   ungroup()  %>%                          # now, ungroup the data and save only one row summary per patient
   select(patid, n_appts)  %>%             # save only patid and nr of appts
   distinct()
