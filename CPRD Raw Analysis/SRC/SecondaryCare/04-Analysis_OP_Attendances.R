@@ -404,12 +404,14 @@ costs_data_hrg <- left_join(appt_data, validation_old %>% select(patid, gender, 
 costs_data_hrg_min <- costs_data_hrg %>% 
   mutate(startage = as.numeric(format(apptdate, "%Y")) - yob) %>% 
   mutate(gender = if_else(gender == "F", 2, 1)) %>% 
-  filter(mainspef != "&") %>% 
-  filter(tretspef != "&") %>% 
+  mutate(mainspef = if_else(mainspef != "&", NA, mainspef)) %>% 
+  mutate(tretspef = if_else(tretspef != "&", NA, tretspef)) %>% 
   rename(sex = gender) %>% 
   mutate(firstatt = ifelse(firstatt == "X", NA, firstatt)) %>% 
-  select(startage, sex, mainspef, tretspef, firstatt)
+  select(startage, sex, mainspef, tretspef, firstatt) %>% 
+  rename_with(toupper)
 
 rio::export(costs_data_hrg_min, here::here("CPRD Raw Analysis", "Results",
                                                "SecondaryCareAnalysis", "costs_data_hrg_min.csv"))
 
+## Create costs from HRGs ----
