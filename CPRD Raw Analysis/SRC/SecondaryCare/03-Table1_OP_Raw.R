@@ -323,13 +323,13 @@ table_one_op_raw_appt_recoded <- table_one_op_raw_appt %>%
     user_status = if_else(is.na(apptdate), "Non-User", "User")
     ) %>% 
   mutate(
-    mainspef_recoded = if_else(mainspef_recoded == "&", NA, mainspef_recoded)
+    mainspef_recoded = ifelse(mainspef_recoded == "&", NA, mainspef_recoded)
     ) %>% 
   mutate(
-    tretspef_recoded = if_else(tretspef_recoded == "&", NA, tretspef_recoded)
+    tretspef_recoded = ifelse(tretspef_recoded == "&", NA, tretspef_recoded)
     ) %>% 
   mutate(
-    opertn_01 = if_else(
+    opertn_01 = ifelse(
       opertn_01 == "&" |opertn_01 == "-", NA, opertn_01
     )
   )
@@ -387,6 +387,7 @@ table_one_op_raw_appt_recoded <- table_one_op_raw_appt_recoded %>%
 
 ## Reorder factor by frequency ----
 table_one_op_raw_appt_recoded <- table_one_op_raw_appt_recoded %>%
+  mutate_at(c("mainspef_recoded", "tretspef_recoded"), as.factor) %>%
   mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason),
          attended_recoded = forcats::fct_infreq(attended_recoded),
          atentype_recoded = forcats::fct_infreq(atentype_recoded),
@@ -397,25 +398,7 @@ table_one_op_raw_appt_recoded <- table_one_op_raw_appt_recoded %>%
          opertn_01_description = forcats::fct_infreq(opertn_01_description)) %>% 
   mutate(follow_up_time = as.numeric(follow_up_time))
 
-
-# (op_gt_summary_table <- table_one_op_raw_appt_recoded %>% 
-#     gtsummary::tbl_summary(
-#       include = c(site, follow_up_reason, 
-#                   follow_up_time, attended_recoded,
-#                   atentype_recoded, firstatt_recoded),
-#       label = list(
-#         site = "Fracture Site", 
-#         follow_up_reason = "Censoring Event",
-#         follow_up_time = "Follow Up Time",
-#         attended_recoded = "Attended or Did Not Attend",
-#         atentype_recoded = "Attendance Type",
-#         firstatt_recoded = "First Attendance"
-#       ),
-#       missing = "no"
-#     ) %>%
-#     gtsummary::modify_header(label = "**Variable**"))
-
-
+## Gtsumaary table ----
 (op_gt_summary_table <- table_one_op_raw_appt_recoded %>% 
     gtsummary::tbl_summary(
       include = c(attended_recoded,
