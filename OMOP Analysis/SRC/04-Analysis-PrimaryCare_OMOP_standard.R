@@ -233,7 +233,27 @@ unadjusted_yearly_visits <- user_visits %>%
 
 # mean(user_yearly_visits$visits_per_year)
 
-unadjusted_user_summary_statistics_overall <- unadjusted_yearly_visits %>%
+# Set seed for reproducibility
+set.seed(12)
+
+# Number of bootstrap samples
+n_boot <- 1000
+prop_sample <- 0.8
+n_sample <- floor(prop_sample * nrow(unadjusted_yearly_visits))
+
+# Manually perform bootstrap WITHOUT replacement on 80% of the data
+boot_means <- numeric(n_boot)
+
+for (i in 1:n_boot) {
+  sample_data <- unadjusted_yearly_visits[sample(1:nrow(unadjusted_yearly_visits), size = n_sample, replace = TRUE), ]
+  boot_means[i] <- mean(sample_data$total_patient_visits)
+}
+
+# Convert to tibble
+boot_df <- tibble(total_patient_visits = boot_means)
+
+# Compute summary statistics using percentile CI
+unadjusted_user_summary_statistics_overall <- boot_df %>%
   summarise(
     mean_visit_per_year = mean(total_patient_visits),
     min_visit_per_year = min(total_patient_visits),
@@ -242,15 +262,12 @@ unadjusted_user_summary_statistics_overall <- unadjusted_yearly_visits %>%
     median_visit_per_year = quantile(total_patient_visits, 0.5),
     lower_q_visits_per_year = quantile(total_patient_visits, 0.25),
     upper_q_visits_per_year = quantile(total_patient_visits, 0.75),
-    n = n()
-  ) %>%
-  mutate(
+    n = n(),
     se = sd_visit_per_year / sqrt(n),
-    lower = mean_visit_per_year - qt(0.975, df = n - 1) * se,
-    upper = mean_visit_per_year + qt(0.975, df = n - 1) * se
+    lower = quantile(total_patient_visits, 0.025),
+    upper = quantile(total_patient_visits, 0.975)
   ) %>%
-  mutate(across(everything(), round, 2))
-
+  mutate(across(everything(), round, 4))
 
 # We then compute visits per year per patient
 unadjusted_all_yearly_visits <- visit_data %>%
@@ -443,35 +460,60 @@ write_xlsx(adjusted_visits_list, here::here("OMOP Analysis", "Results", "Output_
 
 
 ##### Boostrap ----
-###### Unadjusted User ----
-# Load the boot package
-library(boot)  # Required for bootstrapping functions
-
-# Define the statistic function
-# This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
-fc_user <- function(d, i){
-  unadjusted_yearly_visits <- d[i, ]               # Sample the data with replacement
-  return(mean(unadjusted_yearly_visits$total_patient_visits))   # This is your variable of interest (e.g., visits, or costs)
+bootstrap.mean <- function(data, B = 1000, confidence = 0.95) {
+  n <- length(data)
+  means <- rep(0, B)
+  for (i in 1:B) {
+    means[i] <- mean(sample(data, size = n, replace = TRUE))
+  }
+  mean.obs <- mean(means)
+  c.l <- round((1 - confidence) / 2 * B, 0)
+  c.u <- round(B - (1 - confidence) / 2 * B, 0)
+  l <- sort(means)[c.l]
+  u <- sort(means)[c.u]
+  cat(c.l / B * 100, "-percentile:      ", l, "\n")
+  cat("Mean: ", mean.obs, "\n")
+  cat(c.u / B * 100, "-percentile:      ", u, "\n")
+  return(means)
 }
+###### Unadjusted User ----
+# # Load the boot package
+# library(boot)  # Required for bootstrapping functions
+# 
+# # Define the statistic function
+# # This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
+# fc_user <- function(d, i){
+#   unadjusted_yearly_visits <- d[i, ]               # Sample the data with replacement
+#   return(mean(unadjusted_yearly_visits$total_patient_visits))   # This is your variable of interest (e.g., visits, or costs)
+# }
+# 
+# # Set a seed for reproducibility
+# set.seed(626)
+# 
+# # Run bootstrap with 1000 resamples
+# boot_result_user <- boot(unadjusted_yearly_visits, fc_user, R = 1000)
+# 
+# # Compute 95% percentile-based confidence interval
+# boot_ci_user <- boot.ci(boot.out = boot_result_user, type = "norm")
+# 
+# mean_boot_visits_user <-round(as.numeric(boot_result_user$t0),3)
+# lower_ci_boot_visits_user <-round(as.numeric(boot_ci_user$normal[2]), 3)
+# upper_ci_boot_visits_user <-round(as.numeric(boot_ci_user$normal[3]), 3)
 
-# Set a seed for reproducibility
-set.seed(626)
+boot_means_visits_users <- bootstrap.mean(unadjusted_yearly_visits$total_patient_visits, B = 1000, confidence = 0.95)
 
-# Run bootstrap with 1000 resamples
-boot_result_user <- boot(unadjusted_yearly_visits, fc_user, R = 1000)
+# Compute summary statistics
+mean_boot_visits_users <- mean(boot_means_visits_users)
+lower_ci_visits_users <- quantile(boot_means_visits_users, 0.025)
+upper_ci_visits_users <- quantile(boot_means_visits_users, 0.975)
 
-# Compute 95% percentile-based confidence interval
-boot_ci_user <- boot.ci(boot.out = boot_result_user, type = "norm")
-
-mean_boot_visits_user <-round(as.numeric(boot_result_user$t0),3)
-lower_ci_boot_visits_user <-round(as.numeric(boot_ci_user$normal[2]), 3)
-upper_ci_boot_visits_user <-round(as.numeric(boot_ci_user$normal[3]), 3)
-
+# Store in a tibble
 boot_user_summary_statistics_overall <- tibble(
-  mean_boot_visits_user = mean_boot_visits_user,
-  lower_ci_boot_visits_user = lower_ci_boot_visits_user,
-  upper_ci_boot_visits_user = upper_ci_boot_visits_user
+  mean_boot_visits_user = mean_boot_visits_users,
+  lower_ci_boot_visits_user = lower_ci_visits_users,
+  upper_ci_boot_visits_user = upper_ci_visits_users
 )
+
 
 ###### Adjusted User ----
 
@@ -504,27 +546,41 @@ adj_boot_user_summary_statistics_overall <- tibble(
 ###### Unadjusted All ----
 # Define the statistic function
 # This function calculates the mean of the variable of interest (e.g., 'visits' or 'costs')
-fc_all <- function(d, i){
-  unadjusted_all_yearly_visits <- d[i, ]               # Sample the data with replacement
-  return(mean(unadjusted_all_yearly_visits$total_patient_visits))   # This is your variable of interest (e.g., visits, or costs)
-}
+# fc_all <- function(d, i){
+#   unadjusted_all_yearly_visits <- d[i, ]               # Sample the data with replacement
+#   return(mean(unadjusted_all_yearly_visits$total_patient_visits))   # This is your variable of interest (e.g., visits, or costs)
+# }
+# 
+# # Set a seed for reproducibility
+# set.seed(42)
+# 
+# # Run bootstrap with 1000 resamples
+# boot_result_all <- boot(unadjusted_all_yearly_visits, fc_all, R = 1000)
+# 
+# # Compute 95% percentile-based confidence interval
+# boot_ci_all <- boot.ci(boot.out = boot_result_all, type = "norm")
+# 
+# mean_boot_visits_all <-round(as.numeric(boot_result_all$t0),3)
+# lower_ci_boot_visits_all <-round(as.numeric(boot_ci_all$normal[2]), 3)
+# upper_ci_boot_visits_all <-round(as.numeric(boot_ci_all$normal[3]), 3)
+# boot_all_summary_statistics_overall <- tibble(
+#   mean_boot_visits_all = mean_boot_visits_all,
+#   lower_ci_boot_visits_all = lower_ci_boot_visits_all,
+#   upper_ci_boot_visits_all = upper_ci_boot_visits_all
+# )
 
-# Set a seed for reproducibility
-set.seed(42)
+boot_means_visits_all <- bootstrap.mean(unadjusted_yearly_visits$total_patient_visits, B = 1000, confidence = 0.95)
 
-# Run bootstrap with 1000 resamples
-boot_result_all <- boot(unadjusted_all_yearly_visits, fc_all, R = 1000)
+# Compute summary statistics
+mean_boot_visits_all <- mean(boot_means_visits_all)
+lower_ci_visits_all <- quantile(boot_means_visits_all, 0.025)
+upper_ci_visits_all <- quantile(boot_means_visits_users, 0.975)
 
-# Compute 95% percentile-based confidence interval
-boot_ci_all <- boot.ci(boot.out = boot_result_all, type = "norm")
-
-mean_boot_visits_all <-round(as.numeric(boot_result_all$t0),3)
-lower_ci_boot_visits_all <-round(as.numeric(boot_ci_all$normal[2]), 3)
-upper_ci_boot_visits_all <-round(as.numeric(boot_ci_all$normal[3]), 3)
-boot_all_summary_statistics_overall <- tibble(
-  mean_boot_visits_all = mean_boot_visits_all,
-  lower_ci_boot_visits_all = lower_ci_boot_visits_all,
-  upper_ci_boot_visits_all = upper_ci_boot_visits_all
+# Store in a tibble
+boot_user_summary_statistics_overall <- tibble(
+  mean_boot_visits_user = mean_boot_visits_users,
+  lower_ci_boot_visits_user = lower_ci_visits_users,
+  upper_ci_boot_visits_user = upper_ci_visits_users
 )
 
 
@@ -672,17 +728,33 @@ unadjusted_user_yearly_costs <- user_costs %>%
   )
 
 
-# Summary stats for user cost per year
-unadjusted_user_only_costs_summary_statistics_overall <- unadjusted_user_yearly_costs %>%
+# Number of bootstrap samples
+n_boot <- 1000
+prop_sample <- 0.8
+n_sample_c <- floor(prop_sample * nrow(unadjusted_user_yearly_costs))
+
+# Manually perform bootstrap WITHOUT replacement on 80% of the data
+boot_means_c <- numeric(n_boot)
+
+for (i in 1:n_boot) {
+  sample_data <- unadjusted_user_yearly_costs[sample(1:nrow(unadjusted_user_yearly_costs), size = n_sample, replace = TRUE), ]
+  boot_means_c[i] <- mean(sample_data$total_patient_visits_cost)
+}
+
+# Convert to tibble
+boot_df_c <- tibble(total_patient_visits_cost = boot_means_c)
+
+# Compute summary statistics using percentile CI
+unadjusted_user_only_costs_summary_statistics_overall <- boot_df_c %>%
   # group_by(year_after_index) %>%
   summarise(
-    mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 2),
-    min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 2),
-    max_visits_cost = round(max(total_patient_visits_cost, na.rm = TRUE), 2),
-    sd_visits_cost = round(sd(total_patient_visits_cost, na.rm = TRUE), 2),
-    median_visits_cost = round(median(total_patient_visits_cost, na.rm = TRUE), 2),
-    q1_visits_cost = round(quantile(total_patient_visits_cost, 0.25, na.rm = TRUE), 2),
-    q3_visits_cost = round(quantile(total_patient_visits_cost, 0.75, na.rm = TRUE), 2),
+    mean_visits_cost = round(mean(total_patient_visits_cost, na.rm = TRUE), 4),
+    min_visits_cost = round(min(total_patient_visits_cost, na.rm = TRUE), 4),
+    max_visits_cost = round(max(total_patient_visits_cost, na.rm = TRUE), 4),
+    sd_visits_cost = round(sd(total_patient_visits_cost, na.rm = TRUE), 4),
+    median_visits_cost = round(median(total_patient_visits_cost, na.rm = TRUE), 4),
+    q1_visits_cost = round(quantile(total_patient_visits_cost, 0.25, na.rm = TRUE), 4),
+    q3_visits_cost = round(quantile(total_patient_visits_cost, 0.75, na.rm = TRUE), 4),
     n = n()
   ) %>%
   mutate(
@@ -1028,3 +1100,23 @@ cohort_summary_omop <- cohort_summary(visit_data)
 
 # Write to an Excel file
 rio::export(cohort_summary_omop, here::here("OMOP Analysis", "Results", "cohort_summary_OMOP.xlsx"))
+
+## Specialty count ----
+overall_specific_role_count <- visit_data %>% 
+  group_by(specialty_reduced, specialty) %>% 
+  summarise(count_specific_role = n(),
+            .groups = "drop") %>% 
+  mutate(percent_specific_role = count_specific_role / sum(count_specific_role) * 100) 
+
+overall_category_count <- visit_data %>% 
+  group_by(specialty_reduced) %>% 
+  summarise(count_category = n(),
+            .groups = "drop") %>% 
+  mutate(percent_category = round(count_category / sum(count_category) * 100, 2))
+
+overall_healthcare_role_list <- list(
+  overall_category_count = overall_category_count,
+  overall_specific_role_count = overall_specific_role_count
+)
+
+write_xlsx(overall_healthcare_role_list, here::here("OMOP Analysis", "Results", "Output_overall_healthcare_roles-OMOP.xlsx"))
