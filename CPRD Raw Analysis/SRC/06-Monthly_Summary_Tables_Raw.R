@@ -22,9 +22,9 @@ unadj_user_visits_summary <- visit_data |>
   filter(user_status == "User", is_clinically_relevant == 1) %>%
   mutate(index_date = ymd(index_date),
          follow_up_end = ymd(follow_up_end)) |>
-  left_join(cohort_table |> mutate(index_date = ymd(index_date),
-                                       follow_up_end = ymd(follow_up_end)),
-            by = c("patid", "follow_up_end", "index_date")) |>
+  # left_join(cohort_table |> mutate(index_date = ymd(index_date),
+  #                                      follow_up_end = ymd(follow_up_end)),
+  #           by = c("patid", "follow_up_end", "index_date")) |>
   mutate(month_after_index = trunc((as.numeric(difftime(consdate, index_date, units = "days")) / 30.44) + 1)) |>
   group_by(patid, specialty, month_after_index) |>
   summarise(
