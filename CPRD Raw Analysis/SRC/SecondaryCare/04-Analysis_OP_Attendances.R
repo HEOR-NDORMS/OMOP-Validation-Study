@@ -404,8 +404,10 @@ costs_data_hrg <- left_join(appt_data, validation_old %>% select(patid, gender, 
 costs_data_hrg_min <- costs_data_hrg %>% 
   mutate(startage = as.numeric(format(apptdate, "%Y")) - yob) %>% 
   mutate(gender = if_else(gender == "F", 2, 1)) %>% 
-  mutate(mainspef = if_else(mainspef != "&", NA, mainspef)) %>% 
-  mutate(tretspef = if_else(tretspef != "&", NA, tretspef)) %>% 
+  mutate(mainspef = case_when(mainspef == "&" ~ NA, 
+                              TRUE ~ mainspef)) %>% 
+  mutate(tretspef = case_when(tretspef == "&" ~ NA, 
+                              TRUE ~ tretspef)) %>% 
   rename(sex = gender) %>% 
   mutate(firstatt = ifelse(firstatt == "X", NA, firstatt)) %>% 
   select(startage, sex, mainspef, tretspef, firstatt) %>% 
@@ -414,4 +416,12 @@ costs_data_hrg_min <- costs_data_hrg %>%
 rio::export(costs_data_hrg_min, here::here("CPRD Raw Analysis", "Results",
                                                "SecondaryCareAnalysis", "costs_data_hrg_min.csv"))
 
+not_missing_m_t <- costs_data_hrg_min %>% 
+  filter(!is.na(MAINSPEF) & !is.na(TRETSPEF))
+
+count_same_m_t <- not_missing_m_t %>% 
+  mutate(same = as.character(MAINSPEF) == as.character(TRETSPEF)) %>%
+  group_by(same) %>% 
+  summarise(n_same = n()) %>% 
+  mutate(n_same_percent = round(n_same/sum(n_same) *100, 2))
 ## Create costs from HRGs ----

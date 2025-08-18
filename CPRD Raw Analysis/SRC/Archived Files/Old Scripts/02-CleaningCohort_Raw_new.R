@@ -106,21 +106,11 @@ patients_to_exclude <- cohort_table_d %>%
   pull()
 
 # Remove all rows for those patients
-# cohort_table_e <- cohort_table_d %>%
-#   filter(!patid %in% patients_to_exclude) %>%
-#   mutate(age_fracture = lubridate::year(fx_date) - yob)
-# rm(patients_to_exclude)
-
 cohort_table_e <- cohort_table_d %>%
-  {
-    if (!is.null(patients_to_exclude) && length(patients_to_exclude) > 0) {
-      filter(., !is.na(patid) & !patid %in% patients_to_exclude)
-    } else {
-      .
-    }
-  } %>%
+  filter(!patid %in% patients_to_exclude) %>%
   mutate(age_fracture = lubridate::year(fx_date) - yob)
 rm(patients_to_exclude)
+
 # Update attrition report
 AttritionReportCoh <- AttritionReportCoh %>% 
   union_all(  
@@ -292,10 +282,10 @@ AttritionReportCoh <- AttritionReportCoh %>%
 AttritionReportCoh <- AttritionReportCoh %>% 
   dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
 
-rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort", "AttritionReportCoh_Raw.xlsx"))
+rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
 cohort_table_raw_ids <- as.data.frame(cohort_table %>% dplyr::pull(patid))
 #rio::export(cohort_table_raw_ids, here::here("CPRD Raw Analysis", "Results", "cohort_table_raw_ids.csv"))
 #rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
-#rio::export(cohort_table, here::here("CPRD Raw Analysis", "Results", "cohort_table_source_gl.csv"))
 
+#rio::export(cohort_table, here::here("CPRD Raw Analysis", "Results", "cohort_table_source_gl.csv"))

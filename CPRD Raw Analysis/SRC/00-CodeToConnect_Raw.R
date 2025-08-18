@@ -63,3 +63,6 @@ my_dm <- dm::dm_from_con(con = db,
 # Collect the table called “_validation”
 
 all_patients <- my_dm$`_validation` %>%  collect()
+
+my_dm$validation_observation
+
