@@ -4,7 +4,7 @@
 # Do file name: Cleaning Cohort; clean the data grouped by subject_id based on 
 # the remaining conditions in the table
 # Date: 13.01.2025
-# Last date edited: 30.05.2025
+# Last date edited: 19.08.2025
 # ****************************************************************************** #
 
 # Cleaning Cohort ----
@@ -292,7 +292,7 @@ AttritionReportCoh <- AttritionReportCoh %>%
 AttritionReportCoh <- AttritionReportCoh %>% 
   dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
 
-rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort", "AttritionReportCoh_Raw.xlsx"))
+# rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort", "AttritionReportCoh_Raw.xlsx"))
 
 cohort_table_raw_ids <- as.data.frame(cohort_table %>% dplyr::pull(patid))
 #rio::export(cohort_table_raw_ids, here::here("CPRD Raw Analysis", "Results", "cohort_table_raw_ids.csv"))
