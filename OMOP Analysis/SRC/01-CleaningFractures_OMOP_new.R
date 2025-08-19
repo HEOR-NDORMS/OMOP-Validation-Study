@@ -1,9 +1,12 @@
 # ****************************************************************************** #
 #	Project name: Validation Study			    	
 #	Author: Gianluca Fabiano & Njoki Njuki, Rafa	
-# Do file name: Cleaning Fractures (a to e in the attrition table)	
-# Date: 20.12.2024
-# Last date edited: 23.12.2024
+# ****************************************************************************** #
+#	Project name: Validation Study			    	
+#	Author: Njoki Njuki, Gianluca Fabiano
+# Do file name: Cleaning Fractures
+# Date: 24.12.2024
+# Last date edited: 19.08.2025
 # ****************************************************************************** #
 
 # Run the CodeToRun.R first to connect to the database first

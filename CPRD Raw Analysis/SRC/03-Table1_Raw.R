@@ -36,6 +36,13 @@ cohort_table <- cohort_table %>%
     follow_up_reason == "two_yrs_after_index, study_end" ~ "Max of 730 days from index date, End of Study"
   )) %>% select(patid, index_date, site, follow_up_end, follow_up_reason, follow_up_time)
 
+# 2. Import the old vaidation table, to bring in the age variable
+all_patients_old <- my_dm$`_validation_old` %>%  collect() %>%  
+  select(patid, yob) 
+cohort_table <- left_join(cohort_table, all_patients_old, by = "patid") %>% 
+  mutate(age_fracture = lubridate::year(index_date) - yob) %>% 
+  select(!yob)
+
 # 2. Import unit costs
 provider_cost_inputs <- rio::import("provider_specialty_cprd_omop_final.xlsx", sheet = "source_cprd_aurum")
 provider_cost_inputs <- provider_cost_inputs %>% select(description, is_clinically_relevant, unit_cost, category)
@@ -72,7 +79,8 @@ cohort_visit_data_user <- cohort_table %>%
 
 # 5. Deduplicate based on visit date and provider
 cohort_visit_data_user <- cohort_visit_data_user %>% 
-  filter(!is.na(specialty)) %>% # keep only records with specialties (there were some with provider but not specialty)
+  # keep only records with specialties (there were some with provider but not specialty)
+  filter(!is.na(specialty)) %>% 
   distinct(patid, consdate, specialty , .keep_all = TRUE) 
 
 # 6. Create a dataframe where all patients are included (also those without visits)
@@ -83,7 +91,8 @@ visit_data_all <- left_join(
   by = "patid"
 ) %>%
   group_by(patid) %>%
-  mutate(user_status = case_when( # define user status (user= at least 1 clinic.relevant, non user= no clinical or no visits)
+  mutate(user_status = case_when( 
+    # define user status (user= at least 1 clinic.relevant, non user= no clinical or no visits)
     any(is_clinically_relevant == 1, na.rm = TRUE) ~ "User",
     TRUE ~ "Non-User"
   )) %>%
@@ -109,19 +118,21 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
   )
 
 # ---- Create Table 1 ----
-gt_summary_table <- table_one_raw_visit_data %>% 
+(gt_summary_table <- table_one_raw_visit_data %>% 
    gtsummary::tbl_summary(
-     include = c(site, follow_up_reason, 
-                 follow_up_time, user_status),
+     include = c(
+       age_fracture, site, follow_up_reason,
+       follow_up_time, user_status),
      label = list(
+       age_fracture = "Age at Fracture Occurrence",
        site = "Fracture Site", 
        follow_up_reason = "Censoring Event",
-       follow_up_time = "Follow up time",
+       follow_up_time = "Follow up Time",
        user_status = "Heathcare Service User Status"
      ),
      missing = "no"
    ) %>%
-   gtsummary::modify_header(label = "**Variable**")
+   gtsummary::modify_header(label = "**Variable**"))
 
 # Check summary statistics
 
@@ -176,14 +187,13 @@ gt_summary_table_df <- as_tibble(gt_summary_table) %>%
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 # Export to Excel
-rio::export(gt_summary_table_df, here::here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort", "Table1_Raw.xlsx"))
+rio::export(gt_summary_table_df, here::here("CPRD Raw Analysis", "Results", "Cohort", "Table1_Raw.xlsx"))
 
 # Export to HTML
 gtsummary::as_gt(gt_summary_table) %>%
-  gt::gtsave(here::here("CPRD Raw Analysis", "Results", "gt_summary_table_Raw.html"))
+  gt::gtsave(here::here("CPRD Raw Analysis", "Results", "Cohort", "gt_summary_table_Raw.html"))
 
 # Clean environment
-
 rm(list = setdiff(ls(), c("cohort_table", "all_patients", "AttritionReportCoh", 
                           "AttritionReportFrac_Raw" ,"db", "my_dm", "visit_data_all", 
                           "provider_cost_inputs", "study_start_date", "study_end_date", 

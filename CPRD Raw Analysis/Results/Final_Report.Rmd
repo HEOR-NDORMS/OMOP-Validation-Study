@@ -1,11 +1,13 @@
 ---
 title: "Validating primary care resource use and costs based on OMOP-mapped CPRD data against corresponding source data: the case of postmenopausal fragility fractures in the UK"
 date: "`r format(Sys.Date(), '%A, %d %B %Y')`"
+author: "Health Economics Group"
 output: 
   html_document:
     toc: true
     toc_float: true
     toc_depth: 3
+css: custom_style.css
 ---
 
 ```{r setup, include=FALSE}
@@ -19,6 +21,11 @@ library(janitor)
 library(here)
 library(DT)
 library(rio)
+library(gt)
+library(png)
+library(grid)
+library(patchwork)
+library(gridExtra)
 ```
 
 # Overview
@@ -31,7 +38,7 @@ Results are stratified by:
 - Encounter type: **All** vs **Clinically relevant only**
 - Time frames: summaries are presented for the **overall follow-up period**, by **year**, and by **month** after index.
 
-# Inputs {.tabset}
+# Inputs
 
 
 - Clinically relevant encounters were defined based on clinical expert judgment, using the specialty of the healthcare professional associated with each encounter record. The assessment was conducted separately for specialties recorded in CPRD Source and those mapped to OMOP.
@@ -43,17 +50,16 @@ Results are stratified by:
 - For SOURCE CPRD specialties that did not map to an OMOP concept ID (i.e., no matching concept id), their costs were averaged and applied uniformly to all *Uncategorised* specialties in OMOP.
 
 
-## Mapping specialties - plot test 1
+## Mapping specialties
 
-The outer circle displays the SOURCE specialties, each linked to an OMOP specialty represented in the inner circle. SOURCE specialties are grouped and colored according to their associated OMOP specialty. Within each group, darker shades indicate specialties marked as clinically relevant. The length of each outer bar corresponds to the unit cost associated with that SOURCE specialty.
+The inner circle shows OMOP specialties (blue nodes), each linked to their corresponding source specialties in the outer circle (red labels). The radial length of the external dumbbell represents the difference between source and OMOP unit costs.
 
-[ the figure needs some improvement and adjustments ]
 ```{r fig.cap="Specialty Mapping", out.width="80%"}
 
-# knitr::include_graphics(here::here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort", "specialties_graph.png"))
+# knitr::include_graphics(here::here("CPRD Raw Analysis", "Results", "Cohort", "specialties_graph.png"))
 
 htmltools::tags$img(
-  src = here::here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort", "specialties_graph.png"),
+  src = here::here("CPRD Raw Analysis", "Results", "Cohort", "circular_dendrogram.png"),
   style = "max-width:100%; height:auto; cursor:zoom-in;",
   onclick = "this.style.transform='scale(2)'; this.style.cursor='zoom-out';",
   ondblclick = "this.style.transform='scale(1)'; this.style.cursor='zoom-in';"
@@ -61,26 +67,6 @@ htmltools::tags$img(
 
 
 ```
-## Mapping specialties - plot test 2
-
-This is another version of figure 1 and for the same purpose (once refined we can choose which one to use). It shows the mapping between OMOP specialties (first column) and their corresponding source specialties (second column), alongside a visual comparison of the unit costs used in the source and OMOP analyses. The goal is to highlight alignment or discrepancies between the two classifications in terms of both specialty definitions and associated costs.
-
-[ the figure needs some improvement and adjustments ]
-
-```{r fig.cap="Specialty Mapping 2", out.width="80%"}
-
-# knitr::include_graphics(here::here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort", "specialties_graph.png"))
-
-htmltools::tags$img(
-  src = here::here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort", "specialties_graph_2.png"),
-  style = "max-width:100%; height:auto; cursor:zoom-in;",
-  onclick = "this.style.transform='scale(2)'; this.style.cursor='zoom-out';",
-  ondblclick = "this.style.transform='scale(1)'; this.style.cursor='zoom-in';"
-)
-
-
-```
-
 
 # Assumptions
 
@@ -95,79 +81,306 @@ Therefore, records without a provider, or with a provider lacking an assigned sp
 
 ### Attrition
 
-Here we will place the attrition table like the old report (values have not changed)
+```{r}
+# Load and preprocess raw attrition report
+attrition_report_raw <- import(here("CPRD Raw Analysis", "Results", "Cohort", "AttritionReportCoh_Raw.xlsx")) %>%
+  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>%
+  mutate(
+    subjects_excluded = as.numeric(subjects_excluded),
+    number_subjects = as.numeric(number_subjects),
+    records_excluded = as.numeric(records_excluded)
+  ) %>%
+  mutate(
+    percent_excluded = ifelse(!is.na(lag(number_subjects)) & lag(number_subjects) != 0,
+                              round((subjects_excluded / lag(number_subjects)) * 100, 2),
+                              0)
+  ) %>%
+  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded)
 
-#### {.tabset}
+# Load and preprocess OMOP attrition report
+attrition_report_omop <- import(here("OMOP Analysis", "Results", "Cohort", "AttritionReportCoh_OMOP.xlsx")) %>%
+  mutate(
+    subjects_excluded = as.numeric(subjects_excluded),
+    number_subjects = as.numeric(number_subjects),
+    records_excluded = as.numeric(records_excluded)
+  ) %>%
+  mutate(
+    percent_excluded = ifelse(!is.na(lag(number_subjects)) & lag(number_subjects) != 0,
+                              round((subjects_excluded / lag(number_subjects)) * 100, 2),
+                              0)
+  ) %>%
+  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded)
 
-##### Source
+# Extract and prepare top rows from raw
+special_top_rows <- attrition_report_raw %>%
+  filter(reason %in% c("Starting Population - Female individuals", "Anyone With Fracture(s)")) %>%
+  select(reason, number_records, number_subjects, subjects_excluded, percent_excluded, records_excluded) %>%
+  rename_with(~ paste0(., "_raw"), -reason)
 
-```{r attrition - source}
+# Merge rest of the data
+merged_attrition <- full_join(
+  attrition_report_raw %>% filter(!reason %in% special_top_rows$reason),
+  attrition_report_omop,
+  by = "reason",
+  suffix = c("_raw", "_omop")
+)
 
+# Combine top rows with merged attrition table
+reordered_attrition <- bind_rows(
+  special_top_rows,
+  merged_attrition
+) %>%
+  mutate(row_id = row_number()) %>%
+  mutate(
+    reason = case_when(
+      row_id <= 2 ~ reason,
+      TRUE ~ paste0("  ", reason)
+    )
+  )
+
+# Table 1: Starting Population
+starting_population_table <- reordered_attrition %>%
+  filter(str_detect(reason, "Had their.*fracture.*> ?50 years old"))
+
+starting_population_table %>%
+  gt() %>%
+  tab_header(title = md("**Starting Population**")) %>%
+  tab_options(heading.align = "left", table.font.size = px(14)) %>%
+  fmt_number(
+    columns = contains("number_subjects"),
+    sep_mark = ",",
+    decimals = 0
+  ) %>%
+  sub_missing(columns = everything(), missing_text = "") %>%
+  cols_label(
+    reason = "",
+    number_subjects_raw = "Subjects (Source)",
+    number_subjects_omop = "Subjects (OMOP)"
+  ) %>%
+  cols_hide(columns = c(contains("excluded"), contains("records"), row_id)) %>% 
+  opt_stylize(style = 2)
+
+```
+
+
+```{r}
+# Table 2: Exclusions (row 2 to 15)
+exclusion_table <- reordered_attrition %>%
+  slice(2:14)
+
+# Get raw count from row 16
+eligible_count_raw <- reordered_attrition %>%
+  slice(14) %>%
+  pull(number_subjects_raw)
+
+# Get omop count from row 18
+eligible_count_omop <- reordered_attrition %>%
+  slice(14) %>%
+  pull(number_subjects_omop)
+
+# Create final row with eligible counts mapped to visible columns
+eligible_row <- tibble(
+  reason = "Number of eligible patients",
+  number_subjects_raw = eligible_count_raw,
+  number_subjects_omop = eligible_count_omop,
+  subjects_excluded_raw = eligible_count_raw,  # map to visible column
+  percent_excluded_raw = NA,
+  records_excluded_raw = NA,
+  subjects_excluded_omop = eligible_count_omop,  # map to visible column
+  percent_excluded_omop = NA,
+  records_excluded_omop = NA,
+  row_id = NA
+)
+
+# Add the final row to the exclusions table
+exclusion_table <- exclusion_table %>%
+  bind_rows(eligible_row)
+
+
+exclusion_table %>%
+  gt() %>%
+  tab_header(title = md("**Attrition Table - Exclusion Criteria**")) %>%
+  tab_options(heading.align = "left", table.font.size = px(14)) %>%
+  opt_stylize(style = 3) %>%
+  fmt_number(
+    columns = c(contains("subjects_excluded"), contains("records_excluded")),
+    sep_mark = ",",
+    decimals = 0
+  ) %>%
+  fmt_number(
+    columns = contains("percent_excluded"),
+    sep_mark = ",",
+    decimals = 2
+  ) %>%
+  sub_missing(columns = everything(), missing_text = "") %>%
+  cols_label(
+    reason = "Reason for exclusion",
+    subjects_excluded_raw = "N Subjects Excluded",
+    percent_excluded_raw = "Perc Subjects Excluded (%)",
+    records_excluded_raw = "N Records Excluded",
+    subjects_excluded_omop = "N Subjects Excluded",
+    percent_excluded_omop = "Perc Subjects Excluded (%)",
+    records_excluded_omop = "N Records Excluded"
+  ) %>%
+  tab_spanner(
+    label = "Source Analysis",
+    columns = c(subjects_excluded_raw, percent_excluded_raw, records_excluded_raw)
+  ) %>%
+  tab_spanner(
+    label = "OMOP Analysis",
+    columns = c(subjects_excluded_omop, percent_excluded_omop, records_excluded_omop)
+  ) %>%
+  cols_hide(columns = c(row_id, contains("number_records"), contains("number_subjects"))) %>% 
+  tab_style(
+  style = cell_text(weight = "bold"),
+  locations = cells_body(
+    rows = reason == "Number of eligible patients"
+  )
+)
 
 
 ```
 
-##### OMOP
+### Patients Characteristics
 
-```{r attrition - omop}
+```{r}
+# Import data
+table1_data_raw <- rio::import(here("CPRD Raw Analysis", "Results", "Cohort", "Table1_Raw.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
+
+table1_data_omop <- rio::import(here("OMOP Analysis", "Results", "Cohort", "Table1_OMOP.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .))) 
+
+# Define subcategories for indentation
+parent_vars <- c("Fracture Site", "Censoring Event",
+                 "Heathcare Service User Status") 
+
+subcategories <- c(
+  "Hip", "Vertebra", "NHNV", 
+  "Death", "Cancer",
+  "Max of 730 days from index date",
+  "End of Study", "Fracture ensuing incident (index) fracture", "End of data collection period",
+  "Death", "Cancer", 
+  "Paget’s disease of the bone, or other metabolic bone diseases",
+  "Max of 730 days from index date, End of Study",
+  "Cancer, Fracture ensuing incident (index) fracture",
+  "End of data collection period, Fracture ensuing incident (index) fracture",
+  "Fracture ensuing incident (index) fracture, End of Study",
+  "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
+  "Cancer, Paget’s disease of the bone, or other metabolic bone diseases",
+  "End of data collection period, Cancer",
+  "Max of 730 days from index date, Cancer",
+  "Max of 730 days from index date, End of data collection period",
+  "Max of 730 days from index date, Paget’s disease of the bone, or other metabolic bone diseases",
+  "Paget’s disease of the bone, or other metabolic bone diseases, Fracture ensuing incident (index) fracture",
+  "Non-User", "User")
 
 
+# Merge datasets
+merged_data <- full_join(table1_data_raw, table1_data_omop, by = "Variable", suffix = c("_raw", "_omop")) %>% 
+   mutate(Variable = case_when(
+    Variable %in% subcategories ~ paste0("&nbsp;&nbsp;&nbsp;", Variable), # Indent subcategories using HTML space
+    TRUE ~ Variable
+  )) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
-```
+merged_data %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Patient Characteristics**")
+  ) %>%
+  opt_all_caps() %>% 
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  fmt_markdown(columns = "Variable") %>%  # Apply markdown formatting for indentation
+  opt_stylize(style = 3) %>%
 
-### Patients characteristics
-
-We will combine the two tables into one like in old report (values have not changed, except users counts slightly)
-
-#### {.tabset}
-
-##### Source
-
-```{r import-data table 1 - source}
-
-table_1_source <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort" ,"Table1_Raw.xlsx"))
-
-knitr::kable(table_1_source)
-
-
-```
-
-##### OMOP
-
-```{r import-data table 1 - omop}
-
-table_1_omop <- import(here("OMOP Analysis", "Results", "Results_GL", "Cohort" ,"Table1_OMOP.xlsx"))
-
-knitr::kable(table_1_omop)
+  # Add spanner headers for CPRD Raw and OMOP Analysis
+  tab_spanner(
+    label = "CPRD Source Analysis",
+    columns = c("N = 23,106")
+  ) %>%
+  tab_spanner(
+    label = "OMOP Analysis",
+    columns = c("N = 22,900")
+  ) %>%
 
 
+  # Add footnotes
+  tab_footnote(
+    footnote = "Median (Q1, Q3); n (%)",
+    locations = cells_title(groups = "title")
+  ) %>% 
+  tab_footnote(
+    footnote = md("*User defined as subjects with >=1 visit with a clinically relevant healthcare provider and Non-User as Subjects with no visits, or visits with non-clinically relevant healthcare provider, or unknown specialty*"),
+    locations = cells_body(columns = Variable, rows = c(22))
+  )
 ```
 
 ### Exposure
 
-Here we will place the plots with exposure time like the old report (unchanged)
+```{r fig.height=4, fig.width=6}
+# Read images
+Exposure_Time_Raw <- readPNG(here("CPRD Raw Analysis", "Results", "Plots", "Exposure_Time.PNG"))
+Exposure_Time_OMOP <- readPNG(here("OMOP Analysis", "Results", "Plots", "Exposure_Time.PNG"))
 
-###  Specialties
+# Wrap them in rasterGrob
+Exposure_Time_Raw_g <- rasterGrob(Exposure_Time_Raw, interpolate = TRUE)
+Exposure_Time_OMOP_g <- rasterGrob(Exposure_Time_OMOP, interpolate = TRUE)
 
-[ we will combine the two tables into one ]
+# Add titles with arrangeGrob 
+Exposure_Time_Raw_g_with_title <- arrangeGrob(Exposure_Time_Raw_g, top = textGrob("Source", gp = gpar(fontsize = 12, fontface = "bold"))) 
+Exposure_Time_OMOP_g_with_title <- arrangeGrob(Exposure_Time_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 12, fontface = "bold"))) 
 
-#### {.tabset}
-
-##### Source
-```{r import-data specialty}
-table_specialty_source <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Cohort" ,"Output_gt_overall_healthcare_roles_count_SOURCE.xlsx"))
-
-knitr::kable(table_specialty_source, caption = "Healthcare Provider Roles and Categories (Source-CPRD Summary)")
+grid.arrange(Exposure_Time_Raw_g_with_title, Exposure_Time_OMOP_g_with_title, ncol = 2)
 
 ```
 
-##### OMOP
-```{r import-data specialty omop}
+###  Specialties
 
-table_specialty_omop <- import(here("OMOP Analysis", "Results", "Results_GL", "Cohort" ,"Output_gt_overall_healthcare_roles_count_OMOP.xlsx"))
+```{r import-data_specialty}
+table_specialty_source <- import(here("CPRD Raw Analysis", "Results", "Cohort" ,"Output_gt_overall_healthcare_roles_count_SOURCE.xlsx")) %>% 
+  rename(`Total Encounters` = `**Total Encounters**`,
+         `N = 901,535 (Source)` = `**N = 901,535**`)
 
-knitr::kable(table_specialty_omop, caption = "Healthcare Provider Roles and Categories (OMOP Summary)")
+table_specialty_omop <- import(here("OMOP Analysis", "Results", "Cohort" ,"Output_gt_overall_healthcare_roles_count_OMOP.xlsx")) %>% 
+  rename(`Total Encounters` = `**Total Encounters**`,
+         `N = 877,293 (OMOP)` = `**N = 877,293**`)
 
+merged_table_specialty <- full_join(
+  table_specialty_source, table_specialty_omop,
+  by = "Total Encounters"
+)
+
+bold_vars_specialty <- c(
+  "__Healthcare Provider Category__", 
+  "__Healthcare Provider Roles__")
+
+merged_table_specialty %>% 
+     mutate(`Total Encounters` = ifelse(`Total Encounters` %in% bold_vars_specialty, paste0("**", `Total Encounters`, "**"), `Total Encounters`)) |> 
+  gt() |> 
+  tab_header(
+    title = md("**Healthcare Provider Roles and Categories**")
+  ) |> 
+  tab_style(
+    style = cell_fill(color = "#FFFFFF"),
+    locations = cells_body()
+) |>
+  opt_all_caps() %>%
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  fmt_markdown(columns = "Total Encounters") |>   # Apply markdown formatting for indentation
+  opt_stylize(style = 2) |> 
+  # Add footnotes
+  tab_footnote(
+    footnote = "N (%)",
+    locations = cells_title(groups = "title")
+  ) |> 
+  sub_missing(columns = everything(), missing_text = "")
 
 ```
 
@@ -180,14 +393,13 @@ knitr::kable(table_specialty_omop, caption = "Healthcare Provider Roles and Cate
 
 ```{r import-data}
 
-source_overall_observed <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Overall","overall_combined_summary_encounters_SOURCE.xlsx"))
+source_overall_observed <- import(here("CPRD Raw Analysis", "Results", "Overall","overall_combined_summary_encounters_SOURCE.xlsx"))
 
-omop_overall_observed <- import(here("OMOP Analysis", "Results", "Results_GL", "Overall",
-                                       "overall_combined_summary_encounters_OMOP.xlsx"))
+omop_overall_observed <- import(here("OMOP Analysis", "Results", "Overall", "overall_combined_summary_encounters_OMOP.xlsx"))
 
-source_overall_boot <- import(here("CPRD Raw Analysis", "Results", "Results_GL","Overall", "overall_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
+source_overall_boot <- import(here("CPRD Raw Analysis", "Results", "Overall", "overall_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
 
-omop_overall_boot  <- import(here("OMOP Analysis", "Results", "Results_GL", "Overall","overall_combined_bootstrap_summary_encounters_OMOP.xlsx"))
+omop_overall_boot  <- import(here("OMOP Analysis", "Results", "Overall","overall_combined_bootstrap_summary_encounters_OMOP.xlsx"))
 
 
 ```
@@ -412,13 +624,13 @@ We derived two types of mean estimates:
 
 
 ```{r import-data-yearly}
-source_yearly_observed <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Yearly","yearly_combined_summary_encounters_SOURCE.xlsx"))
+source_yearly_observed <- import(here("CPRD Raw Analysis", "Results", "Yearly","yearly_combined_summary_encounters_SOURCE.xlsx"))
 
-omop_yearly_observed <- import(here("OMOP Analysis", "Results", "Results_GL", "Yearly","yearly_combined_summary_encounters_OMOP.xlsx"))
+omop_yearly_observed <- import(here("OMOP Analysis", "Results", "Yearly","yearly_combined_summary_encounters_OMOP.xlsx"))
 
-source_yearly_boot <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Yearly","yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
+source_yearly_boot <- import(here("CPRD Raw Analysis", "Results", "Yearly","yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
 
-omop_yearly_boot <- import(here("OMOP Analysis", "Results", "Results_GL", "Yearly","yearly_combined_bootstrap_summary_encounters_OMOP.xlsx"))
+omop_yearly_boot <- import(here("OMOP Analysis", "Results", "Yearly","yearly_combined_bootstrap_summary_encounters_OMOP.xlsx"))
 ```
 
 #### All Patients {.tabset}
@@ -655,11 +867,11 @@ Like for the yearly analysis, means were derived among *exposed patients* only: 
 
 ```{r import-data-months}
 
-monthly_combined_bootstrap_summary_encounters_SOURCE <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Monthly",
+monthly_combined_bootstrap_summary_encounters_SOURCE <- import(here("CPRD Raw Analysis", "Results", "Monthly",
                                                                                "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
 
 
-monthly_combined_bootstrap_summary_encounters_OMOP <- import(here("OMOP Analysis", "Results", "Results_GL", "Monthly",
+monthly_combined_bootstrap_summary_encounters_OMOP <- import(here("OMOP Analysis", "Results", "Monthly",
                                                                              "monthly_combined_bootstrap_summary_encounters_OMOP.xlsx"))
 
 
@@ -833,13 +1045,13 @@ combined_plot_users
 
 ```{r import-data-costs}
 
-source_overall_costs_observed <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Overall","overall_combined_summary_costs_SOURCE.xlsx"))
+source_overall_costs_observed <- import(here("CPRD Raw Analysis", "Results", "Overall","overall_combined_summary_costs_SOURCE.xlsx"))
 
-omop_overall_costs_observed   <- import(here("OMOP Analysis", "Results", "Results_GL", "Overall","overall_combined_summary_costs_OMOP.xlsx"))
+omop_overall_costs_observed   <- import(here("OMOP Analysis", "Results", "Overall","overall_combined_summary_costs_OMOP.xlsx"))
 
-source_overall_costs_boot <- import(here("CPRD Raw Analysis", "Results", "Results_GL","Overall", "overall_combined_bootstrap_summary_costs_SOURCE.xlsx"))
+source_overall_costs_boot <- import(here("CPRD Raw Analysis", "Results", "Overall", "overall_combined_bootstrap_summary_costs_SOURCE.xlsx"))
 
-omop_overall_costs_boot  <- import(here("OMOP Analysis", "Results", "Results_GL", "Overall","overall_combined_bootstrap_summary_costs_OMOP.xlsx"))
+omop_overall_costs_boot  <- import(here("OMOP Analysis", "Results", "Overall","overall_combined_bootstrap_summary_costs_OMOP.xlsx"))
 
 ```
 
@@ -1045,13 +1257,13 @@ We derived two types of mean estimates:
 
 
 ```{r import-yearly-costs}
-source_yearly_costs_observed <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Yearly","yearly_combined_summary_costs_SOURCE.xlsx"))
+source_yearly_costs_observed <- import(here("CPRD Raw Analysis", "Results", "Yearly","yearly_combined_summary_costs_SOURCE.xlsx"))
 
-omop_yearly_costs_observed <- import(here("OMOP Analysis", "Results", "Results_GL", "Yearly","yearly_combined_summary_costs_OMOP.xlsx"))
+omop_yearly_costs_observed <- import(here("OMOP Analysis", "Results", "Yearly","yearly_combined_summary_costs_OMOP.xlsx"))
 
-source_yearly_costs_boot <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Yearly","yearly_combined_bootstrap_summary_costs_SOURCE.xlsx"))
+source_yearly_costs_boot <- import(here("CPRD Raw Analysis", "Results", "Yearly","yearly_combined_bootstrap_summary_costs_SOURCE.xlsx"))
 
-omop_yearly_costs_boot <- import(here("OMOP Analysis", "Results", "Results_GL", "Yearly","yearly_combined_bootstrap_summary_costs_OMOP.xlsx"))
+omop_yearly_costs_boot <- import(here("OMOP Analysis", "Results", "Yearly","yearly_combined_bootstrap_summary_costs_OMOP.xlsx"))
 ```
 
 #### All Patients {.tabset}
@@ -1286,11 +1498,11 @@ Like for the yearly analysis, means were derived among *exposed patients* only: 
 
 ```{r import-data-months costs}
 
-monthly_combined_bootstrap_summary_costs_SOURCE <- import(here("CPRD Raw Analysis", "Results", "Results_GL", "Monthly",
+monthly_combined_bootstrap_summary_costs_SOURCE <- import(here("CPRD Raw Analysis", "Results", "Monthly",
                                                                                "monthly_combined_bootstrap_summary_costs_SOURCE.xlsx"))
 
 
-monthly_combined_bootstrap_summary_costs_OMOP <- import(here("OMOP Analysis", "Results", "Results_GL", "Monthly",
+monthly_combined_bootstrap_summary_costs_OMOP <- import(here("OMOP Analysis", "Results", "Monthly",
                                                                              "monthly_combined_bootstrap_summary_costs_OMOP.xlsx"))
 
 

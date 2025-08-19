@@ -3,7 +3,7 @@
 #	Author: Njoki Njuki, Gianluca Fabiano
 # Do file name: Table 1: description of the patients
 # Date: 05.05.2025
-# Last date edited: 10.07.2025
+# Last date edited: 19.08.2025
 # ****************************************************************************** #
 
 # Preparation for analyses ----
@@ -27,7 +27,10 @@ cohort_table <- cohort_table %>%
     follow_up_reason == "two_yrs_after_index" ~ "Max of 730 days from index date",
     follow_up_reason == "two_yrs_after_index, fracture_after_index" ~ "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
     follow_up_reason == "two_yrs_after_index, study_end" ~ "Max of 730 days from index date, End of Study"
-  )) %>% select(subject_id, fracture_site, index_date, follow_up_end, follow_up_reason, follow_up_time)
+  )) %>%
+  dplyr::left_join(cdm[["person"]], by = c("subject_id" = "person_id"), copy = T) %>% 
+  dplyr::mutate(age_fracture = lubridate::year(index_date) - year_of_birth) %>% 
+  select(subject_id, age_fracture, fracture_site, index_date, follow_up_end, follow_up_reason, follow_up_time)
 
 
 # 2. Import unit costs
@@ -114,22 +117,23 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
   mutate(follow_up_time = as.numeric(follow_up_time))
 
 # Using gtsummary::tbl_summary, we can summarise the table as follows
-gt_summary_table <- table_one_omop_visit_data %>% 
+(gt_summary_table <- table_one_omop_visit_data %>% 
     gtsummary::tbl_summary(
       # select the variables of interest
-      include = c(fracture_site, follow_up_reason, follow_up_time,
-                  user_status),
+      include = c(age_fracture,fracture_site, follow_up_reason, 
+                  follow_up_time, user_status),
       # rename the variable names
       label = list(
-        fracture_site = "Fracture fracture_site", 
+        age_fracture = "Age at Fracture Occurrence",
+        fracture_site = "Fracture Site", 
         follow_up_reason = "Censoring Event",
-        follow_up_time = "Follow up time",
+        follow_up_time = "Follow up Time",
         user_status = "Heathcare Service User Status"
       ),
       # indicate whether we want the missing values to be seen in the summary table
       missing = "no"
     ) %>%
-    gtsummary::modify_header(label = "**Variable**")
+    gtsummary::modify_header(label = "**Variable**"))
 
 
 # Check summary statistics
@@ -178,12 +182,12 @@ gt_summary_table_df <- as_tibble(gt_summary_table) %>%
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 # Export to Excel
-rio::export(gt_summary_table_df, here::here("OMOP Analysis", "Results", "Results_GL", "Cohort", "Table1_OMOP.xlsx"))
+rio::export(gt_summary_table_df, here::here("OMOP Analysis", "Results", "Cohort", "Table1_OMOP.xlsx"))
 
 # Export to HTML
-# gtsummary::as_gt(gt_summary_table) %>%
-#   gt::gtsave(here::here("OMOP Analysis", "Results_GL", "gt_summary_table_OMOP.html"))
-# 
+gtsummary::as_gt(gt_summary_table) %>%
+  gt::gtsave(here::here("OMOP Analysis",  "Results", "Cohort", "gt_summary_table_OMOP.html"))
+ 
 # Clean environment
 rm(list = setdiff(ls(), c("cohort_table", "cdm", "all_patients", "AttritionReportCoh", 
                           "AttritionReportFrac" ,"cdm", "db", "cohort_visit_data_all", 
