@@ -125,9 +125,9 @@ table_one_omop_visit_data <- table_one_omop_visit_data %>%
       # rename the variable names
       label = list(
         age_fracture = "Age at Fracture Occurrence",
-        fracture_site = "Fracture fracture_site", 
+        fracture_site = "Fracture Site", 
         follow_up_reason = "Censoring Event",
-        follow_up_time = "Follow up time",
+        follow_up_time = "Follow up Time",
         user_status = "Heathcare Service User Status"
       ),
       # indicate whether we want the missing values to be seen in the summary table
