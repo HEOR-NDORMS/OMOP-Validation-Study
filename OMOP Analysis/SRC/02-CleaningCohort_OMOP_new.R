@@ -1,3 +1,12 @@
+# ****************************************************************************** #
+#	Project name: Validation Study			    	
+#	Author: Njoki Njuki, Gianluca Fabiano	
+# Do file name: Cleaning Cohort; clean the data grouped by subject_id based on 
+# the remaining conditions in the table
+# Date: 13.01.2025
+# Last date edited: 19.08.2025
+# ****************************************************************************** #
+
 cohort_table <- fracture_table_e
 
 ### a) Not Female ----
@@ -316,7 +325,7 @@ AttritionReportCoh <- AttritionReportCoh %>%
   dplyr::mutate(subjects_excluded = -(number_subjects-dplyr::lag(number_subjects)), records_excluded = -(number_records - dplyr::lag(number_records)))
 
 
-rio::export(AttritionReportCoh, here::here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
+# rio::export(AttritionReportCoh, here::here("OMOP Analysis", "Results", "AttritionReportCoh_OMOP.xlsx"))
 # 
 # 
 # rio::export(cohort_table, here::here("OMOP Analysis", "Results", "cohort_table_omop_gl.csv"))
