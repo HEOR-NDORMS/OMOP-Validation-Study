@@ -127,7 +127,7 @@ table_one_raw_visit_data <- table_one_raw_visit_data %>%
        age_fracture = "Age at Fracture Occurrence",
        site = "Fracture Site", 
        follow_up_reason = "Censoring Event",
-       follow_up_time = "Follow up time",
+       follow_up_time = "Follow up Time",
        user_status = "Heathcare Service User Status"
      ),
      missing = "no"
@@ -194,7 +194,6 @@ gtsummary::as_gt(gt_summary_table) %>%
   gt::gtsave(here::here("CPRD Raw Analysis", "Results", "Cohort", "gt_summary_table_Raw.html"))
 
 # Clean environment
-
 rm(list = setdiff(ls(), c("cohort_table", "all_patients", "AttritionReportCoh", 
                           "AttritionReportFrac_Raw" ,"db", "my_dm", "visit_data_all", 
                           "provider_cost_inputs", "study_start_date", "study_end_date", 
