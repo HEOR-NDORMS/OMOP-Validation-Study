@@ -44,9 +44,9 @@ visit_data_all <- cohort_visit_data_all
 
 # --- a) All patients & all encounters
 all_patients_all_encounters_counts <- visit_data_all %>%
-  group_by(subject_id) %>%
+  group_by(patid) %>%
   summarise(
-    total_patient_encounters = n(),
+    total_patient_encounters = sum(!is.na(consid)), # this way non users have 0 count
     .groups = "drop"
   )
 
