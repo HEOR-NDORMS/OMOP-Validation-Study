@@ -1,6 +1,7 @@
 # Set up the R environ
 # renv::activate()
 # usethis::edit_r_environ()
+# renv::restore() # this should prompt you to install the various packages required for the study
 
 # install.packages("DBI")
 # install.packages("RPostgres")

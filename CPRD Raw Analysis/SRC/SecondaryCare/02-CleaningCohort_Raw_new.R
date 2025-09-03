@@ -282,7 +282,7 @@ AttritionReportCoh <- AttritionReportCoh %>%
 AttritionReportCoh <- AttritionReportCoh %>% 
   dplyr::mutate(subjects_excluded = -(number_subjects-lag(number_subjects)), records_excluded = -(number_records - lag(number_records)))
 
-rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
+# rio::export(AttritionReportCoh, here::here("CPRD Raw Analysis", "Results", "AttritionReportCoh_Raw.xlsx"))
 
 cohort_table_raw_ids <- as.data.frame(cohort_table %>% dplyr::pull(patid))
 #rio::export(cohort_table_raw_ids, here::here("CPRD Raw Analysis", "Results", "cohort_table_raw_ids.csv"))

@@ -38,7 +38,7 @@ Results are stratified by:
 - Encounter type: **All** vs **Clinically relevant only**
 - Time frames: summaries are presented for the **overall follow-up period**, by **year**, and by **month** after index.
 
-# Inputs {.tabset}
+# Inputs
 
 
 - Clinically relevant encounters were defined based on clinical expert judgment, using the specialty of the healthcare professional associated with each encounter record. The assessment was conducted separately for specialties recorded in CPRD Source and those mapped to OMOP.
@@ -249,9 +249,7 @@ table1_data_raw <- rio::import(here("CPRD Raw Analysis", "Results", "Cohort", "T
   mutate(across(everything(), ~ ifelse(is.na(.), "", .)))
 
 table1_data_omop <- rio::import(here("OMOP Analysis", "Results", "Cohort", "Table1_OMOP.xlsx")) %>% 
-  mutate(across(everything(), ~ ifelse(is.na(.), "", .))) %>% 
-  rename(Variable = `**Characteristic**`,
-         `N = 23,386` = `**N = 23,386**`)
+  mutate(across(everything(), ~ ifelse(is.na(.), "", .))) 
 
 # Define subcategories for indentation
 parent_vars <- c("Fracture Site", "Censoring Event",
@@ -301,7 +299,7 @@ merged_data %>%
 
   # Add spanner headers for CPRD Raw and OMOP Analysis
   tab_spanner(
-    label = "CPRD Raw Analysis",
+    label = "CPRD Source Analysis",
     columns = c("N = 23,106")
   ) %>%
   tab_spanner(
@@ -317,55 +315,11 @@ merged_data %>%
   ) %>% 
   tab_footnote(
     footnote = md("*User defined as subjects with >=1 visit with a clinically relevant healthcare provider and Non-User as Subjects with no visits, or visits with non-clinically relevant healthcare provider, or unknown specialty*"),
-    locations = cells_body(columns = Variable, rows = c(21))
+    locations = cells_body(columns = Variable, rows = c(22))
   )
 ```
 
-### Patients Comparison between Source and OMOP (Generate new)
-
-```{r}
-contigency_table_for_pts_rp <- import(here("Comparison Analysis", "Results", "contigency_table_for_pts.xlsx")) %>% 
-  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>% 
-  mutate(Total = as.numeric(Total))
-
-contigency_table_for_pts_rp %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Contigency Table for Patients**"),
-    subtitle = md("*Comparison between OMOP and Source*")
-  ) %>%
-  # opt_all_caps() %>% 
-  tab_options(
-    heading.align = "left",
-    table.font.size = px(14)
-  ) %>%
-  # Add spanner headers for CPRD Raw and OMOP Analysis
-  tab_spanner(
-    label = "OMOP",
-    columns = c("OMOP: No", "OMOP: Yes")
-  ) %>%
-   opt_stylize(style = 1) %>% 
-  cols_label(
-    `OMOP: No` = "No",
-    `OMOP: Yes` = "Yes"
-    ) %>% 
-  fmt_number(
-    columns = contains("OMOP"),
-    sep_mark = ",",
-    decimals = 0
-  ) %>% 
-  fmt_number(
-    columns = c("Total"),
-    sep_mark = ",",
-    decimals = 0
-  ) %>% 
-  sub_missing(columns = everything(), missing_text = "")
-```
-
-
 ### Exposure
-
-Here we will place the plots with exposure time like the old report (unchanged)
 
 ```{r fig.height=4, fig.width=6}
 # Read images
