@@ -50,33 +50,33 @@ cdm[["appt_data"]] <- appt_data
 # Step 5: Collect only if needed
 # appt_data_collected <- appt_data %>% collect()
 
-# cdm[["appt_data"]] <- cdm$visit_detail %>%
-#   dplyr::filter(
-#     visit_detail_concept_id == 9202,  # Outpatient Visit
-#     visit_detail_start_date >= study_start_date, # only visits in the study period
-#     visit_detail_start_date <= study_end_date
-#   ) %>%
-#   dplyr::select(
-#     visit_detail_id, person_id, provider_id, care_site_id,
-#     visit_detail_start_date, visit_detail_concept_id, preceding_visit_detail_id
-#    ) %>% 
-#   # Join the visit occurrence table
-#   dplyr::left_join(cdm$visit_occurrence %>% select(person_id,  visit_type_concept_id),
-#                    by = "person_id") %>% 
-#   # Join the provider table
-#   dplyr::left_join(cdm$provider %>% select(
-#     provider_id, specialty_concept_id, specialty_source_value,
-#     provider_name, provider_source_value
-#     ), by = "provider_id") %>%
-#   dplyr::select(
-#     visit_detail_id, person_id, provider_id, 
-#     specialty_concept_id, specialty_source_value,
-#     visit_detail_start_date, visit_detail_concept_id,
-#     preceding_visit_detail_id,
-#     visit_type_concept_id,
-#     provider_name, provider_source_value
-#   ) %>% 
-#   computeQuery()
+cdm[["appt_data"]] <- cdm$visit_detail %>%
+  dplyr::filter(
+    visit_detail_concept_id == 9202,  # Outpatient Visit
+    visit_detail_start_date >= study_start_date, # only visits in the study period
+    visit_detail_start_date <= study_end_date
+  ) %>%
+  dplyr::select(
+    visit_detail_id, person_id, provider_id, care_site_id,
+    visit_detail_start_date, visit_detail_concept_id, preceding_visit_detail_id
+   ) %>%
+  # Join the visit occurrence table
+  dplyr::left_join(cdm$visit_occurrence %>% select(person_id,  visit_type_concept_id),
+                   by = "person_id") %>%
+  # Join the provider table
+  dplyr::left_join(cdm$provider %>% select(
+    provider_id, specialty_concept_id, specialty_source_value,
+    provider_name, provider_source_value
+    ), by = "provider_id") %>%
+  dplyr::select(
+    visit_detail_id, person_id, provider_id,
+    specialty_concept_id, specialty_source_value,
+    visit_detail_start_date, visit_detail_concept_id,
+    preceding_visit_detail_id,
+    visit_type_concept_id,
+    provider_name, provider_source_value
+  ) %>%
+  computeQuery()
 
 
 # Merge cohort with visit data
