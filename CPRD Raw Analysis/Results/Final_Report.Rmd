@@ -26,6 +26,8 @@ library(png)
 library(grid)
 library(patchwork)
 library(gridExtra)
+library(gtExtras)
+library(htmltools)
 ```
 
 # Overview
@@ -340,7 +342,7 @@ grid.arrange(Exposure_Time_Raw_g_with_title, Exposure_Time_OMOP_g_with_title, nc
 
 ###  Specialties
 
-```{r import-data_specialty}
+```{r message=FALSE, warning=FALSE}
 table_specialty_source <- import(here("CPRD Raw Analysis", "Results", "Cohort" ,"Output_gt_overall_healthcare_roles_count_SOURCE.xlsx")) %>% 
   rename(`Total Encounters` = `**Total Encounters**`,
          `N = 901,535 (Source)` = `**N = 901,535**`)
@@ -349,21 +351,27 @@ table_specialty_omop <- import(here("OMOP Analysis", "Results", "Cohort" ,"Outpu
   rename(`Total Encounters` = `**Total Encounters**`,
          `N = 877,293 (OMOP)` = `**N = 877,293**`)
 
-merged_table_specialty <- full_join(
-  table_specialty_source, table_specialty_omop,
-  by = "Total Encounters"
+# Bold
+bold_vars_specialty_category <- c(
+  "__Healthcare Provider Category__"
 )
 
-bold_vars_specialty <- c(
-  "__Healthcare Provider Category__", 
-  "__Healthcare Provider Roles__")
-
-merged_table_specialty %>% 
-     mutate(`Total Encounters` = ifelse(`Total Encounters` %in% bold_vars_specialty, paste0("**", `Total Encounters`, "**"), `Total Encounters`)) |> 
-  gt() |> 
-  tab_header(
-    title = md("**Healthcare Provider Roles and Categories**")
-  ) |> 
+# Healthcare Provider Category (shared table)
+table_specialty_source %>% 
+  filter(`Total Encounters` %in% c("Administrative Non-clinical", "General Practitioner", "Nurse", "Other")) %>% 
+  full_join(
+    table_specialty_omop %>% 
+      filter(`Total Encounters` %in% c("Administrative Non-clinical", "General Practitioner", "Nurse", "Other", "Uncategorised")),
+    by = "Total Encounters"
+  ) %>% 
+  mutate(`Total Encounters` = ifelse(
+    `Total Encounters` %in% bold_vars_specialty_category, 
+    paste0("**", `Total Encounters`, "**"), 
+    `Total Encounters`)
+  ) %>%
+  gt() %>%
+  tab_header(title = md("**Healthcare Provider Category**")) %>%
+  fmt_markdown(columns = "Total Encounters") %>% 
   tab_style(
     style = cell_fill(color = "#FFFFFF"),
     locations = cells_body()
@@ -373,7 +381,41 @@ merged_table_specialty %>%
     heading.align = "left",
     table.font.size = px(14)
   ) %>%
-  fmt_markdown(columns = "Total Encounters") |>   # Apply markdown formatting for indentation
+  opt_stylize(style = 2) |> 
+  # Add footnotes
+  tab_footnote(
+    footnote = "N (%)",
+    locations = cells_title(groups = "title")
+  ) |> 
+  sub_missing(columns = everything(), missing_text = "")
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# Roles tables
+bold_vars_specialty_roles <- c(
+  "__Healthcare Provider Roles__"
+)
+
+roles_source <- table_specialty_source %>% 
+  filter(!`Total Encounters` %in% c("__Healthcare Provider Category__", "Administrative Non-clinical", "General Practitioner", "Nurse", "Other")) %>% 
+  mutate(`Total Encounters` = ifelse(
+    `Total Encounters` %in% bold_vars_specialty_roles, 
+    paste0("**", `Total Encounters`, "**"), 
+    `Total Encounters`)
+  ) %>%
+  gt() %>%
+  tab_header(title = md("**Healthcare Provider Roles (Source)**")) %>%
+  fmt_markdown(columns = "Total Encounters") %>% 
+  tab_style(
+    style = cell_fill(color = "#FFFFFF"),
+    locations = cells_body()
+) |>
+  opt_all_caps() %>%
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
   opt_stylize(style = 2) |> 
   # Add footnotes
   tab_footnote(
@@ -382,6 +424,44 @@ merged_table_specialty %>%
   ) |> 
   sub_missing(columns = everything(), missing_text = "")
 
+roles_omop <- table_specialty_omop %>% 
+  filter(!`Total Encounters` %in% c("__Healthcare Provider Category__", "Administrative Non-clinical", "General Practitioner", "Nurse", "Other", "Uncategorised")) %>% 
+  mutate(`Total Encounters` = ifelse(
+    `Total Encounters` %in% bold_vars_specialty_roles, 
+    paste0("**", `Total Encounters`, "**"), 
+    `Total Encounters`)
+  ) %>%
+  gt() %>%
+  tab_header(title = md("**Healthcare Provider Roles (OMOP)**")) %>%
+  fmt_markdown(columns = "Total Encounters") %>% 
+  tab_style(
+    style = cell_fill(color = "#FFFFFF"),
+    locations = cells_body()
+) |>
+  opt_all_caps() %>%
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  opt_stylize(style = 2) |> 
+  # Add footnotes
+  tab_footnote(
+    footnote = "N (%)",
+    locations = cells_title(groups = "title")
+  ) |> 
+  sub_missing(columns = everything(), missing_text = "")
+
+# Create your gt tables as usual
+roles_source_gt <- roles_source
+roles_omop_gt <- roles_omop
+
+# Combine them side by side using HTML layout
+(roles_side_by_side <- tagList(
+  div(style = "display: inline-block; width: 49%; vertical-align: top;",
+      roles_source_gt),
+  div(style = "display: inline-block; width: 49%; vertical-align: top;",
+      roles_omop_gt)
+))
 ```
 
 
@@ -879,7 +959,6 @@ monthly_combined_bootstrap_summary_encounters_OMOP <- import(here("OMOP Analysis
 
 ```{r plot months all patient }
 
-library(tidyverse)
 library(patchwork)
 
 # Combine SOURCE and OMOP into one dataframe
@@ -944,15 +1023,10 @@ p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = So
     color = "Data Source"
   ) +
   custom_theme +
-  theme(legend.position = "none")
+  theme(legend.position = "bottom")
 
 # Combine plots side-by-side
-combined_plot <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
-
-combined_plot
-
-
-
+(combined_plot <- (p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = 'bottom')))
 ```
 
 #### **Users only** 
@@ -1024,7 +1098,7 @@ p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = So
     color = "Data Source"
   ) +
   custom_theme +
-  theme(legend.position = "none")
+  theme(legend.position = "bottom")
 
 # Combine plots side-by-side
 combined_plot_users <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
