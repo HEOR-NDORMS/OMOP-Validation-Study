@@ -61,7 +61,8 @@ final_combined_prop_df_all_months <- final_combined_prop_df_all_months %>%
       "Dental",
       "Social",
       "Service",
-      "Admin"
+      "Admin",
+      "Uncategorised"
     )
   ))
 
@@ -83,7 +84,8 @@ plot_visits_specialty_all_months <- ggplot(
     "Dental" = "#e78ac3", 
     "Social" = "#a6d854", 
     "Admin" = "#ffd92f", 
-    "Service" = "#e5c494"  )) +
+    "Service" = "#e5c494",
+    "Uncategorised" = "#333333")) +
   labs(
     x = "Month After Index",
     y = "Mean Encounters per Patient",
