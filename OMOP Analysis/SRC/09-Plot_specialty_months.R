@@ -218,3 +218,22 @@ ggsave(
   width = 8, height = 6, bg = "white"
 )
 
+## Table by specialty
+
+library(gtsummary)
+
+gt_overall_healthcare_roles_count <- visit_data_all %>%
+  filter(!is.na(visit_detail_id)) %>%
+  tbl_summary(
+    include = specialty_reduced,
+    label = list(specialty_reduced = "Healthcare Category"),
+    statistic = all_categorical() ~ "{n} ({p}%)",
+    sort = all_categorical() ~ "frequency"
+  ) %>%
+  modify_header(label ~ "**Table of Healthcare Categories**") %>%
+  bold_labels()
+
+
+gt_overall_healthcare_roles_count_df <- as_tibble(gt_overall_healthcare_roles_count) 
+
+rio::export(gt_overall_healthcare_roles_count_df, here::here("OMOP Analysis", "Results", "Cohort", "Output_GT_overall_healthcare_roles-OMOP.xlsx"))
