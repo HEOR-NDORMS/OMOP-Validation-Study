@@ -44,8 +44,8 @@ cohort_table <- left_join(cohort_table, all_patients_old, by = "patid") %>%
   select(!yob)
 
 # 2. Import unit costs
-provider_cost_inputs <- rio::import("provider_specialty_cprd_omop_final.xlsx", sheet = "source_cprd_aurum")
-provider_cost_inputs <- provider_cost_inputs %>% select(description, is_clinically_relevant, unit_cost, category)
+provider_cost_inputs <- rio::import("provider_specialty_cprd_omop_final_after_lindsey.xlsx", sheet = "source_cprd_aurum")
+provider_cost_inputs <- provider_cost_inputs %>% select(description, unit_cost_encounter, category)
 
 # 3. Prepare visit table
 visit_data <- my_dm$`validation_consultation` %>%  
@@ -61,7 +61,8 @@ visit_data <- my_dm$`validation_consultation` %>%
   )%>%
   dplyr::rename(
     specialty = description,
-    specialty_reduced = category
+    specialty_reduced = category,
+    unit_cost = unit_cost_encounter
   ) %>%
   computeQuery()
   
@@ -75,7 +76,7 @@ cohort_visit_data_user <- cohort_table %>%
     consdate >= index_date &
       consdate <= follow_up_end) %>% 
   select(patid, index_date, site, follow_up_end, follow_up_reason, follow_up_time, consid, consdate, specialty,
-         specialty_reduced, unit_cost, is_clinically_relevant)
+         specialty_reduced, unit_cost)
 
 # 5. Deduplicate based on visit date and provider
 cohort_visit_data_user <- cohort_visit_data_user %>% 
@@ -92,8 +93,8 @@ visit_data_all <- left_join(
 ) %>%
   group_by(patid) %>%
   mutate(user_status = case_when( 
-    # define user status (user= at least 1 clinic.relevant, non user= no clinical or no visits)
-    any(is_clinically_relevant == 1, na.rm = TRUE) ~ "User",
+    # define user status (user= at least 1 non admin, non user= no clinical or no visits)
+    any(specialty_reduced != "Admin", na.rm = TRUE) ~ "User",
     TRUE ~ "Non-User"
   )) %>%
   ungroup()

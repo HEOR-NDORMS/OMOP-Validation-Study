@@ -32,25 +32,20 @@ library(htmltools)
 
 # Overview
 
-This report compares summary statistics for healthcare resource use (HCRU) and Costs between **SOURCE** and **OMOP** databases. 
+This report compares summary statistics for healthcare resource use (HCRU) and Costs between **SOURCE** and **OMOP** databases.
 
 Results are stratified by:
 
-- Population: **All patients** vs **Users only** (i.e., patients with at least one clinically relevant encounter)
-- Encounter type: **All** vs **Clinically relevant only**
-- Time frames: summaries are presented for the **overall follow-up period**, by **year**, and by **month** after index.
+-   Population: **All patients** vs **Users only** (i.e., patients with at least one non admin encounter)
+-   Time frames: summaries are presented for the **overall follow-up period**, by **year**, and by **month** after index.
 
 # Inputs
 
+-   Unit costs were assigned using the latest (2024 edition) PSSRU Unit Costs of Health and Social Care manual. OMOP specialties were costed based on their corresponding SOURCE CPRD specialties.
 
-- Clinically relevant encounters were defined based on clinical expert judgment, using the specialty of the healthcare professional associated with each encounter record. The assessment was conducted separately for specialties recorded in CPRD Source and those mapped to OMOP.
+-   Where multiple SOURCE CPRD specialties mapped to the same OMOP concept ID, an average of their costs was used to assign a single unit cost in OMOP.
 
-- Unit costs were assigned using the latest (2024 edition) PSSRU Unit Costs of Health and Social Care manual. OMOP specialties were costed based on their corresponding SOURCE CPRD specialties.
-
-- Where multiple SOURCE CPRD specialties mapped to the same OMOP concept ID, an average of their costs was used to assign a single unit cost in OMOP.
-
-- For SOURCE CPRD specialties that did not map to an OMOP concept ID (i.e., no matching concept id), their costs were averaged and applied uniformly to all *Uncategorised* specialties in OMOP.
-
+-   For SOURCE CPRD specialties that did not map to an OMOP concept ID (i.e., no matching concept id), their costs were averaged and applied uniformly to all *Uncategorised* specialties in OMOP.
 
 ## Mapping specialties
 
@@ -74,12 +69,11 @@ htmltools::tags$img(
 
 Both CPRD_consultation and CPRD_observation tables are mapped to the OMOP visit_detail table, resulting in separate records even when they originate from the same clinical event (e.g., an observation recorded during a consultation appears as a distinct visit_detail record). Also, OMOP does not retain information about whether a visit record originated from a consultation or an observation.
 
-
 Therefore, records without a provider, or with a provider lacking an assigned specialty, are excluded. We retain only one visit record per patient, per day, and per provider specialty (i.e., deduplication).
 
 # Cohort
 
-## {.tabset}
+##  {.tabset}
 
 ### Attrition
 
@@ -163,7 +157,6 @@ starting_population_table %>%
   opt_stylize(style = 2)
 
 ```
-
 
 ```{r}
 # Table 2: Exclusions (row 2 to 15)
@@ -340,7 +333,7 @@ grid.arrange(Exposure_Time_Raw_g_with_title, Exposure_Time_OMOP_g_with_title, nc
 
 ```
 
-###  Specialties
+### Specialties
 
 ```{r message=FALSE, warning=FALSE}
 table_specialty_source <- import(here("CPRD Raw Analysis", "Results", "Cohort" ,"Output_gt_overall_healthcare_roles_count_SOURCE.xlsx")) %>% 
@@ -349,7 +342,7 @@ table_specialty_source <- import(here("CPRD Raw Analysis", "Results", "Cohort" ,
 
 table_specialty_omop <- import(here("OMOP Analysis", "Results", "Cohort" ,"Output_gt_overall_healthcare_roles_count_OMOP.xlsx")) %>% 
   rename(`Total Encounters` = `**Total Encounters**`,
-         `N = 877,293 (OMOP)` = `**N = 877,293**`)
+         `N = 877,395 (OMOP)` = `**N = 877,395**`)
 
 # Bold
 bold_vars_specialty_category <- c(
@@ -464,10 +457,9 @@ roles_omop_gt <- roles_omop
 ))
 ```
 
-
 # HCRU
 
-## {.tabset}
+##  {.tabset}
 
 ### Overall
 
@@ -484,11 +476,9 @@ omop_overall_boot  <- import(here("OMOP Analysis", "Results", "Overall","overall
 
 ```
 
-#### All Patients {.tabset}
+#### **All Patients** {.tabset}
 
-##### All Encounters
-
-###### **Observed**
+##### **Observed**
 
 ```{r overall_all_patients_all}
 overall_all_patients_all_enc_obs <- bind_rows(
@@ -512,7 +502,9 @@ DT::datatable(
 
 ```
 
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
+##### **Bootstrap**
+
+Confidence intervals derived using normal, basic, and percentile methods.
 
 ```{r overall_all_patients_all_boot}
 
@@ -537,62 +529,9 @@ DT::datatable(
 
 ```
 
-##### Clinically Relevant Encounters
+#### **Users Only** {.tabset}
 
-###### **Observed**
-
-```{r overall_all_patients_relevant}
-
-overall_all_patients_rel_enc_obs <- bind_rows(
-  source_overall_observed %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_overall_observed   %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group, -n) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- overall_all_patients_rel_enc_obs %>%
-  select(where(is.numeric)) %>%
-  names()
-
-DT::datatable(
-  overall_all_patients_rel_enc_obs,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-
-```
-
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
-
-```{r overall_all_patients_relevant_boot}
-
-overall_all_patients_rel_enc_boot <- bind_rows(
-  source_overall_boot %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_overall_boot   %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- overall_all_patients_rel_enc_boot %>%
-  select(where(is.numeric)) %>%
-  names()
-
-DT::datatable(overall_all_patients_rel_enc_boot,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-
-```
-
-#### Users Only {.tabset}
-
-##### All Encounters
-
-###### **Observed**
+##### **Observed**
 
 ```{r overall_users_all}
 
@@ -616,7 +555,9 @@ DT::datatable(overall_users_all_enc_obs,
 
 ```
 
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
+##### **Bootstrap**
+
+Confidence intervals derived using normal, basic, and percentile methods.
 
 ```{r overall_users_all_boot}
 
@@ -640,68 +581,17 @@ DT::datatable(overall_users_all_enc_boot,
 
 ```
 
-##### Clinically Relevant Encounters
-
-###### **Observed**
-
-```{r overall_users_relevant}
-
-overall_users_rel_enc_obs <- bind_rows(
-  source_overall_observed %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_overall_observed   %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group, -n) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- overall_users_rel_enc_obs %>%
-  select(where(is.numeric)) %>%
-  names()
-
-DT::datatable(overall_users_rel_enc_obs,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-
-```
-
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
-
-```{r overall_users_relevant_boot}
-
-overall_users_rel_enc_boot <- bind_rows(
-  source_overall_boot %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_overall_boot   %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- overall_users_rel_enc_boot %>%
-  select(where(is.numeric)) %>%
-  names()
-
-DT::datatable(overall_users_rel_enc_boot,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-
-```
-
 ### Yearly
 
 We derived two types of mean estimates:
 
-- Mean among *exposed patients* only: average number of visits among patients observed in each year with patients not observed in a given month excluded from the denominator (i.e., mean = (number of visits in the year) / (number of patients exposed that year)).
+-   Mean among *exposed patients* only: average number of visits among patients observed in each year with patients not observed in a given month excluded from the denominator (i.e., mean = (number of visits in the year) / (number of patients exposed that year)).
 
-- Mean across *all patients* in the cohort: average number of visits per year using the full cohort as the denominator, regardless of whether patients were observed in that period. This approach assumes unobserved patients had zero visits, which may be conceptually misleading (e.g., for patients who died or were censored). However, it enables internal consistency checks: the sum of period-specific means aligns with the overall period mean because the denominator remains constant across years and is the same as the one used to derive the mean for the overall period.
+-   Mean across *all patients* in the cohort: average number of visits per year using the full cohort as the denominator, regardless of whether patients were observed in that period. This approach assumes unobserved patients had zero visits, which may be conceptually misleading (e.g., for patients who died or were censored). However, it enables internal consistency checks: the sum of period-specific means aligns with the overall period mean because the denominator remains constant across years and is the same as the one used to derive the mean for the overall period.
 
-- Both means are presented in the "observed" tables. Bootstrapping was conducted for the exposed-patient means only. Corresponding results for the full cohort means will be included in the appendix.
+-   Both means are presented in the "observed" tables. Bootstrapping was conducted for the exposed-patient means only. Corresponding results for the full cohort means will be included in the appendix.
 
-- The analysis was conducted including *partial years*, i.e., years in which patients were exposed for just part of the time
-
+-   The analysis was conducted including *partial years*, i.e., years in which patients were exposed for just part of the time
 
 ```{r import-data-yearly}
 source_yearly_observed <- import(here("CPRD Raw Analysis", "Results", "Yearly","yearly_combined_summary_encounters_SOURCE.xlsx"))
@@ -713,11 +603,9 @@ source_yearly_boot <- import(here("CPRD Raw Analysis", "Results", "Yearly","year
 omop_yearly_boot <- import(here("OMOP Analysis", "Results", "Yearly","yearly_combined_bootstrap_summary_encounters_OMOP.xlsx"))
 ```
 
-#### All Patients {.tabset}
+#### **All Patients** {.tabset}
 
-##### All Encounters
-
-###### **Observed**
+##### **Observed**
 
 ```{r yearly_all_patients_all_obs}
 yearly_all_patients_all_enc_obs <- bind_rows(
@@ -745,7 +633,9 @@ DT::datatable(yearly_all_patients_all_enc_obs,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
+##### **Bootstrap**
+
+Confidence intervals derived using normal, basic, and percentile methods.
 
 ```{r yearly_all_patients_all_boot}
 yearly_all_patients_all_enc_boot <- bind_rows(
@@ -768,65 +658,9 @@ DT::datatable(yearly_all_patients_all_enc_boot,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
+#### **Users Only** {.tabset}
 
-##### Clinically Relevant Encounters
-
-###### **Observed**
-
-```{r yearly_all_patients_rel_obs}
-yearly_all_patients_rel_enc_obs <- bind_rows(
-  source_yearly_observed %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_yearly_observed   %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "OMOP")
-)  %>%
-  select(-group) %>%
-  rename(year = year_after_index) %>%
-  mutate(
-    year = as.integer(year),
-    n_exposed = as.integer(n_exposed)
-  ) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- yearly_all_patients_rel_enc_obs %>%
-  select(where(is.numeric)) %>%
-  select(-year) %>% 
-  names()
-
-DT::datatable(yearly_all_patients_rel_enc_obs,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
-
-```{r yearly_all_patients_rel_boot}
-yearly_all_patients_rel_enc_boot <- bind_rows(
-  source_yearly_boot %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_yearly_boot   %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- yearly_all_patients_rel_enc_boot %>%
-  select(where(is.numeric)) %>%
-  select(-year) %>% 
-  names()
-
-DT::datatable(yearly_all_patients_rel_enc_boot,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-#### Users Only {.tabset}
-
-##### All Encounters
-
-###### **Observed**
+##### **Observed**
 
 ```{r yearly_users_all_obs}
 yearly_users_all_enc_obs <- bind_rows(
@@ -854,7 +688,9 @@ DT::datatable(yearly_users_all_enc_obs,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
+##### **Bootstrap**
+
+Confidence intervals derived using normal, basic, and percentile methods.
 
 ```{r yearly_users_all_boot}
 yearly_users_all_enc_boot <- bind_rows(
@@ -877,73 +713,19 @@ DT::datatable(yearly_users_all_enc_boot,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-##### Clinically Relevant Encounters
-
-###### **Observed**
-
-```{r yearly_users_rel_obs}
-yearly_users_rel_enc_obs <- bind_rows(
-  source_yearly_observed %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_yearly_observed   %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  rename(year = year_after_index) %>%
-  mutate(
-    year = as.integer(year),
-    n_exposed = as.integer(n_exposed)
-  ) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- yearly_users_rel_enc_obs %>%
-  select(where(is.numeric)) %>%
-  select(-year) %>% 
-  names()
-
-DT::datatable(yearly_users_rel_enc_obs,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
-
-```{r yearly_users_rel_boot}
-yearly_users_rel_enc_boot <- bind_rows(
-  source_yearly_boot %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_yearly_boot   %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- yearly_users_rel_enc_boot %>%
-  select(where(is.numeric)) %>%
-  select(-year) %>% 
-  names()
-
-DT::datatable(yearly_users_rel_enc_boot,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-### Monthly
+### Monthly {.tabset}
 
 The analysis was conducted using two time-based definitions:
 
-- *All months*: includes all calendar months in which the patient had any exposure, even if partial.
+-   *All months*: includes all calendar months in which the patient had any exposure, even if partial.
 
-- *Full months*: includes only calendar months where the patient was fully exposed (e.g., excludes final partial month).
+-   *Full months*: includes only calendar months where the patient was fully exposed (e.g., excludes final partial month).
 
 The results presented here are based on the "all-months" approach. Those from the the analysis restricted to full months will be included in the appendix.
 
 Like for the yearly analysis, means were derived among *exposed patients* only: average number of visits among patients observed in each month with patients not observed in a given month excluded from the denominator (i.e., mean = (number of visits in the month) / (number of patients exposed that month)). Separately, means were also calculated across all patients in the cohort and used for internal validation (i.e., the sum of all monthly means equals the overall period). These results will be reported in the appendix.
 
-
-#### **All Patients** {.tabset}
+#### **All Patients**
 
 ```{r import-data-months}
 
@@ -975,10 +757,12 @@ df_all <- bind_rows(
 
 # Subsets
 df_all_encounters <- df_all %>% filter(group == "All Patients & all encounters")
-df_relevant_encounters <- df_all %>% filter(group == "All Patients & relevant encounters")
+# df_relevant_encounters <- df_all %>% filter(group == "All Patients & relevant encounters")
 
 # Common Y-axis scale
-max_y <- ceiling(max(df_all_encounters$ci_upper_norm, df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
+max_y <- ceiling(max(df_all_encounters$ci_upper_norm))
+                     
+                     # , df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
 
 # Shared theme
 custom_theme <- theme_minimal(base_size = 14) +
@@ -1008,6 +792,32 @@ p_all <- ggplot(df_all_encounters, aes(x = month, y = mean, color = Source)) +
   custom_theme +
   theme(legend.position = "bottom")
 
+<<<<<<< HEAD
+# # Plot 2: Relevant Encounters (no dots)
+# p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
+#   geom_line(linewidth = 0.7) +
+#   geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
+#                 width = 0.2, linewidth = 0.4) +
+#   scale_x_continuous(breaks = seq(0, 24, by = 5)) +
+#   scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 1)) +
+#   labs(
+#     title = "Relevant Encounters",
+#     subtitle = "Bootstrap means and 95% Normal CIs",
+#     x = "Month After Index Fracture",
+#     y = NULL,
+#     color = "Data Source"
+#   ) +
+#   custom_theme +
+#   theme(legend.position = "none")
+# 
+# # Combine plots side-by-side
+# combined_plot <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+# 
+# combined_plot
+ p_all
+
+
+=======
 # Plot 2: Relevant Encounters (no dots)
 p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
   geom_line(linewidth = 0.7) +
@@ -1027,11 +837,24 @@ p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = So
 
 # Combine plots side-by-side
 (combined_plot <- (p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = 'bottom')))
+>>>>>>> 32e56cc1257a6c6a9118cacd5f25b96d56de12de
 ```
 
-#### **Users only** 
+#### **All patients - by specialty**
 
+Mean monthly encounters per patient by specialty category (All Patients, All Months)
 ```{r plot months users }
+
+include_graphics(c(
+  here::here("OMOP Analysis", "Results", "Plots", "Mean_encounters_per_specialty_all_months.PNG"),
+  here::here("CPRD Raw Analysis", "Results", "Plots", "Mean_encounters_per_specialty_all_months.PNG")
+))
+
+```
+
+#### **Users only**
+
+```{r plot all patients months specialty hcru }
 
 library(tidyverse)
 library(patchwork)
@@ -1050,10 +873,12 @@ df_all <- bind_rows(
 
 # Subsets
 df_all_encounters <- df_all %>% filter(group == "Users & all encounters")
-df_relevant_encounters <- df_all %>% filter(group == "Users & relevant encounters")
+# df_relevant_encounters <- df_all %>% filter(group == "Users & relevant encounters")
 
 # Common Y-axis scale
-max_y <- ceiling(max(df_all_encounters$ci_upper_norm, df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
+max_y <- ceiling(max(df_all_encounters$ci_upper_norm))
+                     
+                     # , df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
 
 # Shared theme
 custom_theme <- theme_minimal(base_size = 14) +
@@ -1084,6 +909,28 @@ p_all <- ggplot(df_all_encounters, aes(x = month, y = mean, color = Source)) +
   theme(legend.position = "bottom")
 
 # Plot 2: Relevant Encounters (no dots)
+<<<<<<< HEAD
+# p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
+#   geom_line(linewidth = 0.7) +
+#   geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
+#                 width = 0.2, linewidth = 0.4) +
+#   scale_x_continuous(breaks = seq(0, 24, by = 5)) +
+#   scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 1)) +
+#   labs(
+#     title = "Relevant Encounters",
+#     subtitle = "Bootstrap means and 95% Normal CIs",
+#     x = "Month After Index Fracture",
+#     y = NULL,
+#     color = "Data Source"
+#   ) +
+#   custom_theme +
+#   theme(legend.position = "none")
+# 
+# # Combine plots side-by-side
+# combined_plot_users <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+# 
+# combined_plot_users
+=======
 p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
   geom_line(linewidth = 0.7) +
   geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
@@ -1105,15 +952,16 @@ combined_plot_users <- p_all + p_relevant + plot_layout(guides = "collect") & th
 
 combined_plot_users
 
+>>>>>>> 32e56cc1257a6c6a9118cacd5f25b96d56de12de
 
+p_all
 
 ```
 
 
-
 # Costs
 
-## {.tabset}
+##  {.tabset}
 
 ### Overall
 
@@ -1129,11 +977,9 @@ omop_overall_costs_boot  <- import(here("OMOP Analysis", "Results", "Overall","o
 
 ```
 
-#### All Patients {.tabset}
+#### **All Patients** {.tabset}
 
-##### All Encounters
-
-###### **Observed**
+##### **Observed**
 
 ```{r overall_costs_all_patients}
 overall_all_patients_all_cost_obs <- bind_rows(
@@ -1155,7 +1001,9 @@ DT::datatable(overall_all_patients_all_cost_obs,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
+##### **Bootstrap**
+
+Confidence intervals derived using normal, basic, and percentile methods.
 
 ```{r overall_costs_all_patients_all_boot}
 overall_all_patients_all_cost_boot <- bind_rows(
@@ -1177,57 +1025,9 @@ DT::datatable(overall_all_patients_all_cost_boot,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-##### Clinically Relevant Encounters
+#### **Users Only** {.tabset}
 
-###### **Observed**
-
-```{r overall_costs_all_patients_relevant}
-overall_all_patients_rel_cost_obs <- bind_rows(
-  source_overall_costs_observed %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_overall_costs_observed   %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group, -n) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- overall_all_patients_rel_cost_obs %>%
-  select(where(is.numeric)) %>%
-  names()
-
-DT::datatable(overall_all_patients_rel_cost_obs,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
-
-```{r overall_costs_all_patients_relevant_boot}
-overall_all_patients_rel_cost_boot <- bind_rows(
-  source_overall_costs_boot %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_overall_costs_boot   %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- overall_all_patients_rel_cost_boot %>%
-  select(where(is.numeric)) %>%
-  names()
-
-DT::datatable(overall_all_patients_rel_cost_boot,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-#### Users Only {.tabset}
-
-##### All Encounters
-
-###### **Observed**
+##### **Observed**
 
 ```{r overall_costs_users}
 overall_users_all_cost_obs <- bind_rows(
@@ -1249,7 +1049,9 @@ DT::datatable(overall_users_all_cost_obs,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
+##### **Bootstrap**
+
+Confidence intervals derived using normal, basic, and percentile methods.
 
 ```{r overall_costs_users_all_boot}
 overall_users_all_cost_boot <- bind_rows(
@@ -1271,64 +1073,17 @@ DT::datatable(overall_users_all_cost_boot,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-##### Clinically Relevant Encounters
-
-###### **Observed**
-
-```{r overall_costs_users_relevant}
-overall_users_rel_cost_obs <- bind_rows(
-  source_overall_costs_observed %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_overall_costs_observed   %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group, -n) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- overall_users_rel_cost_obs %>%
-  select(where(is.numeric)) %>%
-  names()
-
-DT::datatable(overall_users_rel_cost_obs,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
-
-```{r overall_costs_users_relevant_boot}
-overall_users_rel_cost_boot <- bind_rows(
-  source_overall_costs_boot %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_overall_costs_boot   %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- overall_users_rel_cost_boot %>%
-  select(where(is.numeric)) %>%
-  names()
-
-DT::datatable(overall_users_rel_cost_boot,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
 ### Yearly
 
 We derived two types of mean estimates:
 
-- Mean among *exposed patients* only: average number of visits among patients observed in each year with patients not observed in a given month excluded from the denominator (i.e., mean = (number of visits in the year) / (number of patients exposed that year)).
+-   Mean among *exposed patients* only: average number of visits among patients observed in each year with patients not observed in a given month excluded from the denominator (i.e., mean = (number of visits in the year) / (number of patients exposed that year)).
 
-- Mean across *all patients* in the cohort: average number of visits per year using the full cohort as the denominator, regardless of whether patients were observed in that period. This approach assumes unobserved patients had zero visits, which may be conceptually misleading (e.g., for patients who died or were censored). However, it enables internal consistency checks: the sum of period-specific means aligns with the overall period mean because the denominator remains constant across years and is the same as the one used to derive the mean for the overall period.
+-   Mean across *all patients* in the cohort: average number of visits per year using the full cohort as the denominator, regardless of whether patients were observed in that period. This approach assumes unobserved patients had zero visits, which may be conceptually misleading (e.g., for patients who died or were censored). However, it enables internal consistency checks: the sum of period-specific means aligns with the overall period mean because the denominator remains constant across years and is the same as the one used to derive the mean for the overall period.
 
-- Both means are presented in the "observed" tables. Bootstrapping was conducted for the exposed-patient means only. Corresponding results for the full cohort means will be included in the appendix.
+-   Both means are presented in the "observed" tables. Bootstrapping was conducted for the exposed-patient means only. Corresponding results for the full cohort means will be included in the appendix.
 
-- The analysis was conducted including *partial years*, i.e., years in which patients were exposed for just part of the time
-
+-   The analysis was conducted including *partial years*, i.e., years in which patients were exposed for just part of the time
 
 ```{r import-yearly-costs}
 source_yearly_costs_observed <- import(here("CPRD Raw Analysis", "Results", "Yearly","yearly_combined_summary_costs_SOURCE.xlsx"))
@@ -1340,11 +1095,9 @@ source_yearly_costs_boot <- import(here("CPRD Raw Analysis", "Results", "Yearly"
 omop_yearly_costs_boot <- import(here("OMOP Analysis", "Results", "Yearly","yearly_combined_bootstrap_summary_costs_OMOP.xlsx"))
 ```
 
-#### All Patients {.tabset}
+#### **All Patients** {.tabset}
 
-##### All Encounters
-
-###### **Observed**
+##### **Observed**
 
 ```{r yearly_costs_all_patients_all_obs}
 yearly_all_patients_all_cost_obs <- bind_rows(
@@ -1372,7 +1125,9 @@ DT::datatable(yearly_all_patients_all_cost_obs,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
+##### **Bootstrap**
+
+Confidence intervals derived using normal, basic, and percentile methods.
 
 ```{r yearly_costs_all_patients_all_boot}
 yearly_all_patients_all_cost_boot <- bind_rows(
@@ -1395,64 +1150,9 @@ DT::datatable(yearly_all_patients_all_cost_boot,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-##### Clinically Relevant Encounters
+#### **Users Only** {.tabset}
 
-###### **Observed**
-
-```{r yearly_costs_all_patients_rel_obs}
-yearly_all_patients_rel_cost_obs <- bind_rows(
-  source_yearly_costs_observed %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_yearly_costs_observed   %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  rename(year = year_after_index) %>%
-  mutate(
-    year = as.integer(year),
-    n_exposed = as.integer(n_exposed)
-  ) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- yearly_all_patients_rel_cost_obs %>%
-  select(where(is.numeric)) %>%
-  select(-year) %>% 
-  names()
-
-DT::datatable(yearly_all_patients_rel_cost_obs,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-###### **Bootstrap** (with confidence intervals derived using normal, basic, and percentile methods).
-
-```{r yearly_costs_all_patients_rel_boot}
-yearly_all_patients_rel_cost_boot <- bind_rows(
-  source_yearly_costs_boot %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_yearly_costs_boot   %>% filter(group == "All Patients & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- yearly_all_patients_rel_cost_boot %>%
-  select(where(is.numeric)) %>%
-  select(-year) %>% 
-  names()
-
-DT::datatable(yearly_all_patients_rel_cost_boot,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-#### Users Only {.tabset}
-
-##### All Encounters
-
-###### **Observed**
+##### **Observed**
 
 ```{r yearly_costs_users_all_obs}
 yearly_users_all_cost_obs <- bind_rows(
@@ -1480,7 +1180,7 @@ DT::datatable(yearly_users_all_cost_obs,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-###### **Bootstrap**
+##### **Bootstrap**
 
 ```{r yearly_costs_users_all_boot}
 yearly_users_all_cost_boot <- bind_rows(
@@ -1503,72 +1203,19 @@ DT::datatable(yearly_users_all_cost_boot,
   formatRound(columns = numeric_cols, digits = 2, mark = ",")
 ```
 
-##### Clinically Relevant Encounters
-
-###### **Observed**
-
-```{r yearly_costs_users_rel_obs}
-yearly_users_rel_cost_obs <- bind_rows(
-  source_yearly_costs_observed %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_yearly_costs_observed   %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  rename(year = year_after_index) %>%
-  mutate(
-    year = as.integer(year),
-    n_exposed = as.integer(n_exposed)
-  ) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- yearly_users_rel_cost_obs %>%
-  select(where(is.numeric)) %>%
-  select(-year) %>% 
-  names()
-
-DT::datatable(yearly_users_rel_cost_obs,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-###### **Bootstrap**
-
-```{r yearly_costs_users_rel_boot}
-yearly_users_rel_cost_boot <- bind_rows(
-  source_yearly_costs_boot %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "SOURCE"),
-  omop_yearly_costs_boot   %>% filter(group == "Users & relevant encounters") %>% mutate(Cohort = "OMOP")
-) %>%
-  select(-group) %>%
-  relocate(Cohort)
-
-# Cosmetic
-numeric_cols <- yearly_users_rel_cost_boot %>%
-  select(where(is.numeric)) %>%
-  select(-year) %>% 
-  names()
-
-DT::datatable(yearly_users_rel_cost_boot,
-  options = list(dom = 't', ordering = FALSE),
-  rownames = FALSE
-) %>%
-  formatRound(columns = numeric_cols, digits = 2, mark = ",")
-```
-
-### Monthly
+### Monthly {.tabset}
 
 The analysis was conducted using two time-based definitions:
 
-- *All months*: includes all calendar months in which the patient had any exposure, even if partial.
+-   *All months*: includes all calendar months in which the patient had any exposure, even if partial.
 
-- *Full months*: includes only calendar months where the patient was fully exposed (e.g., excludes final partial month).
+-   *Full months*: includes only calendar months where the patient was fully exposed (e.g., excludes final partial month).
 
 The results presented here are based on the "all-months" approach. Those from the the analysis restricted to full months will be included in the appendix.
 
 Like for the yearly analysis, means were derived among *exposed patients* only: average number of visits among patients observed in each month with patients not observed in a given month excluded from the denominator (i.e., mean = (number of visits in the month) / (number of patients exposed that month)). Separately, means were also calculated across all patients in the cohort and used for internal validation (i.e., the sum of all monthly means equals the overall period). These results will be reported in the appendix.
 
-#### **All Patients** {.tabset}
+#### **All Patients**
 
 ```{r import-data-months costs}
 
@@ -1601,10 +1248,12 @@ df_all <- bind_rows(
 
 # Subsets
 df_all_encounters <- df_all %>% filter(group == "All Patients & all encounters")
-df_relevant_encounters <- df_all %>% filter(group == "All Patients & relevant encounters")
+# df_relevant_encounters <- df_all %>% filter(group == "All Patients & relevant encounters")
 
 # Common Y-axis scale
-max_y <- ceiling(max(df_all_encounters$ci_upper_norm, df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
+max_y <- ceiling(max(df_all_encounters$ci_upper_norm))
+                     
+                     # , df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
 
 # Shared theme
 custom_theme <- theme_minimal(base_size = 14) +
@@ -1635,32 +1284,40 @@ p_all <- ggplot(df_all_encounters, aes(x = month, y = mean, color = Source)) +
   theme(legend.position = "bottom")
 
 # Plot 2: Relevant Encounters (no dots)
-p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
-  geom_line(linewidth = 0.7) +
-  geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-                width = 0.2, linewidth = 0.4) +
-  scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-  scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 10)) +
-  labs(
-    title = "Relevant Encounters",
-    subtitle = "Bootstrap means and 95% Normal CIs",
-    x = "Month After Index Fracture",
-    y = NULL,
-    color = "Data Source"
-  ) +
-  custom_theme +
-  theme(legend.position = "none")
+# p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
+#   geom_line(linewidth = 0.7) +
+#   geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
+#                 width = 0.2, linewidth = 0.4) +
+#   scale_x_continuous(breaks = seq(0, 24, by = 5)) +
+#   scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 10)) +
+#   labs(
+#     title = "Relevant Encounters",
+#     subtitle = "Bootstrap means and 95% Normal CIs",
+#     x = "Month After Index Fracture",
+#     y = NULL,
+#     color = "Data Source"
+#   ) +
+#   custom_theme +
+#   theme(legend.position = "none")
+# 
+# # Combine plots side-by-side
+# combined_plot_costs <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+# 
+# combined_plot_costs
 
-# Combine plots side-by-side
-combined_plot_costs <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+p_all
 
-combined_plot_costs
+```
+
+#### **All patients - by specialty**
+
+```{r plot months all patient cost specialty }
 
 
 
 ```
 
-#### **Users only** 
+#### **Users only**
 
 ```{r plot months users costs}
 
@@ -1681,10 +1338,12 @@ df_all <- bind_rows(
 
 # Subsets
 df_all_encounters <- df_all %>% filter(group == "Users & all encounters")
-df_relevant_encounters <- df_all %>% filter(group == "Users & relevant encounters")
+# df_relevant_encounters <- df_all %>% filter(group == "Users & relevant encounters")
 
 # Common Y-axis scale
-max_y <- ceiling(max(df_all_encounters$ci_upper_norm, df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
+max_y <- ceiling(max(df_all_encounters$ci_upper_norm))
+                     
+                     # , df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
 
 # Shared theme
 custom_theme <- theme_minimal(base_size = 14) +
@@ -1715,28 +1374,28 @@ p_all <- ggplot(df_all_encounters, aes(x = month, y = mean, color = Source)) +
   theme(legend.position = "bottom")
 
 # Plot 2: Relevant Encounters (no dots)
-p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
-  geom_line(linewidth = 0.7) +
-  geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-                width = 0.2, linewidth = 0.4) +
-  scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-  scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 10)) +
-  labs(
-    title = "Relevant Encounters",
-    subtitle = "Bootstrap means and 95% Normal CIs",
-    x = "Month After Index Fracture",
-    y = NULL,
-    color = "Data Source"
-  ) +
-  custom_theme +
-  theme(legend.position = "none")
+# p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
+#   geom_line(linewidth = 0.7) +
+#   geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
+#                 width = 0.2, linewidth = 0.4) +
+#   scale_x_continuous(breaks = seq(0, 24, by = 5)) +
+#   scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 10)) +
+#   labs(
+#     title = "Relevant Encounters",
+#     subtitle = "Bootstrap means and 95% Normal CIs",
+#     x = "Month After Index Fracture",
+#     y = NULL,
+#     color = "Data Source"
+#   ) +
+#   custom_theme +
+#   theme(legend.position = "none")
+# 
+# # Combine plots side-by-side
+# combined_plot_users_costs <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
+# 
+# combined_plot_users_costs
 
-# Combine plots side-by-side
-combined_plot_users_costs <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
-
-combined_plot_users_costs
-
-
+p_all
 
 ```
 
@@ -1744,21 +1403,20 @@ combined_plot_users_costs
 
 ### Healthcare Resource Use
 
-•	Primary care **resource use was slightly higher in the source data compared to OMOP, although the difference was not statistically significant**, as indicated by overlapping bootstrap confidence intervals (CIs).
+• Primary care **resource use was slightly higher in the source data compared to OMOP, although the difference was not statistically significant**, as indicated by overlapping bootstrap confidence intervals (CIs).
 
-•	This pattern was consistent across the overall observation period, as well as in yearly and monthly analyses. It held true both for the full patient population and when analyses were restricted to users only.
+• This pattern was consistent across the overall observation period, as well as in yearly and monthly analyses. It held true both for the full patient population and when analyses were restricted to users only.
 
 ### Costs
 
-•	Cost patterns diverged from those observed for resource use, with **OMOP showing higher visit costs than the source data, accompanied by non-overlapping CIs**. This was consistent across all patients, in overall, yearly, and monthly analyses, as well as for users only.
+• Cost patterns diverged from those observed for resource use, with **OMOP showing higher visit costs than the source data, accompanied by non-overlapping CIs**. This was consistent across all patients, in overall, yearly, and monthly analyses, as well as for users only.
 
-•	However, when **restricting the analysis to clinically relevant encounters**, the pattern reversed: the **source data showed higher costs than OMOP, mirroring the trend seen in healthcare resource use**.
+• However, when **restricting the analysis to clinically relevant encounters**, the pattern reversed: the **source data showed higher costs than OMOP, mirroring the trend seen in healthcare resource use**.
 
-•	This discrepancy can be attributed to the fact that **clinical relevance was defined independently** in OMOP and the source data and that **source uses a more granular specialty definition**. 
+• This discrepancy can be attributed to the fact that **clinical relevance was defined independently** in OMOP and the source data and that **source uses a more granular specialty definition**.
 
-•	For example, multiple source specialties may map to a single OMOP specialty. In such cases, some of the original source specialties may be considered clinically relevant, even though the aggregated OMOP specialty is not. This issue is especially pronounced for **source specialties that lack a direct mapping to an OMOP concept** (uncategorised); these **were classified as not relevant in OMOP, even though some were considered clinically relevant in the source analysis**.
+• For example, multiple source specialties may map to a single OMOP specialty. In such cases, some of the original source specialties may be considered clinically relevant, even though the aggregated OMOP specialty is not. This issue is especially pronounced for **source specialties that lack a direct mapping to an OMOP concept** (uncategorised); these **were classified as not relevant in OMOP, even though some were considered clinically relevant in the source analysis**.
 
-•	The plots in the Inputs section are intended to help clarify the mechanisms underlying these patterns. While the list of specialties has been updated to include all values present in the datasets, and unit costs have been revised using 2024 PSSRU values, it is important to **verify both the correct assignment of clinical relevance and the underlying assumptions used in cost calculations**, as these factors have emerged as **key drivers** of the observed cost differences.
+• The plots in the Inputs section are intended to help clarify the mechanisms underlying these patterns. While the list of specialties has been updated to include all values present in the datasets, and unit costs have been revised using 2024 PSSRU values, it is important to **verify both the correct assignment of clinical relevance and the underlying assumptions used in cost calculations**, as these factors have emerged as **key drivers** of the observed cost differences.
 
-•	The analysis was verified using the same unit cost codes across both datasets to confirm that observed differences were not attributable to coding inconsistencies.
-
+• The analysis was verified using the same unit cost codes across both datasets to confirm that observed differences were not attributable to coding inconsistencies.
