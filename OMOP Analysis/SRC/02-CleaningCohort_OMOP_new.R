@@ -148,7 +148,7 @@ cdm[["cancer"]] <- cdm[["denominator"]] %>% # remember to revert to condition_oc
   dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date) %>%
   dplyr::mutate(cohort_start_date = as.Date(as.character(cohort_start_date))) %>%
   dplyr::mutate(cohort_end_date = as.Date(as.character(cohort_end_date))) %>%
-  dplyr::rename(cancer_date =condition_start_date) 
+  dplyr::rename(cancer_date =condition_start_date) %>% computeQuery()
 
 # Removing cancer records before the birth year
 cdm[["cancer"]] <- cdm[["cancer"]] %>%
@@ -189,7 +189,7 @@ cdm[["mbd"]] <- cdm[["denominator"]] %>% # # remember to revert to condition_occ
   dplyr::select(subject_id, cohort_start_date, cohort_end_date, condition_concept_id, condition_start_date) %>%
   dplyr::mutate(cohort_start_date = as.Date(as.character(cohort_start_date))) %>%
   dplyr::mutate(cohort_end_date = as.Date(as.character(cohort_end_date))) %>%
-  dplyr::rename(mbd_date =condition_start_date) 
+  dplyr::rename(mbd_date =condition_start_date) %>% computeQuery()
 
 cohort_table_g_index <- 
   cohort_table_f_index %>% dplyr::anti_join(cohort_table_f_index %>% 

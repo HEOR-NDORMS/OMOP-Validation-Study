@@ -258,7 +258,8 @@ table_one_op_raw_appt_recoded <- table_one_op_raw_appt %>%
       "Sport and Exercise Medicine" = "325"
     ),
     tretspef_recoded = fct_recode(
-      tretspef, "General Surgery Service" = "100", 
+      tretspef, 
+      "General Surgery Service" = "100", 
       "Urology Service" = "101", 
       "Urology Service" = "103", 
       "Upper Gastrointenstinal Surgery Service" = "106", 
