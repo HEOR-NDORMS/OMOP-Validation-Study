@@ -230,7 +230,7 @@ gt_overall_healthcare_roles_count <- visit_data_all %>%
     statistic = all_categorical() ~ "{n} ({p}%)",
     sort = all_categorical() ~ "frequency"
   ) %>%
-  modify_header(label ~ "**Table of Healthcare Categories**") %>%
+  modify_header(label ~ "OMOP") %>%
   bold_labels()
 
 
