@@ -146,6 +146,10 @@ sd_follow_up_time <- sd(table_one_omop_visit_data$follow_up_time, na.rm = TRUE)
 median_followup_time <- median(table_one_omop_visit_data$follow_up_time, na.rm = TRUE)
 iqr_followup_time <- IQR(table_one_omop_visit_data$follow_up_time, na.rm = TRUE)
 
+# Age
+mean_age<-mean(table_one_omop_visit_data$age_fracture, na.rm = TRUE)
+sd_age <- sd(table_one_omop_visit_data$age_fracture, na.rm = TRUE)
+
 # Number of patients
 number_of_patients <- n_distinct(table_one_omop_visit_data$subject_id)
 
