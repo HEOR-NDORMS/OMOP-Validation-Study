@@ -117,8 +117,8 @@ users_mean_atts <- mean(users_ae_attendance_per_patient$n_att, na.rm = TRUE)
 (users_atts_plot_hist <- ggplot(users_ae_attendance_per_patient, 
                                     aes(x = n_att)) +
     geom_histogram(binwidth = 2, 
-                   fill = "cadetblue1", 
-                   color = "cadetblue") +
+                   fill = "#1976d2", 
+                   color = "#1e88e5") +
     geom_vline(xintercept = users_mean_atts, 
                linetype = "dashed", 
                color = "red", 
@@ -131,19 +131,25 @@ users_mean_atts <- mean(users_ae_attendance_per_patient$n_att, na.rm = TRUE)
              hjust = 0.5, 
              color = "red", 
              fontface = "bold") +
-    labs(title = "Distribution of AE Attendances", 
-         subtitle = "AE Healthcare Service Users",
+    labs(title = "", 
+         subtitle = "",
          x = "Number of Attendances (bin width = 2)", 
          y = "Count of Patients",
-         caption = "Each bar represents a 2-attendances range e.g., 1-2, 3-4, ...
-         \n up to the range of the data.\n 
-         Red line shows the average attendances per OP Healthcare Service User.")) +
-  theme_minimal()
+         caption = "Each bar represents a 2-attendances range e.g., 1-2, 3-4, ...\n up to the range of the data.\nRed line shows the average attendances per OP Healthcare Service User.") +
+  theme_minimal(base_size = 14, base_family = "Times") +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 13),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(size = 12),
+    plot.caption = element_text(size = 10, hjust = 0)
+  )
+)
 
 # Save the plot
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE","Plots",
-  "Mean_atts_hist-Users_va.PNG"),
+  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE", "Plots",
+  "Mean_atts_hist_users-Raw.PNG"),
   plot = users_atts_plot_hist,
   width = 10,
   height = 7,
@@ -152,27 +158,27 @@ ggsave(here::here(
 
 (users_atts_plot_density <- ggplot(users_ae_attendance_per_patient,
                                     aes(x = n_att)) +
-    geom_density(fill = "cadetblue1",
-                 color = "cadetblue") +
+    geom_density(fill = "#1a7431",
+                 color = "#155d27") +
     labs(
-      title = "Density Plot of AE Attendances",
-      subtitle = "AE Healthcare Service Users",
+      title = "",
+      subtitle = "",
       x = "Number of Attendances",
       y = "Density") +
-    theme_minimal() +
+    theme_minimal(base_size = 14, base_family = "Times") +
     theme(
       plot.title = element_text(face = "bold", size = 16),
-      axis.title = element_text(hjust = 0.5, size = 14),
+      plot.subtitle = element_text(size = 13),
+      axis.title = element_text(face = "bold"),
       axis.text = element_text(size = 12),
-      plot.caption = element_text(size = 12),
-      panel.spacing = unit(2, "lines")
+      plot.caption = element_text(size = 10, hjust = 0)
     )
 )
 
 # Save the plot
 ggsave(here::here(
   "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" ,"AE", "Plots",
-  "Mean_atts_density-Users.PNG"),
+  "Mean_atts_density_users-Raw.PNG"),
   plot = users_atts_plot_density,
   width = 7.5,
   height = 6,
@@ -192,20 +198,25 @@ all_mean_atts <- mean(all_ae_attendance_per_patient$n_att, na.rm = TRUE)
                linetype = "dashed", 
                color = "#2F4F4F", 
                size = 0.5) +
-    labs(title = "Distribution of AE Attendances", 
-         subtitle = "All patients (Both Healthcare Service User and Non-Users)",
+    labs(title = "", 
+         subtitle = "",
          x = "Number of Attendances (bin width = 2)", 
          y = "Count of Patients",
-         caption = "Each bar represents a 2-attendances range e.g., 1-2, 3-4, ...
-         \n up to the range of the data. 
-         \nGreen line shows the average attendances both AE Healthcare Service 
-         Users & Non-Users.")) +
-  theme_minimal()
+         caption = "Each bar represents a 2-attendances range e.g., 1-2, 3-4, ...\n up to the range of the data.\nGreen line shows the average attendances both AE Healthcare Service Users & Non-Users.") +
+  theme_minimal(base_size = 14, base_family = "Times") +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 13),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(size = 12),
+    plot.caption = element_text(size = 10, hjust = 0)
+  )
+)
 
 # Save the plot
 ggsave(here::here(
   "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE", "Plots",
-  "Mean_atts_hist-All.PNG"),
+  "Mean_atts_hist_all-Raw.PNG"),
   plot = all_atts_plot_hist,
   width = 10,
   height = 7,
@@ -214,27 +225,27 @@ ggsave(here::here(
 
 (all_atts_plot_density <- ggplot(all_ae_attendance_per_patient,
                                   aes(x = n_att)) +
-    geom_density(fill = "#FF7F50",
-                 color = "#FF7256") +
+    geom_density(fill = "#7f5539",
+                 color = "#b08968") +
     labs(
-      title = "Density Plot of AE Attendances",
-      subtitle = "All patients (Both Healthcare Service User and Non-Users)",
+      title = "",
+      subtitle = "",
       x = "Number of Attendances",
       y = "Density") +
-    theme_minimal() +
+    theme_minimal(base_size = 14, base_family = "Times") +
     theme(
       plot.title = element_text(face = "bold", size = 16),
-      axis.title = element_text(hjust = 0.5, size = 14),
+      plot.subtitle = element_text(size = 13),
+      axis.title = element_text(face = "bold"),
       axis.text = element_text(size = 12),
-      plot.caption = element_text(size = 12),
-      panel.spacing = unit(2, "lines")
+      plot.caption = element_text(size = 10, hjust = 0)
     )
 )
 
 # Save the plot
 ggsave(here::here(
   "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE", "Plots",
-  "Mean_appts_density-All.PNG"),
+  "Mean_appts_density_all-Raw.PNG"),
   plot = all_atts_plot_density,
   width = 7.5,
   height = 6,
