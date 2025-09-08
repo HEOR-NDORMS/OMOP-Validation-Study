@@ -150,6 +150,8 @@ number_of_patients <- n_distinct(table_one_raw_visit_data$patid)
 median_age_pt <- median(table_one_raw_visit_data$age_fracture, na.rm = TRUE)
 iqr_age_pt <- IQR(table_one_raw_visit_data$age_fracture, na.rm = TRUE)
 
+mean_age<-mean(table_one_raw_visit_data$age_fracture, na.rm = TRUE)
+sd_age <- sd(table_one_raw_visit_data$age_fracture, na.rm = TRUE)
 # Site of index fracture summary
 site_count <- table_one_raw_visit_data %>% 
   group_by(site) %>%

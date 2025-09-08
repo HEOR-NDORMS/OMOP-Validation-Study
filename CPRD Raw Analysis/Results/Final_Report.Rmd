@@ -309,7 +309,7 @@ merged_data %>%
     locations = cells_title(groups = "title")
   ) %>% 
   tab_footnote(
-    footnote = md("*User defined as subjects with >=1 visit with a clinically relevant healthcare provider and Non-User as Subjects with no visits, or visits with non-clinically relevant healthcare provider, or unknown specialty*"),
+    footnote = md("*User defined as subjects with >=1 clinical (i.e. non admin) encounter. Non-User were individuals with no encounters, or only admin encounters*"),
     locations = cells_body(columns = Variable, rows = c(22))
   )
 ```
@@ -335,127 +335,220 @@ grid.arrange(Exposure_Time_Raw_g_with_title, Exposure_Time_OMOP_g_with_title, nc
 
 ### Specialties
 
-```{r message=FALSE, warning=FALSE}
-table_specialty_source <- import(here("CPRD Raw Analysis", "Results", "Cohort" ,"Output_gt_overall_healthcare_roles_count_SOURCE.xlsx")) %>% 
-  rename(`Total Encounters` = `**Total Encounters**`,
-         `N = 901,535 (Source)` = `**N = 901,535**`)
+```{r message=FALSE, warning=FALSE, out.width="49%"}
+library(here)
+library(gt)
+library(htmltools)
 
-table_specialty_omop <- import(here("OMOP Analysis", "Results", "Cohort" ,"Output_gt_overall_healthcare_roles_count_OMOP.xlsx")) %>% 
-  rename(`Total Encounters` = `**Total Encounters**`,
-         `N = 877,395 (OMOP)` = `**N = 877,395**`)
+# Import data
+table_specialty_source <- import(here("CPRD Raw Analysis", "Results", "Cohort" ,"Output_GT_overall_healthcare_roles-Raw.xlsx")) 
+table_specialty_omop   <- import(here("OMOP Analysis", "Results", "Cohort" ,"Output_GT_overall_healthcare_roles-OMOP.xlsx")) 
 
-# Bold
-bold_vars_specialty_category <- c(
-  "__Healthcare Provider Category__"
+table_specialty_source <- table_specialty_source %>%
+  rename("N = 901,535" = `**N = 901,535**`)%>% 
+  slice(-1)
+
+table_specialty_omop <- table_specialty_omop %>%
+  rename("N = 877,293" = `**N = 877,293**`)%>% 
+  slice(-1)
+# Create gt tables
+roles_source_gt <- gt(table_specialty_source)
+roles_omop_gt   <- gt(table_specialty_omop)
+
+# Place them side by side
+roles_side_by_side <- tagList(
+  div(
+    style = "display: inline-block; width: 49%; vertical-align: top;",
+    roles_source_gt
+  ),
+  div(
+    style = "display: inline-block; width: 49%; vertical-align: top;",
+    roles_omop_gt
+  )
 )
 
-# Healthcare Provider Category (shared table)
-table_specialty_source %>% 
-  filter(`Total Encounters` %in% c("Administrative Non-clinical", "General Practitioner", "Nurse", "Other")) %>% 
-  full_join(
-    table_specialty_omop %>% 
-      filter(`Total Encounters` %in% c("Administrative Non-clinical", "General Practitioner", "Nurse", "Other", "Uncategorised")),
-    by = "Total Encounters"
-  ) %>% 
-  mutate(`Total Encounters` = ifelse(
-    `Total Encounters` %in% bold_vars_specialty_category, 
-    paste0("**", `Total Encounters`, "**"), 
-    `Total Encounters`)
-  ) %>%
-  gt() %>%
-  tab_header(title = md("**Healthcare Provider Category**")) %>%
-  fmt_markdown(columns = "Total Encounters") %>% 
-  tab_style(
-    style = cell_fill(color = "#FFFFFF"),
-    locations = cells_body()
-) |>
-  opt_all_caps() %>%
-  tab_options(
-    heading.align = "left",
-    table.font.size = px(14)
-  ) %>%
-  opt_stylize(style = 2) |> 
-  # Add footnotes
-  tab_footnote(
-    footnote = "N (%)",
-    locations = cells_title(groups = "title")
-  ) |> 
-  sub_missing(columns = everything(), missing_text = "")
+roles_side_by_side
+
+
+# 
+# table_specialty_omop <- import(here("OMOP Analysis", "Results", "Cohort" ,"Output_gt_overall_healthcare_roles_count_OMOP.xlsx")) %>% 
+#   rename(`Total Encounters` = `**Total Encounters**`,
+#          `N = 877,293 (OMOP)` = `**N = 877,293**`)
+
+# # Bold
+# bold_vars_specialty_category <- c(
+#   "__Healthcare Provider Category__"
+# )
+# 
+# # Healthcare Provider Category (shared table)
+# table_specialty_source %>% 
+#   filter(`Total Encounters` %in% c("Administrative Non-clinical", "General Practitioner", "Nurse", "Other")) %>% 
+#   full_join(
+#     table_specialty_omop %>% 
+#       filter(`Total Encounters` %in% c("Administrative Non-clinical", "General Practitioner", "Nurse", "Other", "Uncategorised")),
+#     by = "Total Encounters"
+#   ) %>% 
+#   mutate(`Total Encounters` = ifelse(
+#     `Total Encounters` %in% bold_vars_specialty_category, 
+#     paste0("**", `Total Encounters`, "**"), 
+#     `Total Encounters`)
+#   ) %>%
+#   gt() %>%
+#   tab_header(title = md("**Healthcare Provider Category**")) %>%
+#   fmt_markdown(columns = "Total Encounters") %>% 
+#   tab_style(
+#     style = cell_fill(color = "#FFFFFF"),
+#     locations = cells_body()
+# ) |>
+#   opt_all_caps() %>%
+#   tab_options(
+#     heading.align = "left",
+#     table.font.size = px(14)
+#   ) %>%
+#   opt_stylize(style = 2) |> 
+#   # Add footnotes
+#   tab_footnote(
+#     footnote = "N (%)",
+#     locations = cells_title(groups = "title")
+#   ) |> 
+#   sub_missing(columns = everything(), missing_text = "")
 ```
 
+<!-- ```{r message=FALSE, warning=FALSE} -->
 
-```{r message=FALSE, warning=FALSE}
-# Roles tables
-bold_vars_specialty_roles <- c(
-  "__Healthcare Provider Roles__"
-)
+<!-- # Roles tables -->
 
-roles_source <- table_specialty_source %>% 
-  filter(!`Total Encounters` %in% c("__Healthcare Provider Category__", "Administrative Non-clinical", "General Practitioner", "Nurse", "Other")) %>% 
-  mutate(`Total Encounters` = ifelse(
-    `Total Encounters` %in% bold_vars_specialty_roles, 
-    paste0("**", `Total Encounters`, "**"), 
-    `Total Encounters`)
-  ) %>%
-  gt() %>%
-  tab_header(title = md("**Healthcare Provider Roles (Source)**")) %>%
-  fmt_markdown(columns = "Total Encounters") %>% 
-  tab_style(
-    style = cell_fill(color = "#FFFFFF"),
-    locations = cells_body()
-) |>
-  opt_all_caps() %>%
-  tab_options(
-    heading.align = "left",
-    table.font.size = px(14)
-  ) %>%
-  opt_stylize(style = 2) |> 
-  # Add footnotes
-  tab_footnote(
-    footnote = "N (%)",
-    locations = cells_title(groups = "title")
-  ) |> 
-  sub_missing(columns = everything(), missing_text = "")
+<!-- bold_vars_specialty_roles <- c( -->
 
-roles_omop <- table_specialty_omop %>% 
-  filter(!`Total Encounters` %in% c("__Healthcare Provider Category__", "Administrative Non-clinical", "General Practitioner", "Nurse", "Other", "Uncategorised")) %>% 
-  mutate(`Total Encounters` = ifelse(
-    `Total Encounters` %in% bold_vars_specialty_roles, 
-    paste0("**", `Total Encounters`, "**"), 
-    `Total Encounters`)
-  ) %>%
-  gt() %>%
-  tab_header(title = md("**Healthcare Provider Roles (OMOP)**")) %>%
-  fmt_markdown(columns = "Total Encounters") %>% 
-  tab_style(
-    style = cell_fill(color = "#FFFFFF"),
-    locations = cells_body()
-) |>
-  opt_all_caps() %>%
-  tab_options(
-    heading.align = "left",
-    table.font.size = px(14)
-  ) %>%
-  opt_stylize(style = 2) |> 
-  # Add footnotes
-  tab_footnote(
-    footnote = "N (%)",
-    locations = cells_title(groups = "title")
-  ) |> 
-  sub_missing(columns = everything(), missing_text = "")
+<!--   "__Healthcare Provider Roles__" -->
 
-# Create your gt tables as usual
-roles_source_gt <- roles_source
-roles_omop_gt <- roles_omop
+<!-- ) -->
 
-# Combine them side by side using HTML layout
-(roles_side_by_side <- tagList(
-  div(style = "display: inline-block; width: 49%; vertical-align: top;",
-      roles_source_gt),
-  div(style = "display: inline-block; width: 49%; vertical-align: top;",
-      roles_omop_gt)
-))
-```
+<!-- roles_source <- table_specialty_source %>%  -->
+
+<!--   filter(!`Total Encounters` %in% c("__Healthcare Provider Category__", "Administrative Non-clinical", "General Practitioner", "Nurse", "Other")) %>%  -->
+
+<!--   mutate(`Total Encounters` = ifelse( -->
+
+<!--     `Total Encounters` %in% bold_vars_specialty_roles,  -->
+
+<!--     paste0("**", `Total Encounters`, "**"),  -->
+
+<!--     `Total Encounters`) -->
+
+<!--   ) %>% -->
+
+<!--   gt() %>% -->
+
+<!--   tab_header(title = md("**Healthcare Provider Roles (Source)**")) %>% -->
+
+<!--   fmt_markdown(columns = "Total Encounters") %>%  -->
+
+<!--   tab_style( -->
+
+<!--     style = cell_fill(color = "#FFFFFF"), -->
+
+<!--     locations = cells_body() -->
+
+<!-- ) |> -->
+
+<!--   opt_all_caps() %>% -->
+
+<!--   tab_options( -->
+
+<!--     heading.align = "left", -->
+
+<!--     table.font.size = px(14) -->
+
+<!--   ) %>% -->
+
+<!--   opt_stylize(style = 2) |>  -->
+
+<!--   # Add footnotes -->
+
+<!--   tab_footnote( -->
+
+<!--     footnote = "N (%)", -->
+
+<!--     locations = cells_title(groups = "title") -->
+
+<!--   ) |>  -->
+
+<!--   sub_missing(columns = everything(), missing_text = "") -->
+
+<!-- roles_omop <- table_specialty_omop %>%  -->
+
+<!--   filter(!`Total Encounters` %in% c("__Healthcare Provider Category__", "Administrative Non-clinical", "General Practitioner", "Nurse", "Other", "Uncategorised")) %>%  -->
+
+<!--   mutate(`Total Encounters` = ifelse( -->
+
+<!--     `Total Encounters` %in% bold_vars_specialty_roles,  -->
+
+<!--     paste0("**", `Total Encounters`, "**"),  -->
+
+<!--     `Total Encounters`) -->
+
+<!--   ) %>% -->
+
+<!--   gt() %>% -->
+
+<!--   tab_header(title = md("**Healthcare Provider Roles (OMOP)**")) %>% -->
+
+<!--   fmt_markdown(columns = "Total Encounters") %>%  -->
+
+<!--   tab_style( -->
+
+<!--     style = cell_fill(color = "#FFFFFF"), -->
+
+<!--     locations = cells_body() -->
+
+<!-- ) |> -->
+
+<!--   opt_all_caps() %>% -->
+
+<!--   tab_options( -->
+
+<!--     heading.align = "left", -->
+
+<!--     table.font.size = px(14) -->
+
+<!--   ) %>% -->
+
+<!--   opt_stylize(style = 2) |>  -->
+
+<!--   # Add footnotes -->
+
+<!--   tab_footnote( -->
+
+<!--     footnote = "N (%)", -->
+
+<!--     locations = cells_title(groups = "title") -->
+
+<!--   ) |>  -->
+
+<!--   sub_missing(columns = everything(), missing_text = "") -->
+
+<!-- # Create your gt tables as usual -->
+
+<!-- roles_source_gt <- roles_source -->
+
+<!-- roles_omop_gt <- roles_omop -->
+
+<!-- # Combine them side by side using HTML layout -->
+
+<!-- (roles_side_by_side <- tagList( -->
+
+<!--   div(style = "display: inline-block; width: 49%; vertical-align: top;", -->
+
+<!--       roles_source_gt), -->
+
+<!--   div(style = "display: inline-block; width: 49%; vertical-align: top;", -->
+
+<!--       roles_omop_gt) -->
+
+<!-- )) -->
+
+<!-- ``` -->
 
 # HCRU
 
@@ -745,7 +838,7 @@ library(patchwork)
 
 # Combine SOURCE and OMOP into one dataframe
 df_all <- bind_rows(
-  monthly_combined_bootstrap_summary_encounters_SOURCE %>% mutate(Source = "SOURCE"),
+  monthly_combined_bootstrap_summary_encounters_SOURCE %>% mutate(Source = "Source-CPRD"),
   monthly_combined_bootstrap_summary_encounters_OMOP %>% mutate(Source = "OMOP")
 ) %>%
   mutate(
@@ -761,8 +854,8 @@ df_all_encounters <- df_all %>% filter(group == "All Patients & all encounters")
 
 # Common Y-axis scale
 max_y <- ceiling(max(df_all_encounters$ci_upper_norm))
-                     
-                     # , df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
+
+# , df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
 
 # Shared theme
 custom_theme <- theme_minimal(base_size = 14) +
@@ -778,76 +871,59 @@ custom_theme <- theme_minimal(base_size = 14) +
 # Plot 1: All Encounters (no dots)
 p_all <- ggplot(df_all_encounters, aes(x = month, y = mean, color = Source)) +
   geom_line(linewidth = 0.7) +
-  geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-                width = 0.2, linewidth = 0.4) +
-  scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-  scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 1)) +
+  geom_errorbar(
+    aes(ymin = ci_lower_norm, ymax = ci_upper_norm),
+    width = 0.2, linewidth = 0.4
+  ) +
+  scale_x_continuous(
+    breaks = seq(min(df_all_encounters$month),
+                 max(df_all_encounters$month),
+                 by = 1)
+  ) +
+  scale_y_continuous(
+    limits = c(0, max_y),
+    breaks = seq(0, max_y, by = 1)
+  ) +
+  scale_color_manual(
+    values = c("Source-CPRD" = "firebrick", "OMOP" = "steelblue")
+  ) +
   labs(
-    title = "All Encounters",
-    subtitle = "Bootstrap means and 95% Normal CIs",
+    title = "Mean Encounters per Patient per Month",
+    subtitle = "Bootstrap means and 95% CIs",
     x = "Month After Index Fracture",
     y = "Mean Primary Care Encounters",
     color = "Data Source"
   ) +
   custom_theme +
-  theme(legend.position = "bottom")
+  theme(
+    legend.position = "bottom",
+    panel.grid.major.x = element_line(color = "grey80", linewidth = 0.2),
+    panel.grid.major.y = element_line(color = "grey80", linewidth = 0.2),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
 
-<<<<<<< HEAD
-# # Plot 2: Relevant Encounters (no dots)
-# p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
-#   geom_line(linewidth = 0.7) +
-#   geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-#                 width = 0.2, linewidth = 0.4) +
-#   scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-#   scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 1)) +
-#   labs(
-#     title = "Relevant Encounters",
-#     subtitle = "Bootstrap means and 95% Normal CIs",
-#     x = "Month After Index Fracture",
-#     y = NULL,
-#     color = "Data Source"
-#   ) +
-#   custom_theme +
-#   theme(legend.position = "none")
-# 
-# # Combine plots side-by-side
-# combined_plot <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
-# 
-# combined_plot
- p_all
+p_all
+# ggsave(
+#   here::here("CPRD Raw Analysis", "Results", "Plots",
+#              "Mean_encounters_all_months_all_patients_omop_source.PNG"),
+#   plot = p_all,
+#   width = 8, height = 6, bg = "white"
+# )
 
-
-=======
-# Plot 2: Relevant Encounters (no dots)
-p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
-  geom_line(linewidth = 0.7) +
-  geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-                width = 0.2, linewidth = 0.4) +
-  scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-  scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 1)) +
-  labs(
-    title = "Relevant Encounters",
-    subtitle = "Bootstrap means and 95% Normal CIs",
-    x = "Month After Index Fracture",
-    y = NULL,
-    color = "Data Source"
-  ) +
-  custom_theme +
-  theme(legend.position = "bottom")
-
-# Combine plots side-by-side
-(combined_plot <- (p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = 'bottom')))
->>>>>>> 32e56cc1257a6c6a9118cacd5f25b96d56de12de
 ```
 
 #### **All patients - by specialty**
 
 Mean monthly encounters per patient by specialty category (All Patients, All Months)
-```{r plot months users }
 
-include_graphics(c(
-  here::here("OMOP Analysis", "Results", "Plots", "Mean_encounters_per_specialty_all_months.PNG"),
-  here::here("CPRD Raw Analysis", "Results", "Plots", "Mean_encounters_per_specialty_all_months.PNG")
+```{r plot months users, fig.show="hold", out.width="49%"}
+
+knitr::include_graphics(c(
+  
+  here::here("CPRD Raw Analysis", "Results", "Plots", "Mean_encounters_per_specialty_all_months.PNG"),
+  
+  here::here("OMOP Analysis", "Results", "Plots", "Mean_encounters_per_specialty_all_months.PNG")
 ))
 
 ```
@@ -894,70 +970,42 @@ custom_theme <- theme_minimal(base_size = 14) +
 # Plot 1: All Encounters (no dots)
 p_all <- ggplot(df_all_encounters, aes(x = month, y = mean, color = Source)) +
   geom_line(linewidth = 0.7) +
-  geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-                width = 0.2, linewidth = 0.4) +
-  scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-  scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 1)) +
+  geom_errorbar(
+    aes(ymin = ci_lower_norm, ymax = ci_upper_norm),
+    width = 0.2, linewidth = 0.4
+  ) +
+  scale_x_continuous(
+    breaks = seq(min(df_all_encounters$month),
+                 max(df_all_encounters$month),
+                 by = 1)
+  ) +
+  scale_y_continuous(
+    limits = c(0, max_y),
+    breaks = seq(0, max_y, by = 1)
+  ) +
+  scale_color_manual(
+    values = c("SOURCE" = "firebrick", "OMOP" = "steelblue")
+  ) +
   labs(
-    title = "All Encounters",
-    subtitle = "Bootstrap means and 95% Normal CIs",
+    title = "Mean Encounters per Patient (User) per Month",
+    subtitle = "Bootstrap means and 95% CIs",
     x = "Month After Index Fracture",
     y = "Mean Primary Care Encounters",
     color = "Data Source"
   ) +
   custom_theme +
-  theme(legend.position = "bottom")
-
-# Plot 2: Relevant Encounters (no dots)
-<<<<<<< HEAD
-# p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
-#   geom_line(linewidth = 0.7) +
-#   geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-#                 width = 0.2, linewidth = 0.4) +
-#   scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-#   scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 1)) +
-#   labs(
-#     title = "Relevant Encounters",
-#     subtitle = "Bootstrap means and 95% Normal CIs",
-#     x = "Month After Index Fracture",
-#     y = NULL,
-#     color = "Data Source"
-#   ) +
-#   custom_theme +
-#   theme(legend.position = "none")
-# 
-# # Combine plots side-by-side
-# combined_plot_users <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
-# 
-# combined_plot_users
-=======
-p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
-  geom_line(linewidth = 0.7) +
-  geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-                width = 0.2, linewidth = 0.4) +
-  scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-  scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 1)) +
-  labs(
-    title = "Relevant Encounters",
-    subtitle = "Bootstrap means and 95% Normal CIs",
-    x = "Month After Index Fracture",
-    y = NULL,
-    color = "Data Source"
-  ) +
-  custom_theme +
-  theme(legend.position = "bottom")
-
-# Combine plots side-by-side
-combined_plot_users <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
-
-combined_plot_users
-
->>>>>>> 32e56cc1257a6c6a9118cacd5f25b96d56de12de
+  theme(
+    legend.position = "bottom",
+    panel.grid.major.x = element_line(color = "grey80", linewidth = 0.2),
+    panel.grid.major.y = element_line(color = "grey80", linewidth = 0.2),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
 
 p_all
 
-```
 
+```
 
 # Costs
 
@@ -1231,12 +1279,13 @@ monthly_combined_bootstrap_summary_costs_OMOP <- import(here("OMOP Analysis", "R
 
 ```{r plot months all patient costs }
 
+
 library(tidyverse)
 library(patchwork)
 
 # Combine SOURCE and OMOP into one dataframe
 df_all <- bind_rows(
-  monthly_combined_bootstrap_summary_costs_SOURCE %>% mutate(Source = "SOURCE"),
+  monthly_combined_bootstrap_summary_costs_SOURCE %>% mutate(Source = "Source-CPRD"),
   monthly_combined_bootstrap_summary_costs_OMOP %>% mutate(Source = "OMOP")
 ) %>%
   mutate(
@@ -1252,68 +1301,66 @@ df_all_encounters <- df_all %>% filter(group == "All Patients & all encounters")
 
 # Common Y-axis scale
 max_y <- ceiling(max(df_all_encounters$ci_upper_norm))
-                     
-                     # , df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
 
-# Shared theme
-custom_theme <- theme_minimal(base_size = 14) +
-  theme(
-    plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
-    plot.subtitle = element_text(size = 10, hjust = 0.5),
-    axis.text = element_text(size = 9),
-    axis.title = element_text(size = 10),
-    legend.title = element_text(size = 9),
-    legend.text = element_text(size = 8)
-  )
+# , df_relevant_encounters$ci_upper_norm, na.rm = TRUE))
 
-# Plot 1: All Encounters (no dots)
 p_all <- ggplot(df_all_encounters, aes(x = month, y = mean, color = Source)) +
   geom_line(linewidth = 0.7) +
-  geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-                width = 0.2, linewidth = 0.4) +
-  scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-  scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 10)) +
+  geom_errorbar(
+    aes(ymin = ci_lower_norm, ymax = ci_upper_norm),
+    width = 0.2, linewidth = 0.4
+  ) +
+  scale_x_continuous(
+    breaks = seq(min(df_all_encounters$month),
+                 max(df_all_encounters$month),
+                 by = 1)
+  ) +
+  scale_y_continuous(
+    limits = c(0, max_y),
+    breaks = seq(0, max_y, by = 10),
+    labels = scales::label_dollar(prefix = "£", accuracy = 1)
+  ) +
+  scale_color_manual(
+    values = c("Source-CPRD" = "firebrick", "OMOP" = "steelblue")
+  ) +
   labs(
-    title = "All Encounters",
-    subtitle = "Bootstrap means and 95% Normal CIs",
+    title = "Mean Costs per Patient per Month",
+    subtitle = "Bootstrap means and 95% CIs",
     x = "Month After Index Fracture",
     y = "Mean Primary Care Costs (£)",
     color = "Data Source"
   ) +
   custom_theme +
-  theme(legend.position = "bottom")
-
-# Plot 2: Relevant Encounters (no dots)
-# p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
-#   geom_line(linewidth = 0.7) +
-#   geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-#                 width = 0.2, linewidth = 0.4) +
-#   scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-#   scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 10)) +
-#   labs(
-#     title = "Relevant Encounters",
-#     subtitle = "Bootstrap means and 95% Normal CIs",
-#     x = "Month After Index Fracture",
-#     y = NULL,
-#     color = "Data Source"
-#   ) +
-#   custom_theme +
-#   theme(legend.position = "none")
-# 
-# # Combine plots side-by-side
-# combined_plot_costs <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
-# 
-# combined_plot_costs
+  theme(
+    legend.position = "bottom",
+    panel.grid.major.x = element_line(color = "grey80", linewidth = 0.2),
+    panel.grid.major.y = element_line(color = "grey80", linewidth = 0.2),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
 
 p_all
 
+# ggsave(
+#   here::here("CPRD Raw Analysis", "Results", "Plots",
+#              "Mean_costs_all_months_all_patients_omop_source.PNG"),
+#   plot = p_all,
+#   width = 8, height = 6, bg = "white"
+# )
 ```
 
 #### **All patients - by specialty**
 
-```{r plot months all patient cost specialty }
+Mean monthly costs per patient by specialty category (All Patients, All Months)
 
+```{r plot months all patient cost specialty , fig.show="hold", out.width="49%" }
 
+knitr::include_graphics(c(
+  
+  here::here("CPRD Raw Analysis", "Results", "Plots", "Mean_costs_per_specialty_all_months.PNG"),
+  
+  here::here("OMOP Analysis", "Results", "Plots", "Mean_costs_per_specialty_all_months.PNG")
+))
 
 ```
 
@@ -1356,44 +1403,41 @@ custom_theme <- theme_minimal(base_size = 14) +
     legend.text = element_text(size = 8)
   )
 
-# Plot 1: All Encounters (no dots)
+# Plot 1: All Encounters 
+
 p_all <- ggplot(df_all_encounters, aes(x = month, y = mean, color = Source)) +
   geom_line(linewidth = 0.7) +
-  geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-                width = 0.2, linewidth = 0.4) +
-  scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-  scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 10)) +
+  geom_errorbar(
+    aes(ymin = ci_lower_norm, ymax = ci_upper_norm),
+    width = 0.2, linewidth = 0.4
+  ) +
+  scale_x_continuous(
+    breaks = seq(min(df_all_encounters$month),
+                 max(df_all_encounters$month),
+                 by = 1)
+  ) +
+  scale_y_continuous(
+    limits = c(0, max_y),
+    breaks = seq(0, max_y, by = 10)
+  ) +
+  scale_color_manual(
+    values = c("SOURCE" = "firebrick", "OMOP" = "steelblue")
+  ) +
   labs(
-    title = "All Encounters",
-    subtitle = "Bootstrap means and 95% Normal CIs",
+    title = "Mean Costs per Patient (User) per Month",
+    subtitle = "Bootstrap means and 95% CIs",
     x = "Month After Index Fracture",
-    y = "Mean Primary Care Costs (£)",
+    y = "Mean Primary Care Costs",
     color = "Data Source"
   ) +
   custom_theme +
-  theme(legend.position = "bottom")
-
-# Plot 2: Relevant Encounters (no dots)
-# p_relevant <- ggplot(df_relevant_encounters, aes(x = month, y = mean, color = Source)) +
-#   geom_line(linewidth = 0.7) +
-#   geom_errorbar(aes(ymin = ci_lower_norm, ymax = ci_upper_norm), 
-#                 width = 0.2, linewidth = 0.4) +
-#   scale_x_continuous(breaks = seq(0, 24, by = 5)) +
-#   scale_y_continuous(limits = c(0, max_y), breaks = seq(0, max_y, by = 10)) +
-#   labs(
-#     title = "Relevant Encounters",
-#     subtitle = "Bootstrap means and 95% Normal CIs",
-#     x = "Month After Index Fracture",
-#     y = NULL,
-#     color = "Data Source"
-#   ) +
-#   custom_theme +
-#   theme(legend.position = "none")
-# 
-# # Combine plots side-by-side
-# combined_plot_users_costs <- p_all + p_relevant + plot_layout(guides = "collect") & theme(legend.position = "bottom")
-# 
-# combined_plot_users_costs
+  theme(
+    legend.position = "bottom",
+    panel.grid.major.x = element_line(color = "grey80", linewidth = 0.2),
+    panel.grid.major.y = element_line(color = "grey80", linewidth = 0.2),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
 
 p_all
 
@@ -1401,22 +1445,14 @@ p_all
 
 # Conclusions
 
-### Healthcare Resource Use
+-   **Primary care resource use** was slightly higher in the source data compared with OMOP. However, the difference was not statistically significant, as shown by overlapping bootstrap confidence intervals (CIs). The slightly higher encounter count in the source may also reflect the **larger cohort size** in that dataset.
 
-• Primary care **resource use was slightly higher in the source data compared to OMOP, although the difference was not statistically significant**, as indicated by overlapping bootstrap confidence intervals (CIs).
+-   C**osts** followed the same overall pattern, though differences were more pronounced. These cost differences were still not statistically significant.
 
-• This pattern was consistent across the overall observation period, as well as in yearly and monthly analyses. It held true both for the full patient population and when analyses were restricted to users only.
+-   This pattern was consistent across the full observation period, as well as in yearly and monthly analyses. It held for both the full patient population and for analyses restricted to users only.
 
-### Costs
+-   Differences in costs mainly arose from the way **unit costs were assigned based on specialty roles**. In particular, for specialties without a direct OMOP concept mapping, multiple CPRD specialties were grouped under a single OMOP concept ID. In such cases, OMOP costs were assigned using the **average unit cost** across the grouped specialties (see plot in input section).
 
-• Cost patterns diverged from those observed for resource use, with **OMOP showing higher visit costs than the source data, accompanied by non-overlapping CIs**. This was consistent across all patients, in overall, yearly, and monthly analyses, as well as for users only.
+-   To ensure robustness, the analysis was repeated using the **same unit cost codes across both datasets**, confirming that observed differences were not due to coding inconsistencies.
 
-• However, when **restricting the analysis to clinically relevant encounters**, the pattern reversed: the **source data showed higher costs than OMOP, mirroring the trend seen in healthcare resource use**.
-
-• This discrepancy can be attributed to the fact that **clinical relevance was defined independently** in OMOP and the source data and that **source uses a more granular specialty definition**.
-
-• For example, multiple source specialties may map to a single OMOP specialty. In such cases, some of the original source specialties may be considered clinically relevant, even though the aggregated OMOP specialty is not. This issue is especially pronounced for **source specialties that lack a direct mapping to an OMOP concept** (uncategorised); these **were classified as not relevant in OMOP, even though some were considered clinically relevant in the source analysis**.
-
-• The plots in the Inputs section are intended to help clarify the mechanisms underlying these patterns. While the list of specialties has been updated to include all values present in the datasets, and unit costs have been revised using 2024 PSSRU values, it is important to **verify both the correct assignment of clinical relevance and the underlying assumptions used in cost calculations**, as these factors have emerged as **key drivers** of the observed cost differences.
-
-• The analysis was verified using the same unit cost codes across both datasets to confirm that observed differences were not attributable to coding inconsistencies.
+-   A **sensitivity analysis** restricted to patients with the **same IDs in both OMOP and source data** (ensuring the same individuals were compared) will be conducted.
