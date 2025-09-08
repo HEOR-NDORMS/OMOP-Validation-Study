@@ -4046,14 +4046,21 @@ follow-up period</strong>, by <strong>year</strong>, and by
 <h1>Inputs</h1>
 <ul>
 <li><p>Unit costs were assigned using the latest (2024 edition) PSSRU
-Unit Costs of Health and Social Care manual. OMOP specialties were
-costed based on their corresponding SOURCE CPRD specialties.</p></li>
+Unit Costs of Health and Social Care manual.</p></li>
+<li><p>Source specialties were costed based on unit costs and mean
+estimates of encounter duration provided by clinical expert
+opinion.</p></li>
+<li><p>OMOP specialties were costed based on their corresponding SOURCE
+CPRD specialties.</p></li>
 <li><p>Where multiple SOURCE CPRD specialties mapped to the same OMOP
 concept ID, an average of their costs was used to assign a single unit
 cost in OMOP.</p></li>
 <li><p>For SOURCE CPRD specialties that did not map to an OMOP concept
 ID (i.e., no matching concept id), their costs were averaged and applied
 uniformly to all <em>Uncategorised</em> specialties in OMOP.</p></li>
+<li><p>All specialties were categorised into groups (e.g., Admin, GP,
+Nurse etc) as provided by clinical expert opinion. Where assumptions
+were made, they’re reported in appendix.</p></li>
 </ul>
 <div id="mapping-specialties" class="section level2">
 <h2>Mapping specialties</h2>
@@ -4082,20 +4089,20 @@ patient, per day, and per provider specialty (i.e., deduplication).</p>
 <h2 class="tabset"></h2>
 <div id="attrition" class="section level3">
 <h3>Attrition</h3>
-<div id="hlsfjewpgs" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#hlsfjewpgs table {
+<div id="vvmmcddjtt" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#vvmmcddjtt table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#hlsfjewpgs thead, #hlsfjewpgs tbody, #hlsfjewpgs tfoot, #hlsfjewpgs tr, #hlsfjewpgs td, #hlsfjewpgs th {
+#vvmmcddjtt thead, #vvmmcddjtt tbody, #vvmmcddjtt tfoot, #vvmmcddjtt tr, #vvmmcddjtt td, #vvmmcddjtt th {
 border-style: none;
 }
-#hlsfjewpgs p {
+#vvmmcddjtt p {
 margin: 0;
 padding: 0;
 }
-#hlsfjewpgs .gt_table {
+#vvmmcddjtt .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -4120,11 +4127,11 @@ border-left-style: solid;
 border-left-width: 3px;
 border-left-color: #D5D5D5;
 }
-#hlsfjewpgs .gt_caption {
+#vvmmcddjtt .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#hlsfjewpgs .gt_title {
+#vvmmcddjtt .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -4135,7 +4142,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#hlsfjewpgs .gt_subtitle {
+#vvmmcddjtt .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -4146,7 +4153,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#hlsfjewpgs .gt_heading {
+#vvmmcddjtt .gt_heading {
 background-color: #FFFFFF;
 text-align: left;
 border-bottom-color: #FFFFFF;
@@ -4157,12 +4164,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#hlsfjewpgs .gt_bottom_border {
+#vvmmcddjtt .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D5D5D5;
 }
-#hlsfjewpgs .gt_col_headings {
+#vvmmcddjtt .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D5D5D5;
@@ -4176,7 +4183,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#hlsfjewpgs .gt_col_heading {
+#vvmmcddjtt .gt_col_heading {
 color: #FFFFFF;
 background-color: #004D80;
 font-size: 100%;
@@ -4195,7 +4202,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#hlsfjewpgs .gt_column_spanner_outer {
+#vvmmcddjtt .gt_column_spanner_outer {
 color: #FFFFFF;
 background-color: #004D80;
 font-size: 100%;
@@ -4206,13 +4213,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#hlsfjewpgs .gt_column_spanner_outer:first-child {
+#vvmmcddjtt .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#hlsfjewpgs .gt_column_spanner_outer:last-child {
+#vvmmcddjtt .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#hlsfjewpgs .gt_column_spanner {
+#vvmmcddjtt .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D5D5D5;
@@ -4223,10 +4230,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#hlsfjewpgs .gt_spanner_row {
+#vvmmcddjtt .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#hlsfjewpgs .gt_group_heading {
+#vvmmcddjtt .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4251,7 +4258,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#hlsfjewpgs .gt_empty_group_heading {
+#vvmmcddjtt .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -4265,13 +4272,13 @@ border-bottom-width: 2px;
 border-bottom-color: #D5D5D5;
 vertical-align: middle;
 }
-#hlsfjewpgs .gt_from_md > :first-child {
+#vvmmcddjtt .gt_from_md > :first-child {
 margin-top: 0;
 }
-#hlsfjewpgs .gt_from_md > :last-child {
+#vvmmcddjtt .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#hlsfjewpgs .gt_row {
+#vvmmcddjtt .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4289,7 +4296,7 @@ border-right-color: #89D3FE;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#hlsfjewpgs .gt_stub {
+#vvmmcddjtt .gt_stub {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -4301,7 +4308,7 @@ border-right-color: #5F5F5F;
 padding-left: 5px;
 padding-right: 5px;
 }
-#hlsfjewpgs .gt_stub_row_group {
+#vvmmcddjtt .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -4314,13 +4321,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#hlsfjewpgs .gt_row_group_first td {
+#vvmmcddjtt .gt_row_group_first td {
 border-top-width: 2px;
 }
-#hlsfjewpgs .gt_row_group_first th {
+#vvmmcddjtt .gt_row_group_first th {
 border-top-width: 2px;
 }
-#hlsfjewpgs .gt_summary_row {
+#vvmmcddjtt .gt_summary_row {
 color: #333333;
 background-color: #89D3FE;
 text-transform: inherit;
@@ -4329,14 +4336,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#hlsfjewpgs .gt_first_summary_row {
+#vvmmcddjtt .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #D5D5D5;
 }
-#hlsfjewpgs .gt_first_summary_row.thick {
+#vvmmcddjtt .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#hlsfjewpgs .gt_last_summary_row {
+#vvmmcddjtt .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4345,7 +4352,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D5D5D5;
 }
-#hlsfjewpgs .gt_grand_summary_row {
+#vvmmcddjtt .gt_grand_summary_row {
 color: #FFFFFF;
 background-color: #00A1FF;
 text-transform: inherit;
@@ -4354,7 +4361,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#hlsfjewpgs .gt_first_grand_summary_row {
+#vvmmcddjtt .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4363,7 +4370,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #D5D5D5;
 }
-#hlsfjewpgs .gt_last_grand_summary_row_top {
+#vvmmcddjtt .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4372,10 +4379,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #D5D5D5;
 }
-#hlsfjewpgs .gt_striped {
+#vvmmcddjtt .gt_striped {
 background-color: #F4F4F4;
 }
-#hlsfjewpgs .gt_table_body {
+#vvmmcddjtt .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D5D5D5;
@@ -4383,7 +4390,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D5D5D5;
 }
-#hlsfjewpgs .gt_footnotes {
+#vvmmcddjtt .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -4396,7 +4403,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#hlsfjewpgs .gt_footnote {
+#vvmmcddjtt .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -4404,7 +4411,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#hlsfjewpgs .gt_sourcenotes {
+#vvmmcddjtt .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -4417,64 +4424,64 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#hlsfjewpgs .gt_sourcenote {
+#vvmmcddjtt .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#hlsfjewpgs .gt_left {
+#vvmmcddjtt .gt_left {
 text-align: left;
 }
-#hlsfjewpgs .gt_center {
+#vvmmcddjtt .gt_center {
 text-align: center;
 }
-#hlsfjewpgs .gt_right {
+#vvmmcddjtt .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#hlsfjewpgs .gt_font_normal {
+#vvmmcddjtt .gt_font_normal {
 font-weight: normal;
 }
-#hlsfjewpgs .gt_font_bold {
+#vvmmcddjtt .gt_font_bold {
 font-weight: bold;
 }
-#hlsfjewpgs .gt_font_italic {
+#vvmmcddjtt .gt_font_italic {
 font-style: italic;
 }
-#hlsfjewpgs .gt_super {
+#vvmmcddjtt .gt_super {
 font-size: 65%;
 }
-#hlsfjewpgs .gt_footnote_marks {
+#vvmmcddjtt .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#hlsfjewpgs .gt_asterisk {
+#vvmmcddjtt .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#hlsfjewpgs .gt_indent_1 {
+#vvmmcddjtt .gt_indent_1 {
 text-indent: 5px;
 }
-#hlsfjewpgs .gt_indent_2 {
+#vvmmcddjtt .gt_indent_2 {
 text-indent: 10px;
 }
-#hlsfjewpgs .gt_indent_3 {
+#vvmmcddjtt .gt_indent_3 {
 text-indent: 15px;
 }
-#hlsfjewpgs .gt_indent_4 {
+#vvmmcddjtt .gt_indent_4 {
 text-indent: 20px;
 }
-#hlsfjewpgs .gt_indent_5 {
+#vvmmcddjtt .gt_indent_5 {
 text-indent: 25px;
 }
-#hlsfjewpgs .katex-display {
+#vvmmcddjtt .katex-display {
 display: inline-flex !important;
 margin-bottom: 0.75em !important;
 }
-#hlsfjewpgs div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#vvmmcddjtt div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
 height: 0px !important;
 }
 </style>
@@ -4499,20 +4506,20 @@ height: 0px !important;
   
 </table>
 </div>
-<div id="ebwiyssdsg" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#ebwiyssdsg table {
+<div id="tjufrrmlor" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#tjufrrmlor table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#ebwiyssdsg thead, #ebwiyssdsg tbody, #ebwiyssdsg tfoot, #ebwiyssdsg tr, #ebwiyssdsg td, #ebwiyssdsg th {
+#tjufrrmlor thead, #tjufrrmlor tbody, #tjufrrmlor tfoot, #tjufrrmlor tr, #tjufrrmlor td, #tjufrrmlor th {
 border-style: none;
 }
-#ebwiyssdsg p {
+#tjufrrmlor p {
 margin: 0;
 padding: 0;
 }
-#ebwiyssdsg .gt_table {
+#tjufrrmlor .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -4537,11 +4544,11 @@ border-left-style: none;
 border-left-width: 2px;
 border-left-color: #D3D3D3;
 }
-#ebwiyssdsg .gt_caption {
+#tjufrrmlor .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#ebwiyssdsg .gt_title {
+#tjufrrmlor .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -4552,7 +4559,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#ebwiyssdsg .gt_subtitle {
+#tjufrrmlor .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -4563,7 +4570,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#ebwiyssdsg .gt_heading {
+#tjufrrmlor .gt_heading {
 background-color: #FFFFFF;
 text-align: left;
 border-bottom-color: #FFFFFF;
@@ -4574,12 +4581,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#ebwiyssdsg .gt_bottom_border {
+#tjufrrmlor .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #929292;
 }
-#ebwiyssdsg .gt_col_headings {
+#tjufrrmlor .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #929292;
@@ -4593,7 +4600,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#ebwiyssdsg .gt_col_heading {
+#tjufrrmlor .gt_col_heading {
 color: #FFFFFF;
 background-color: #004D80;
 font-size: 100%;
@@ -4612,7 +4619,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#ebwiyssdsg .gt_column_spanner_outer {
+#tjufrrmlor .gt_column_spanner_outer {
 color: #FFFFFF;
 background-color: #004D80;
 font-size: 100%;
@@ -4623,13 +4630,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#ebwiyssdsg .gt_column_spanner_outer:first-child {
+#tjufrrmlor .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#ebwiyssdsg .gt_column_spanner_outer:last-child {
+#tjufrrmlor .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#ebwiyssdsg .gt_column_spanner {
+#tjufrrmlor .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #929292;
@@ -4640,10 +4647,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#ebwiyssdsg .gt_spanner_row {
+#tjufrrmlor .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#ebwiyssdsg .gt_group_heading {
+#tjufrrmlor .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4668,7 +4675,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#ebwiyssdsg .gt_empty_group_heading {
+#tjufrrmlor .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -4682,13 +4689,13 @@ border-bottom-width: 2px;
 border-bottom-color: #929292;
 vertical-align: middle;
 }
-#ebwiyssdsg .gt_from_md > :first-child {
+#tjufrrmlor .gt_from_md > :first-child {
 margin-top: 0;
 }
-#ebwiyssdsg .gt_from_md > :last-child {
+#tjufrrmlor .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#ebwiyssdsg .gt_row {
+#tjufrrmlor .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4706,7 +4713,7 @@ border-right-color: #929292;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#ebwiyssdsg .gt_stub {
+#tjufrrmlor .gt_stub {
 color: #333333;
 background-color: #D5D5D5;
 font-size: 100%;
@@ -4718,7 +4725,7 @@ border-right-color: #FFFFFF;
 padding-left: 5px;
 padding-right: 5px;
 }
-#ebwiyssdsg .gt_stub_row_group {
+#tjufrrmlor .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -4731,13 +4738,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#ebwiyssdsg .gt_row_group_first td {
+#tjufrrmlor .gt_row_group_first td {
 border-top-width: 2px;
 }
-#ebwiyssdsg .gt_row_group_first th {
+#tjufrrmlor .gt_row_group_first th {
 border-top-width: 2px;
 }
-#ebwiyssdsg .gt_summary_row {
+#tjufrrmlor .gt_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -4746,14 +4753,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#ebwiyssdsg .gt_first_summary_row {
+#tjufrrmlor .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #929292;
 }
-#ebwiyssdsg .gt_first_summary_row.thick {
+#tjufrrmlor .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#ebwiyssdsg .gt_last_summary_row {
+#tjufrrmlor .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4762,7 +4769,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #929292;
 }
-#ebwiyssdsg .gt_grand_summary_row {
+#tjufrrmlor .gt_grand_summary_row {
 color: #333333;
 background-color: #D5D5D5;
 text-transform: inherit;
@@ -4771,7 +4778,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#ebwiyssdsg .gt_first_grand_summary_row {
+#tjufrrmlor .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4780,7 +4787,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #929292;
 }
-#ebwiyssdsg .gt_last_grand_summary_row_top {
+#tjufrrmlor .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -4789,10 +4796,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #929292;
 }
-#ebwiyssdsg .gt_striped {
+#tjufrrmlor .gt_striped {
 background-color: #F4F4F4;
 }
-#ebwiyssdsg .gt_table_body {
+#tjufrrmlor .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #929292;
@@ -4800,7 +4807,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #929292;
 }
-#ebwiyssdsg .gt_footnotes {
+#tjufrrmlor .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -4813,7 +4820,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#ebwiyssdsg .gt_footnote {
+#tjufrrmlor .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -4821,7 +4828,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#ebwiyssdsg .gt_sourcenotes {
+#tjufrrmlor .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -4834,64 +4841,64 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#ebwiyssdsg .gt_sourcenote {
+#tjufrrmlor .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#ebwiyssdsg .gt_left {
+#tjufrrmlor .gt_left {
 text-align: left;
 }
-#ebwiyssdsg .gt_center {
+#tjufrrmlor .gt_center {
 text-align: center;
 }
-#ebwiyssdsg .gt_right {
+#tjufrrmlor .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#ebwiyssdsg .gt_font_normal {
+#tjufrrmlor .gt_font_normal {
 font-weight: normal;
 }
-#ebwiyssdsg .gt_font_bold {
+#tjufrrmlor .gt_font_bold {
 font-weight: bold;
 }
-#ebwiyssdsg .gt_font_italic {
+#tjufrrmlor .gt_font_italic {
 font-style: italic;
 }
-#ebwiyssdsg .gt_super {
+#tjufrrmlor .gt_super {
 font-size: 65%;
 }
-#ebwiyssdsg .gt_footnote_marks {
+#tjufrrmlor .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#ebwiyssdsg .gt_asterisk {
+#tjufrrmlor .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#ebwiyssdsg .gt_indent_1 {
+#tjufrrmlor .gt_indent_1 {
 text-indent: 5px;
 }
-#ebwiyssdsg .gt_indent_2 {
+#tjufrrmlor .gt_indent_2 {
 text-indent: 10px;
 }
-#ebwiyssdsg .gt_indent_3 {
+#tjufrrmlor .gt_indent_3 {
 text-indent: 15px;
 }
-#ebwiyssdsg .gt_indent_4 {
+#tjufrrmlor .gt_indent_4 {
 text-indent: 20px;
 }
-#ebwiyssdsg .gt_indent_5 {
+#tjufrrmlor .gt_indent_5 {
 text-indent: 25px;
 }
-#ebwiyssdsg .katex-display {
+#tjufrrmlor .katex-display {
 display: inline-flex !important;
 margin-bottom: 0.75em !important;
 }
-#ebwiyssdsg div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#tjufrrmlor div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
 height: 0px !important;
 }
 </style>
@@ -5026,20 +5033,20 @@ height: 0px !important;
 </div>
 <div id="patients-characteristics" class="section level3">
 <h3>Patients Characteristics</h3>
-<div id="zhxbdfimbr" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#zhxbdfimbr table {
+<div id="frfijhqoko" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#frfijhqoko table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#zhxbdfimbr thead, #zhxbdfimbr tbody, #zhxbdfimbr tfoot, #zhxbdfimbr tr, #zhxbdfimbr td, #zhxbdfimbr th {
+#frfijhqoko thead, #frfijhqoko tbody, #frfijhqoko tfoot, #frfijhqoko tr, #frfijhqoko td, #frfijhqoko th {
 border-style: none;
 }
-#zhxbdfimbr p {
+#frfijhqoko p {
 margin: 0;
 padding: 0;
 }
-#zhxbdfimbr .gt_table {
+#frfijhqoko .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -5064,11 +5071,11 @@ border-left-style: none;
 border-left-width: 2px;
 border-left-color: #D3D3D3;
 }
-#zhxbdfimbr .gt_caption {
+#frfijhqoko .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#zhxbdfimbr .gt_title {
+#frfijhqoko .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -5079,7 +5086,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#zhxbdfimbr .gt_subtitle {
+#frfijhqoko .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -5090,7 +5097,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#zhxbdfimbr .gt_heading {
+#frfijhqoko .gt_heading {
 background-color: #FFFFFF;
 text-align: left;
 border-bottom-color: #FFFFFF;
@@ -5101,12 +5108,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#zhxbdfimbr .gt_bottom_border {
+#frfijhqoko .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #929292;
 }
-#zhxbdfimbr .gt_col_headings {
+#frfijhqoko .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #929292;
@@ -5120,7 +5127,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#zhxbdfimbr .gt_col_heading {
+#frfijhqoko .gt_col_heading {
 color: #FFFFFF;
 background-color: #004D80;
 font-size: 80%;
@@ -5139,7 +5146,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#zhxbdfimbr .gt_column_spanner_outer {
+#frfijhqoko .gt_column_spanner_outer {
 color: #FFFFFF;
 background-color: #004D80;
 font-size: 80%;
@@ -5150,13 +5157,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#zhxbdfimbr .gt_column_spanner_outer:first-child {
+#frfijhqoko .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#zhxbdfimbr .gt_column_spanner_outer:last-child {
+#frfijhqoko .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#zhxbdfimbr .gt_column_spanner {
+#frfijhqoko .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #929292;
@@ -5167,10 +5174,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#zhxbdfimbr .gt_spanner_row {
+#frfijhqoko .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#zhxbdfimbr .gt_group_heading {
+#frfijhqoko .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5195,7 +5202,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#zhxbdfimbr .gt_empty_group_heading {
+#frfijhqoko .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -5209,13 +5216,13 @@ border-bottom-width: 2px;
 border-bottom-color: #929292;
 vertical-align: middle;
 }
-#zhxbdfimbr .gt_from_md > :first-child {
+#frfijhqoko .gt_from_md > :first-child {
 margin-top: 0;
 }
-#zhxbdfimbr .gt_from_md > :last-child {
+#frfijhqoko .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#zhxbdfimbr .gt_row {
+#frfijhqoko .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5233,7 +5240,7 @@ border-right-color: #929292;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#zhxbdfimbr .gt_stub {
+#frfijhqoko .gt_stub {
 color: #333333;
 background-color: #D5D5D5;
 font-size: 80%;
@@ -5245,7 +5252,7 @@ border-right-color: #FFFFFF;
 padding-left: 5px;
 padding-right: 5px;
 }
-#zhxbdfimbr .gt_stub_row_group {
+#frfijhqoko .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -5258,13 +5265,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#zhxbdfimbr .gt_row_group_first td {
+#frfijhqoko .gt_row_group_first td {
 border-top-width: 2px;
 }
-#zhxbdfimbr .gt_row_group_first th {
+#frfijhqoko .gt_row_group_first th {
 border-top-width: 2px;
 }
-#zhxbdfimbr .gt_summary_row {
+#frfijhqoko .gt_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -5273,14 +5280,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#zhxbdfimbr .gt_first_summary_row {
+#frfijhqoko .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #929292;
 }
-#zhxbdfimbr .gt_first_summary_row.thick {
+#frfijhqoko .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#zhxbdfimbr .gt_last_summary_row {
+#frfijhqoko .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5289,7 +5296,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #929292;
 }
-#zhxbdfimbr .gt_grand_summary_row {
+#frfijhqoko .gt_grand_summary_row {
 color: #333333;
 background-color: #D5D5D5;
 text-transform: inherit;
@@ -5298,7 +5305,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#zhxbdfimbr .gt_first_grand_summary_row {
+#frfijhqoko .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5307,7 +5314,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #929292;
 }
-#zhxbdfimbr .gt_last_grand_summary_row_top {
+#frfijhqoko .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5316,10 +5323,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #929292;
 }
-#zhxbdfimbr .gt_striped {
+#frfijhqoko .gt_striped {
 background-color: #F4F4F4;
 }
-#zhxbdfimbr .gt_table_body {
+#frfijhqoko .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #929292;
@@ -5327,7 +5334,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #929292;
 }
-#zhxbdfimbr .gt_footnotes {
+#frfijhqoko .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -5340,7 +5347,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#zhxbdfimbr .gt_footnote {
+#frfijhqoko .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -5348,7 +5355,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#zhxbdfimbr .gt_sourcenotes {
+#frfijhqoko .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -5361,64 +5368,64 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#zhxbdfimbr .gt_sourcenote {
+#frfijhqoko .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#zhxbdfimbr .gt_left {
+#frfijhqoko .gt_left {
 text-align: left;
 }
-#zhxbdfimbr .gt_center {
+#frfijhqoko .gt_center {
 text-align: center;
 }
-#zhxbdfimbr .gt_right {
+#frfijhqoko .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#zhxbdfimbr .gt_font_normal {
+#frfijhqoko .gt_font_normal {
 font-weight: normal;
 }
-#zhxbdfimbr .gt_font_bold {
+#frfijhqoko .gt_font_bold {
 font-weight: bold;
 }
-#zhxbdfimbr .gt_font_italic {
+#frfijhqoko .gt_font_italic {
 font-style: italic;
 }
-#zhxbdfimbr .gt_super {
+#frfijhqoko .gt_super {
 font-size: 65%;
 }
-#zhxbdfimbr .gt_footnote_marks {
+#frfijhqoko .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#zhxbdfimbr .gt_asterisk {
+#frfijhqoko .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#zhxbdfimbr .gt_indent_1 {
+#frfijhqoko .gt_indent_1 {
 text-indent: 5px;
 }
-#zhxbdfimbr .gt_indent_2 {
+#frfijhqoko .gt_indent_2 {
 text-indent: 10px;
 }
-#zhxbdfimbr .gt_indent_3 {
+#frfijhqoko .gt_indent_3 {
 text-indent: 15px;
 }
-#zhxbdfimbr .gt_indent_4 {
+#frfijhqoko .gt_indent_4 {
 text-indent: 20px;
 }
-#zhxbdfimbr .gt_indent_5 {
+#frfijhqoko .gt_indent_5 {
 text-indent: 25px;
 }
-#zhxbdfimbr .katex-display {
+#frfijhqoko .katex-display {
 display: inline-flex !important;
 margin-bottom: 0.75em !important;
 }
-#zhxbdfimbr div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#frfijhqoko div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
 height: 0px !important;
 }
 </style>
@@ -5528,21 +5535,22 @@ height: 0px !important;
 </div>
 <div id="specialties" class="section level3">
 <h3>Specialties</h3>
+<p>Total number of encounters, by specialty category.</p>
 <div style="display: inline-block; width: 49%; vertical-align: top;">
-<div id="erfenvndka" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#erfenvndka table {
+<div id="qdtukfyzrp" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#qdtukfyzrp table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#erfenvndka thead, #erfenvndka tbody, #erfenvndka tfoot, #erfenvndka tr, #erfenvndka td, #erfenvndka th {
+#qdtukfyzrp thead, #qdtukfyzrp tbody, #qdtukfyzrp tfoot, #qdtukfyzrp tr, #qdtukfyzrp td, #qdtukfyzrp th {
 border-style: none;
 }
-#erfenvndka p {
+#qdtukfyzrp p {
 margin: 0;
 padding: 0;
 }
-#erfenvndka .gt_table {
+#qdtukfyzrp .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -5567,11 +5575,11 @@ border-left-style: none;
 border-left-width: 2px;
 border-left-color: #D3D3D3;
 }
-#erfenvndka .gt_caption {
+#qdtukfyzrp .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#erfenvndka .gt_title {
+#qdtukfyzrp .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -5582,7 +5590,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#erfenvndka .gt_subtitle {
+#qdtukfyzrp .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -5593,7 +5601,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#erfenvndka .gt_heading {
+#qdtukfyzrp .gt_heading {
 background-color: #FFFFFF;
 text-align: center;
 border-bottom-color: #FFFFFF;
@@ -5604,12 +5612,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#erfenvndka .gt_bottom_border {
+#qdtukfyzrp .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#erfenvndka .gt_col_headings {
+#qdtukfyzrp .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -5623,7 +5631,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#erfenvndka .gt_col_heading {
+#qdtukfyzrp .gt_col_heading {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -5642,7 +5650,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#erfenvndka .gt_column_spanner_outer {
+#qdtukfyzrp .gt_column_spanner_outer {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -5653,13 +5661,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#erfenvndka .gt_column_spanner_outer:first-child {
+#qdtukfyzrp .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#erfenvndka .gt_column_spanner_outer:last-child {
+#qdtukfyzrp .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#erfenvndka .gt_column_spanner {
+#qdtukfyzrp .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
@@ -5670,10 +5678,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#erfenvndka .gt_spanner_row {
+#qdtukfyzrp .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#erfenvndka .gt_group_heading {
+#qdtukfyzrp .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5698,7 +5706,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#erfenvndka .gt_empty_group_heading {
+#qdtukfyzrp .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -5712,13 +5720,13 @@ border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 vertical-align: middle;
 }
-#erfenvndka .gt_from_md > :first-child {
+#qdtukfyzrp .gt_from_md > :first-child {
 margin-top: 0;
 }
-#erfenvndka .gt_from_md > :last-child {
+#qdtukfyzrp .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#erfenvndka .gt_row {
+#qdtukfyzrp .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5736,7 +5744,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#erfenvndka .gt_stub {
+#qdtukfyzrp .gt_stub {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -5748,7 +5756,7 @@ border-right-color: #D3D3D3;
 padding-left: 5px;
 padding-right: 5px;
 }
-#erfenvndka .gt_stub_row_group {
+#qdtukfyzrp .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -5761,13 +5769,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#erfenvndka .gt_row_group_first td {
+#qdtukfyzrp .gt_row_group_first td {
 border-top-width: 2px;
 }
-#erfenvndka .gt_row_group_first th {
+#qdtukfyzrp .gt_row_group_first th {
 border-top-width: 2px;
 }
-#erfenvndka .gt_summary_row {
+#qdtukfyzrp .gt_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -5776,14 +5784,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#erfenvndka .gt_first_summary_row {
+#qdtukfyzrp .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #D3D3D3;
 }
-#erfenvndka .gt_first_summary_row.thick {
+#qdtukfyzrp .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#erfenvndka .gt_last_summary_row {
+#qdtukfyzrp .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5792,7 +5800,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#erfenvndka .gt_grand_summary_row {
+#qdtukfyzrp .gt_grand_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -5801,7 +5809,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#erfenvndka .gt_first_grand_summary_row {
+#qdtukfyzrp .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5810,7 +5818,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #D3D3D3;
 }
-#erfenvndka .gt_last_grand_summary_row_top {
+#qdtukfyzrp .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -5819,10 +5827,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #D3D3D3;
 }
-#erfenvndka .gt_striped {
+#qdtukfyzrp .gt_striped {
 background-color: rgba(128, 128, 128, 0.05);
 }
-#erfenvndka .gt_table_body {
+#qdtukfyzrp .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -5830,7 +5838,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#erfenvndka .gt_footnotes {
+#qdtukfyzrp .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -5843,7 +5851,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#erfenvndka .gt_footnote {
+#qdtukfyzrp .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -5851,7 +5859,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#erfenvndka .gt_sourcenotes {
+#qdtukfyzrp .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -5864,64 +5872,64 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#erfenvndka .gt_sourcenote {
+#qdtukfyzrp .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#erfenvndka .gt_left {
+#qdtukfyzrp .gt_left {
 text-align: left;
 }
-#erfenvndka .gt_center {
+#qdtukfyzrp .gt_center {
 text-align: center;
 }
-#erfenvndka .gt_right {
+#qdtukfyzrp .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#erfenvndka .gt_font_normal {
+#qdtukfyzrp .gt_font_normal {
 font-weight: normal;
 }
-#erfenvndka .gt_font_bold {
+#qdtukfyzrp .gt_font_bold {
 font-weight: bold;
 }
-#erfenvndka .gt_font_italic {
+#qdtukfyzrp .gt_font_italic {
 font-style: italic;
 }
-#erfenvndka .gt_super {
+#qdtukfyzrp .gt_super {
 font-size: 65%;
 }
-#erfenvndka .gt_footnote_marks {
+#qdtukfyzrp .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#erfenvndka .gt_asterisk {
+#qdtukfyzrp .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#erfenvndka .gt_indent_1 {
+#qdtukfyzrp .gt_indent_1 {
 text-indent: 5px;
 }
-#erfenvndka .gt_indent_2 {
+#qdtukfyzrp .gt_indent_2 {
 text-indent: 10px;
 }
-#erfenvndka .gt_indent_3 {
+#qdtukfyzrp .gt_indent_3 {
 text-indent: 15px;
 }
-#erfenvndka .gt_indent_4 {
+#qdtukfyzrp .gt_indent_4 {
 text-indent: 20px;
 }
-#erfenvndka .gt_indent_5 {
+#qdtukfyzrp .gt_indent_5 {
 text-indent: 25px;
 }
-#erfenvndka .katex-display {
+#qdtukfyzrp .katex-display {
 display: inline-flex !important;
 margin-bottom: 0.75em !important;
 }
-#erfenvndka div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#qdtukfyzrp div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
 height: 0px !important;
 }
 </style>
@@ -5958,20 +5966,20 @@ height: 0px !important;
 </div>
 </div>
 <div style="display: inline-block; width: 49%; vertical-align: top;">
-<div id="dddgzbmzfc" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#dddgzbmzfc table {
+<div id="cfgjjqqqpg" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#cfgjjqqqpg table {
 font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 -webkit-font-smoothing: antialiased;
 -moz-osx-font-smoothing: grayscale;
 }
-#dddgzbmzfc thead, #dddgzbmzfc tbody, #dddgzbmzfc tfoot, #dddgzbmzfc tr, #dddgzbmzfc td, #dddgzbmzfc th {
+#cfgjjqqqpg thead, #cfgjjqqqpg tbody, #cfgjjqqqpg tfoot, #cfgjjqqqpg tr, #cfgjjqqqpg td, #cfgjjqqqpg th {
 border-style: none;
 }
-#dddgzbmzfc p {
+#cfgjjqqqpg p {
 margin: 0;
 padding: 0;
 }
-#dddgzbmzfc .gt_table {
+#cfgjjqqqpg .gt_table {
 display: table;
 border-collapse: collapse;
 line-height: normal;
@@ -5996,11 +6004,11 @@ border-left-style: none;
 border-left-width: 2px;
 border-left-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_caption {
+#cfgjjqqqpg .gt_caption {
 padding-top: 4px;
 padding-bottom: 4px;
 }
-#dddgzbmzfc .gt_title {
+#cfgjjqqqpg .gt_title {
 color: #333333;
 font-size: 125%;
 font-weight: initial;
@@ -6011,7 +6019,7 @@ padding-right: 5px;
 border-bottom-color: #FFFFFF;
 border-bottom-width: 0;
 }
-#dddgzbmzfc .gt_subtitle {
+#cfgjjqqqpg .gt_subtitle {
 color: #333333;
 font-size: 85%;
 font-weight: initial;
@@ -6022,7 +6030,7 @@ padding-right: 5px;
 border-top-color: #FFFFFF;
 border-top-width: 0;
 }
-#dddgzbmzfc .gt_heading {
+#cfgjjqqqpg .gt_heading {
 background-color: #FFFFFF;
 text-align: center;
 border-bottom-color: #FFFFFF;
@@ -6033,12 +6041,12 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_bottom_border {
+#cfgjjqqqpg .gt_bottom_border {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_col_headings {
+#cfgjjqqqpg .gt_col_headings {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -6052,7 +6060,7 @@ border-right-style: none;
 border-right-width: 1px;
 border-right-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_col_heading {
+#cfgjjqqqpg .gt_col_heading {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -6071,7 +6079,7 @@ padding-left: 5px;
 padding-right: 5px;
 overflow-x: hidden;
 }
-#dddgzbmzfc .gt_column_spanner_outer {
+#cfgjjqqqpg .gt_column_spanner_outer {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -6082,13 +6090,13 @@ padding-bottom: 0;
 padding-left: 4px;
 padding-right: 4px;
 }
-#dddgzbmzfc .gt_column_spanner_outer:first-child {
+#cfgjjqqqpg .gt_column_spanner_outer:first-child {
 padding-left: 0;
 }
-#dddgzbmzfc .gt_column_spanner_outer:last-child {
+#cfgjjqqqpg .gt_column_spanner_outer:last-child {
 padding-right: 0;
 }
-#dddgzbmzfc .gt_column_spanner {
+#cfgjjqqqpg .gt_column_spanner {
 border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
@@ -6099,10 +6107,10 @@ overflow-x: hidden;
 display: inline-block;
 width: 100%;
 }
-#dddgzbmzfc .gt_spanner_row {
+#cfgjjqqqpg .gt_spanner_row {
 border-bottom-style: hidden;
 }
-#dddgzbmzfc .gt_group_heading {
+#cfgjjqqqpg .gt_group_heading {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -6127,7 +6135,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 text-align: left;
 }
-#dddgzbmzfc .gt_empty_group_heading {
+#cfgjjqqqpg .gt_empty_group_heading {
 padding: 0.5px;
 color: #333333;
 background-color: #FFFFFF;
@@ -6141,13 +6149,13 @@ border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 vertical-align: middle;
 }
-#dddgzbmzfc .gt_from_md > :first-child {
+#cfgjjqqqpg .gt_from_md > :first-child {
 margin-top: 0;
 }
-#dddgzbmzfc .gt_from_md > :last-child {
+#cfgjjqqqpg .gt_from_md > :last-child {
 margin-bottom: 0;
 }
-#dddgzbmzfc .gt_row {
+#cfgjjqqqpg .gt_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -6165,7 +6173,7 @@ border-right-color: #D3D3D3;
 vertical-align: middle;
 overflow-x: hidden;
 }
-#dddgzbmzfc .gt_stub {
+#cfgjjqqqpg .gt_stub {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -6177,7 +6185,7 @@ border-right-color: #D3D3D3;
 padding-left: 5px;
 padding-right: 5px;
 }
-#dddgzbmzfc .gt_stub_row_group {
+#cfgjjqqqpg .gt_stub_row_group {
 color: #333333;
 background-color: #FFFFFF;
 font-size: 100%;
@@ -6190,13 +6198,13 @@ padding-left: 5px;
 padding-right: 5px;
 vertical-align: top;
 }
-#dddgzbmzfc .gt_row_group_first td {
+#cfgjjqqqpg .gt_row_group_first td {
 border-top-width: 2px;
 }
-#dddgzbmzfc .gt_row_group_first th {
+#cfgjjqqqpg .gt_row_group_first th {
 border-top-width: 2px;
 }
-#dddgzbmzfc .gt_summary_row {
+#cfgjjqqqpg .gt_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -6205,14 +6213,14 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#dddgzbmzfc .gt_first_summary_row {
+#cfgjjqqqpg .gt_first_summary_row {
 border-top-style: solid;
 border-top-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_first_summary_row.thick {
+#cfgjjqqqpg .gt_first_summary_row.thick {
 border-top-width: 2px;
 }
-#dddgzbmzfc .gt_last_summary_row {
+#cfgjjqqqpg .gt_last_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -6221,7 +6229,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_grand_summary_row {
+#cfgjjqqqpg .gt_grand_summary_row {
 color: #333333;
 background-color: #FFFFFF;
 text-transform: inherit;
@@ -6230,7 +6238,7 @@ padding-bottom: 8px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#dddgzbmzfc .gt_first_grand_summary_row {
+#cfgjjqqqpg .gt_first_grand_summary_row {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -6239,7 +6247,7 @@ border-top-style: double;
 border-top-width: 6px;
 border-top-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_last_grand_summary_row_top {
+#cfgjjqqqpg .gt_last_grand_summary_row_top {
 padding-top: 8px;
 padding-bottom: 8px;
 padding-left: 5px;
@@ -6248,10 +6256,10 @@ border-bottom-style: double;
 border-bottom-width: 6px;
 border-bottom-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_striped {
+#cfgjjqqqpg .gt_striped {
 background-color: rgba(128, 128, 128, 0.05);
 }
-#dddgzbmzfc .gt_table_body {
+#cfgjjqqqpg .gt_table_body {
 border-top-style: solid;
 border-top-width: 2px;
 border-top-color: #D3D3D3;
@@ -6259,7 +6267,7 @@ border-bottom-style: solid;
 border-bottom-width: 2px;
 border-bottom-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_footnotes {
+#cfgjjqqqpg .gt_footnotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -6272,7 +6280,7 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_footnote {
+#cfgjjqqqpg .gt_footnote {
 margin: 0px;
 font-size: 90%;
 padding-top: 4px;
@@ -6280,7 +6288,7 @@ padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#dddgzbmzfc .gt_sourcenotes {
+#cfgjjqqqpg .gt_sourcenotes {
 color: #333333;
 background-color: #FFFFFF;
 border-bottom-style: none;
@@ -6293,64 +6301,64 @@ border-right-style: none;
 border-right-width: 2px;
 border-right-color: #D3D3D3;
 }
-#dddgzbmzfc .gt_sourcenote {
+#cfgjjqqqpg .gt_sourcenote {
 font-size: 90%;
 padding-top: 4px;
 padding-bottom: 4px;
 padding-left: 5px;
 padding-right: 5px;
 }
-#dddgzbmzfc .gt_left {
+#cfgjjqqqpg .gt_left {
 text-align: left;
 }
-#dddgzbmzfc .gt_center {
+#cfgjjqqqpg .gt_center {
 text-align: center;
 }
-#dddgzbmzfc .gt_right {
+#cfgjjqqqpg .gt_right {
 text-align: right;
 font-variant-numeric: tabular-nums;
 }
-#dddgzbmzfc .gt_font_normal {
+#cfgjjqqqpg .gt_font_normal {
 font-weight: normal;
 }
-#dddgzbmzfc .gt_font_bold {
+#cfgjjqqqpg .gt_font_bold {
 font-weight: bold;
 }
-#dddgzbmzfc .gt_font_italic {
+#cfgjjqqqpg .gt_font_italic {
 font-style: italic;
 }
-#dddgzbmzfc .gt_super {
+#cfgjjqqqpg .gt_super {
 font-size: 65%;
 }
-#dddgzbmzfc .gt_footnote_marks {
+#cfgjjqqqpg .gt_footnote_marks {
 font-size: 75%;
 vertical-align: 0.4em;
 position: initial;
 }
-#dddgzbmzfc .gt_asterisk {
+#cfgjjqqqpg .gt_asterisk {
 font-size: 100%;
 vertical-align: 0;
 }
-#dddgzbmzfc .gt_indent_1 {
+#cfgjjqqqpg .gt_indent_1 {
 text-indent: 5px;
 }
-#dddgzbmzfc .gt_indent_2 {
+#cfgjjqqqpg .gt_indent_2 {
 text-indent: 10px;
 }
-#dddgzbmzfc .gt_indent_3 {
+#cfgjjqqqpg .gt_indent_3 {
 text-indent: 15px;
 }
-#dddgzbmzfc .gt_indent_4 {
+#cfgjjqqqpg .gt_indent_4 {
 text-indent: 20px;
 }
-#dddgzbmzfc .gt_indent_5 {
+#cfgjjqqqpg .gt_indent_5 {
 text-indent: 25px;
 }
-#dddgzbmzfc .katex-display {
+#cfgjjqqqpg .katex-display {
 display: inline-flex !important;
 margin-bottom: 0.75em !important;
 }
-#dddgzbmzfc div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#cfgjjqqqpg div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
 height: 0px !important;
 }
 </style>
@@ -6467,30 +6475,30 @@ height: 0px !important;
 <h4 class="tabset"><strong>All Patients</strong></h4>
 <div id="observed" class="section level5">
 <h5><strong>Observed</strong></h5>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-a833538b77953f6761e5" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-a833538b77953f6761e5">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[39.02,38.31],[0,0],[678,678],[37.39,36.59],[28,28],[14,14],[51,51],[0.25,0.24],[38.54,37.84],[39.5,38.78]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>median<\/th>\n      <th>lower_q<\/th>\n      <th>upper_q<\/th>\n      <th>se<\/th>\n      <th>ci_lower<\/th>\n      <th>ci_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"min","targets":2},{"name":"max","targets":3},{"name":"sd","targets":4},{"name":"median","targets":5},{"name":"lower_q","targets":6},{"name":"upper_q","targets":7},{"name":"se","targets":8},{"name":"ci_lower","targets":9},{"name":"ci_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-ba17bdfd06e2f995ec7c" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-ba17bdfd06e2f995ec7c">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[39.02,38.31],[0,0],[678,678],[37.39,36.59],[28,28],[14,14],[51,51],[0.25,0.24],[38.54,37.84],[39.5,38.78]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>median<\/th>\n      <th>lower_q<\/th>\n      <th>upper_q<\/th>\n      <th>se<\/th>\n      <th>ci_lower<\/th>\n      <th>ci_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"min","targets":2},{"name":"max","targets":3},{"name":"sd","targets":4},{"name":"median","targets":5},{"name":"lower_q","targets":6},{"name":"upper_q","targets":7},{"name":"se","targets":8},{"name":"ci_lower","targets":9},{"name":"ci_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 <div id="bootstrap" class="section level5">
 <h5><strong>Bootstrap</strong></h5>
 <p>Confidence intervals derived using normal, basic, and percentile
 methods.</p>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-8df721d576c415251e0b" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-8df721d576c415251e0b">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[39,38.312],[0.06,0.061],[0.245,0.247],[0.008,0.008],[38.554,37.823],[39.514,38.792],[38.541,37.797],[39.508,38.778],[38.527,37.841],[39.493,38.822]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_norm_lower<\/th>\n      <th>ci_norm_upper<\/th>\n      <th>ci_basic_lower<\/th>\n      <th>ci_basic_upper<\/th>\n      <th>ci_perc_lower<\/th>\n      <th>ci_perc_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"variance","targets":2},{"name":"sd","targets":3},{"name":"se","targets":4},{"name":"ci_norm_lower","targets":5},{"name":"ci_norm_upper","targets":6},{"name":"ci_basic_lower","targets":7},{"name":"ci_basic_upper","targets":8},{"name":"ci_perc_lower","targets":9},{"name":"ci_perc_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-b82a860461d4644f6d7c" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-b82a860461d4644f6d7c">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[39,38.312],[0.06,0.061],[0.245,0.247],[0.008,0.008],[38.554,37.823],[39.514,38.792],[38.541,37.797],[39.508,38.778],[38.527,37.841],[39.493,38.822]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_norm_lower<\/th>\n      <th>ci_norm_upper<\/th>\n      <th>ci_basic_lower<\/th>\n      <th>ci_basic_upper<\/th>\n      <th>ci_perc_lower<\/th>\n      <th>ci_perc_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"variance","targets":2},{"name":"sd","targets":3},{"name":"se","targets":4},{"name":"ci_norm_lower","targets":5},{"name":"ci_norm_upper","targets":6},{"name":"ci_basic_lower","targets":7},{"name":"ci_basic_upper","targets":8},{"name":"ci_perc_lower","targets":9},{"name":"ci_perc_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 </div>
 <div id="users-only" class="section level4 tabset">
 <h4 class="tabset"><strong>Users Only</strong></h4>
 <div id="observed-1" class="section level5">
 <h5><strong>Observed</strong></h5>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-454e8d6ee1d48b6b2ed4" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-454e8d6ee1d48b6b2ed4">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[40,39.24],[1,1],[678,678],[37.44,36.62],[29,28],[15,15],[52,51],[0.25,0.25],[39.51,38.76],[40.49,39.72]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>median<\/th>\n      <th>lower_q<\/th>\n      <th>upper_q<\/th>\n      <th>se<\/th>\n      <th>ci_lower<\/th>\n      <th>ci_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"min","targets":2},{"name":"max","targets":3},{"name":"sd","targets":4},{"name":"median","targets":5},{"name":"lower_q","targets":6},{"name":"upper_q","targets":7},{"name":"se","targets":8},{"name":"ci_lower","targets":9},{"name":"ci_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-82d5c278677eb8f74047" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-82d5c278677eb8f74047">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[40,39.24],[1,1],[678,678],[37.44,36.62],[29,28],[15,15],[52,51],[0.25,0.25],[39.51,38.76],[40.49,39.72]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>median<\/th>\n      <th>lower_q<\/th>\n      <th>upper_q<\/th>\n      <th>se<\/th>\n      <th>ci_lower<\/th>\n      <th>ci_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"min","targets":2},{"name":"max","targets":3},{"name":"sd","targets":4},{"name":"median","targets":5},{"name":"lower_q","targets":6},{"name":"upper_q","targets":7},{"name":"se","targets":8},{"name":"ci_lower","targets":9},{"name":"ci_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 <div id="bootstrap-1" class="section level5">
 <h5><strong>Bootstrap</strong></h5>
 <p>Confidence intervals derived using normal, basic, and percentile
 methods.</p>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-00bd7a5b00716ad04415" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-00bd7a5b00716ad04415">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[39.992,39.25],[0.067,0.065],[0.259,0.254],[0.008,0.008],[39.498,38.732],[40.513,39.728],[39.517,38.783],[40.523,39.755],[39.475,38.725],[40.481,39.697]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_norm_lower<\/th>\n      <th>ci_norm_upper<\/th>\n      <th>ci_basic_lower<\/th>\n      <th>ci_basic_upper<\/th>\n      <th>ci_perc_lower<\/th>\n      <th>ci_perc_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"variance","targets":2},{"name":"sd","targets":3},{"name":"se","targets":4},{"name":"ci_norm_lower","targets":5},{"name":"ci_norm_upper","targets":6},{"name":"ci_basic_lower","targets":7},{"name":"ci_basic_upper","targets":8},{"name":"ci_perc_lower","targets":9},{"name":"ci_perc_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-8104a495552e050562b3" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-8104a495552e050562b3">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[39.992,39.25],[0.067,0.065],[0.259,0.254],[0.008,0.008],[39.498,38.732],[40.513,39.728],[39.517,38.783],[40.523,39.755],[39.475,38.725],[40.481,39.697]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_norm_lower<\/th>\n      <th>ci_norm_upper<\/th>\n      <th>ci_basic_lower<\/th>\n      <th>ci_basic_upper<\/th>\n      <th>ci_perc_lower<\/th>\n      <th>ci_perc_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"variance","targets":2},{"name":"sd","targets":3},{"name":"se","targets":4},{"name":"ci_norm_lower","targets":5},{"name":"ci_norm_upper","targets":6},{"name":"ci_basic_lower","targets":7},{"name":"ci_basic_upper","targets":8},{"name":"ci_perc_lower","targets":9},{"name":"ci_perc_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 </div>
 </div>
@@ -6522,30 +6530,30 @@ time</p></li>
 <h4 class="tabset"><strong>All Patients</strong></h4>
 <div id="observed-2" class="section level5">
 <h5><strong>Observed</strong></h5>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-624811377b1f5fd3c937" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-624811377b1f5fd3c937">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[26.3,20.55,25.81,20.19],[0,0,0,0],[346,332,346,332],[22.37,21.05,21.89,20.62],[11,6,11,6],[20,15,20,14],[34,28,34,27],[23106,14300,22900,14172],[607611,293924,591125,286168],[26.3,12.72,25.81,12.5],[0.15,0.18,0.14,0.17],[26.01,20.21,25.53,19.85],[26.59,20.9,26.1,20.53]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean_exposed<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>q1<\/th>\n      <th>median<\/th>\n      <th>q3<\/th>\n      <th>n_exposed<\/th>\n      <th>tot_encounters<\/th>\n      <th>mean_all_patients<\/th>\n      <th>se<\/th>\n      <th>lower<\/th>\n      <th>upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":12,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":13,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":14,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11,12,13,14]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean_exposed","targets":2},{"name":"min","targets":3},{"name":"max","targets":4},{"name":"sd","targets":5},{"name":"q1","targets":6},{"name":"median","targets":7},{"name":"q3","targets":8},{"name":"n_exposed","targets":9},{"name":"tot_encounters","targets":10},{"name":"mean_all_patients","targets":11},{"name":"se","targets":12},{"name":"lower","targets":13},{"name":"upper","targets":14}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render","options.columnDefs.10.render","options.columnDefs.11.render","options.columnDefs.12.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-fb51b06356108f734712" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-fb51b06356108f734712">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[26.3,20.55,25.81,20.19],[0,0,0,0],[346,332,346,332],[22.37,21.05,21.89,20.62],[11,6,11,6],[20,15,20,14],[34,28,34,27],[23106,14300,22900,14172],[607611,293924,591125,286168],[26.3,12.72,25.81,12.5],[0.15,0.18,0.14,0.17],[26.01,20.21,25.53,19.85],[26.59,20.9,26.1,20.53]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean_exposed<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>q1<\/th>\n      <th>median<\/th>\n      <th>q3<\/th>\n      <th>n_exposed<\/th>\n      <th>tot_encounters<\/th>\n      <th>mean_all_patients<\/th>\n      <th>se<\/th>\n      <th>lower<\/th>\n      <th>upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":12,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":13,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":14,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11,12,13,14]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean_exposed","targets":2},{"name":"min","targets":3},{"name":"max","targets":4},{"name":"sd","targets":5},{"name":"q1","targets":6},{"name":"median","targets":7},{"name":"q3","targets":8},{"name":"n_exposed","targets":9},{"name":"tot_encounters","targets":10},{"name":"mean_all_patients","targets":11},{"name":"se","targets":12},{"name":"lower","targets":13},{"name":"upper","targets":14}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render","options.columnDefs.10.render","options.columnDefs.11.render","options.columnDefs.12.render"],"jsHooks":[]}</script>
 </div>
 <div id="bootstrap-2" class="section level5">
 <h5><strong>Bootstrap</strong></h5>
 <p>Confidence intervals derived using normal, basic, and percentile
 methods.</p>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-64a97cd851b0a00d2b09" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-64a97cd851b0a00d2b09">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[26.292,20.557,25.814,20.193],[0.02,0.031,0.022,0.03],[0.142,0.176,0.149,0.174],[0.004,0.006,0.005,0.005],[26.022,20.207,25.52,19.852],[26.58,20.897,26.105,20.533],[26.019,20.216,25.513,19.848],[26.565,20.909,26.094,20.546],[26.028,20.199,25.532,19.839],[26.575,20.892,26.114,20.537]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_lower_norm<\/th>\n      <th>ci_upper_norm<\/th>\n      <th>ci_lower_basic<\/th>\n      <th>ci_upper_basic<\/th>\n      <th>ci_lower_perc<\/th>\n      <th>ci_upper_perc<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean","targets":2},{"name":"variance","targets":3},{"name":"sd","targets":4},{"name":"se","targets":5},{"name":"ci_lower_norm","targets":6},{"name":"ci_upper_norm","targets":7},{"name":"ci_lower_basic","targets":8},{"name":"ci_upper_basic","targets":9},{"name":"ci_lower_perc","targets":10},{"name":"ci_upper_perc","targets":11}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-fa5bbc44a57fdfe7e9e7" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-fa5bbc44a57fdfe7e9e7">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[26.292,20.557,25.814,20.193],[0.02,0.031,0.022,0.03],[0.142,0.176,0.149,0.174],[0.004,0.006,0.005,0.005],[26.022,20.207,25.52,19.852],[26.58,20.897,26.105,20.533],[26.019,20.216,25.513,19.848],[26.565,20.909,26.094,20.546],[26.028,20.199,25.532,19.839],[26.575,20.892,26.114,20.537]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_lower_norm<\/th>\n      <th>ci_upper_norm<\/th>\n      <th>ci_lower_basic<\/th>\n      <th>ci_upper_basic<\/th>\n      <th>ci_lower_perc<\/th>\n      <th>ci_upper_perc<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean","targets":2},{"name":"variance","targets":3},{"name":"sd","targets":4},{"name":"se","targets":5},{"name":"ci_lower_norm","targets":6},{"name":"ci_upper_norm","targets":7},{"name":"ci_lower_basic","targets":8},{"name":"ci_upper_basic","targets":9},{"name":"ci_lower_perc","targets":10},{"name":"ci_upper_perc","targets":11}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 </div>
 <div id="users-only-1" class="section level4 tabset">
 <h4 class="tabset"><strong>Users Only</strong></h4>
 <div id="observed-3" class="section level5">
 <h5><strong>Observed</strong></h5>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-ad88f88aaaafd5dd6edf" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-ad88f88aaaafd5dd6edf">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[26.92,20.71,26.41,20.35],[0,0,0,0],[346,332,346,332],[22.36,21.06,21.87,20.63],[12,6,12,6],[21,15,20,15],[35,28,34,28],[22478,14187,22302,14062],[605212,293878,589003,286131],[26.92,13.07,26.41,12.83],[0.15,0.18,0.15,0.17],[26.63,20.37,26.12,20.01],[27.22,21.06,26.7,20.69]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean_exposed<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>q1<\/th>\n      <th>median<\/th>\n      <th>q3<\/th>\n      <th>n_exposed<\/th>\n      <th>tot_encounters<\/th>\n      <th>mean_all_patients<\/th>\n      <th>se<\/th>\n      <th>lower<\/th>\n      <th>upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":12,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":13,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":14,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11,12,13,14]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean_exposed","targets":2},{"name":"min","targets":3},{"name":"max","targets":4},{"name":"sd","targets":5},{"name":"q1","targets":6},{"name":"median","targets":7},{"name":"q3","targets":8},{"name":"n_exposed","targets":9},{"name":"tot_encounters","targets":10},{"name":"mean_all_patients","targets":11},{"name":"se","targets":12},{"name":"lower","targets":13},{"name":"upper","targets":14}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render","options.columnDefs.10.render","options.columnDefs.11.render","options.columnDefs.12.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-c13c0be1143088484217" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-c13c0be1143088484217">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[26.92,20.71,26.41,20.35],[0,0,0,0],[346,332,346,332],[22.36,21.06,21.87,20.63],[12,6,12,6],[21,15,20,15],[35,28,34,28],[22478,14187,22302,14062],[605212,293878,589003,286131],[26.92,13.07,26.41,12.83],[0.15,0.18,0.15,0.17],[26.63,20.37,26.12,20.01],[27.22,21.06,26.7,20.69]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean_exposed<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>q1<\/th>\n      <th>median<\/th>\n      <th>q3<\/th>\n      <th>n_exposed<\/th>\n      <th>tot_encounters<\/th>\n      <th>mean_all_patients<\/th>\n      <th>se<\/th>\n      <th>lower<\/th>\n      <th>upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":12,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":13,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":14,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11,12,13,14]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean_exposed","targets":2},{"name":"min","targets":3},{"name":"max","targets":4},{"name":"sd","targets":5},{"name":"q1","targets":6},{"name":"median","targets":7},{"name":"q3","targets":8},{"name":"n_exposed","targets":9},{"name":"tot_encounters","targets":10},{"name":"mean_all_patients","targets":11},{"name":"se","targets":12},{"name":"lower","targets":13},{"name":"upper","targets":14}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render","options.columnDefs.10.render","options.columnDefs.11.render","options.columnDefs.12.render"],"jsHooks":[]}</script>
 </div>
 <div id="bootstrap-3" class="section level5">
 <h5><strong>Bootstrap</strong></h5>
 <p>Confidence intervals derived using normal, basic, and percentile
 methods.</p>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-d8822d3be9650dd9f94e" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-d8822d3be9650dd9f94e">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[26.923,20.707,26.416,20.352],[0.024,0.032,0.023,0.032],[0.156,0.179,0.15,0.18],[0.005,0.006,0.005,0.006],[26.621,20.37,26.11,19.991],[27.231,21.073,26.699,20.697],[26.633,20.358,26.121,20.01],[27.237,21.066,26.717,20.72],[26.612,20.363,26.104,19.975],[27.216,21.071,26.7,20.686]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_lower_norm<\/th>\n      <th>ci_upper_norm<\/th>\n      <th>ci_lower_basic<\/th>\n      <th>ci_upper_basic<\/th>\n      <th>ci_lower_perc<\/th>\n      <th>ci_upper_perc<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean","targets":2},{"name":"variance","targets":3},{"name":"sd","targets":4},{"name":"se","targets":5},{"name":"ci_lower_norm","targets":6},{"name":"ci_upper_norm","targets":7},{"name":"ci_lower_basic","targets":8},{"name":"ci_upper_basic","targets":9},{"name":"ci_lower_perc","targets":10},{"name":"ci_upper_perc","targets":11}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-9df843d54caada1ffb82" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-9df843d54caada1ffb82">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[26.923,20.707,26.416,20.352],[0.024,0.032,0.023,0.032],[0.156,0.179,0.15,0.18],[0.005,0.006,0.005,0.006],[26.621,20.37,26.11,19.991],[27.231,21.073,26.699,20.697],[26.633,20.358,26.121,20.01],[27.237,21.066,26.717,20.72],[26.612,20.363,26.104,19.975],[27.216,21.071,26.7,20.686]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_lower_norm<\/th>\n      <th>ci_upper_norm<\/th>\n      <th>ci_lower_basic<\/th>\n      <th>ci_upper_basic<\/th>\n      <th>ci_lower_perc<\/th>\n      <th>ci_upper_perc<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean","targets":2},{"name":"variance","targets":3},{"name":"sd","targets":4},{"name":"se","targets":5},{"name":"ci_lower_norm","targets":6},{"name":"ci_upper_norm","targets":7},{"name":"ci_lower_basic","targets":8},{"name":"ci_upper_basic","targets":9},{"name":"ci_lower_perc","targets":10},{"name":"ci_upper_perc","targets":11}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 </div>
 </div>
@@ -6596,30 +6604,30 @@ Patients, All Months)</p>
 <h4 class="tabset"><strong>All Patients</strong></h4>
 <div id="observed-4" class="section level5">
 <h5><strong>Observed</strong></h5>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-046172bf5dd936f05e5d" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-046172bf5dd936f05e5d">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[1113.42,1087.13],[0,0],[19104.33,19809.38],[1141.63,1116.37],[782.63,763.51],[339.93,331.22],[1508.08,1470.56],[7.51,7.38],[1098.7,1072.67],[1128.14,1101.59]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>median<\/th>\n      <th>lower_q<\/th>\n      <th>upper_q<\/th>\n      <th>se<\/th>\n      <th>ci_lower<\/th>\n      <th>ci_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"min","targets":2},{"name":"max","targets":3},{"name":"sd","targets":4},{"name":"median","targets":5},{"name":"lower_q","targets":6},{"name":"upper_q","targets":7},{"name":"se","targets":8},{"name":"ci_lower","targets":9},{"name":"ci_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-204260c65562cdac833e" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-204260c65562cdac833e">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[1113.42,1087.13],[0,0],[19104.33,19809.38],[1141.63,1116.37],[782.63,763.51],[339.93,331.22],[1508.08,1470.56],[7.51,7.38],[1098.7,1072.67],[1128.14,1101.59]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>median<\/th>\n      <th>lower_q<\/th>\n      <th>upper_q<\/th>\n      <th>se<\/th>\n      <th>ci_lower<\/th>\n      <th>ci_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"min","targets":2},{"name":"max","targets":3},{"name":"sd","targets":4},{"name":"median","targets":5},{"name":"lower_q","targets":6},{"name":"upper_q","targets":7},{"name":"se","targets":8},{"name":"ci_lower","targets":9},{"name":"ci_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 <div id="bootstrap-4" class="section level5">
 <h5><strong>Bootstrap</strong></h5>
 <p>Confidence intervals derived using normal, basic, and percentile
 methods.</p>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-cb0de429a06bccc6ad17" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-cb0de429a06bccc6ad17">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[1112.792,1087.052],[57.186,54.989],[7.562,7.415],[0.239,0.234],[1099.222,1072.669],[1128.865,1101.737],[1098.476,1072.003],[1128.562,1101.713],[1098.274,1072.543],[1128.359,1102.253]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_norm_lower<\/th>\n      <th>ci_norm_upper<\/th>\n      <th>ci_basic_lower<\/th>\n      <th>ci_basic_upper<\/th>\n      <th>ci_perc_lower<\/th>\n      <th>ci_perc_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"variance","targets":2},{"name":"sd","targets":3},{"name":"se","targets":4},{"name":"ci_norm_lower","targets":5},{"name":"ci_norm_upper","targets":6},{"name":"ci_basic_lower","targets":7},{"name":"ci_basic_upper","targets":8},{"name":"ci_perc_lower","targets":9},{"name":"ci_perc_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-685f2f9f2cd62d134932" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-685f2f9f2cd62d134932">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[1112.792,1087.052],[57.186,54.989],[7.562,7.415],[0.239,0.234],[1099.222,1072.669],[1128.865,1101.737],[1098.476,1072.003],[1128.562,1101.713],[1098.274,1072.543],[1128.359,1102.253]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_norm_lower<\/th>\n      <th>ci_norm_upper<\/th>\n      <th>ci_basic_lower<\/th>\n      <th>ci_basic_upper<\/th>\n      <th>ci_perc_lower<\/th>\n      <th>ci_perc_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"variance","targets":2},{"name":"sd","targets":3},{"name":"se","targets":4},{"name":"ci_norm_lower","targets":5},{"name":"ci_norm_upper","targets":6},{"name":"ci_basic_lower","targets":7},{"name":"ci_basic_upper","targets":8},{"name":"ci_perc_lower","targets":9},{"name":"ci_perc_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 </div>
 <div id="users-only-3" class="section level4 tabset">
 <h4 class="tabset"><strong>Users Only</strong></h4>
 <div id="observed-5" class="section level5">
 <h5><strong>Observed</strong></h5>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-08867cebafa6aaff17b0" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-08867cebafa6aaff17b0">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[1144.26,1115.95],[2.59,3.06],[19104.33,19809.38],[1142.25,1117.09],[810.5599999999999,791.42],[368.36,358.06],[1539.36,1494.93],[7.62,7.48],[1129.32,1101.29],[1159.19,1130.61]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>median<\/th>\n      <th>lower_q<\/th>\n      <th>upper_q<\/th>\n      <th>se<\/th>\n      <th>ci_lower<\/th>\n      <th>ci_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"min","targets":2},{"name":"max","targets":3},{"name":"sd","targets":4},{"name":"median","targets":5},{"name":"lower_q","targets":6},{"name":"upper_q","targets":7},{"name":"se","targets":8},{"name":"ci_lower","targets":9},{"name":"ci_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-5b3a44cbc9b7ac000926" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-5b3a44cbc9b7ac000926">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[1144.26,1115.95],[2.59,3.06],[19104.33,19809.38],[1142.25,1117.09],[810.5599999999999,791.42],[368.36,358.06],[1539.36,1494.93],[7.62,7.48],[1129.32,1101.29],[1159.19,1130.61]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>median<\/th>\n      <th>lower_q<\/th>\n      <th>upper_q<\/th>\n      <th>se<\/th>\n      <th>ci_lower<\/th>\n      <th>ci_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"min","targets":2},{"name":"max","targets":3},{"name":"sd","targets":4},{"name":"median","targets":5},{"name":"lower_q","targets":6},{"name":"upper_q","targets":7},{"name":"se","targets":8},{"name":"ci_lower","targets":9},{"name":"ci_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 <div id="bootstrap-5" class="section level5">
 <h5><strong>Bootstrap</strong></h5>
 <p>Confidence intervals derived using normal, basic, and percentile
 methods.</p>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-d1c78712b9149b224f5f" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-d1c78712b9149b224f5f">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[1144.095,1116.378],[63.552,61.426],[7.972,7.837],[0.252,0.248],[1128.792,1100.161],[1160.041,1130.883],[1128.561,1101.295],[1160.824,1132.087],[1127.688,1099.813],[1159.951,1130.605]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_norm_lower<\/th>\n      <th>ci_norm_upper<\/th>\n      <th>ci_basic_lower<\/th>\n      <th>ci_basic_upper<\/th>\n      <th>ci_perc_lower<\/th>\n      <th>ci_perc_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"variance","targets":2},{"name":"sd","targets":3},{"name":"se","targets":4},{"name":"ci_norm_lower","targets":5},{"name":"ci_norm_upper","targets":6},{"name":"ci_basic_lower","targets":7},{"name":"ci_basic_upper","targets":8},{"name":"ci_perc_lower","targets":9},{"name":"ci_perc_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-c232ef4ad17d210f48c4" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-c232ef4ad17d210f48c4">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","OMOP"],[1144.095,1116.378],[63.552,61.426],[7.972,7.837],[0.252,0.248],[1128.792,1100.161],[1160.041,1130.883],[1128.561,1101.295],[1160.824,1132.087],[1127.688,1099.813],[1159.951,1130.605]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_norm_lower<\/th>\n      <th>ci_norm_upper<\/th>\n      <th>ci_basic_lower<\/th>\n      <th>ci_basic_upper<\/th>\n      <th>ci_perc_lower<\/th>\n      <th>ci_perc_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10]},{"name":"Cohort","targets":0},{"name":"mean","targets":1},{"name":"variance","targets":2},{"name":"sd","targets":3},{"name":"se","targets":4},{"name":"ci_norm_lower","targets":5},{"name":"ci_norm_upper","targets":6},{"name":"ci_basic_lower","targets":7},{"name":"ci_basic_upper","targets":8},{"name":"ci_perc_lower","targets":9},{"name":"ci_perc_upper","targets":10}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 </div>
 </div>
@@ -6651,28 +6659,28 @@ time</p></li>
 <h4 class="tabset"><strong>All Patients</strong></h4>
 <div id="observed-6" class="section level5">
 <h5><strong>Observed</strong></h5>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-6d2e2f3442cdc4abdce3" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-6d2e2f3442cdc4abdce3">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[727.9,622.92,710.01,609.38],[0,0,0,0],[16052.42,9340,15909.51,9341.540000000001],[693.0599999999999,652.92,676.04,639.0700000000001],[261.16,174.8,254.94,171.91],[539.78,445.69,529.0599999999999,435.31],[975.89,851.8200000000001,951.77,836.13],[23106,14300,22900,14172],[16818921.2,8907705.699999999,16259129.83,8636096.98],[727.9,385.51,710.01,377.12],[4.56,5.46,4.47,5.37],[718.97,612.21,701.25,598.85],[736.84,633.62,718.76,619.9]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean_exposed<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>q1<\/th>\n      <th>median<\/th>\n      <th>q3<\/th>\n      <th>n_exposed<\/th>\n      <th>total_costs<\/th>\n      <th>mean_all_patients<\/th>\n      <th>se<\/th>\n      <th>lower<\/th>\n      <th>upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":12,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":13,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":14,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11,12,13,14]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean_exposed","targets":2},{"name":"min","targets":3},{"name":"max","targets":4},{"name":"sd","targets":5},{"name":"q1","targets":6},{"name":"median","targets":7},{"name":"q3","targets":8},{"name":"n_exposed","targets":9},{"name":"total_costs","targets":10},{"name":"mean_all_patients","targets":11},{"name":"se","targets":12},{"name":"lower","targets":13},{"name":"upper","targets":14}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render","options.columnDefs.10.render","options.columnDefs.11.render","options.columnDefs.12.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-ed61193adbf0426d445d" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-ed61193adbf0426d445d">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[727.9,622.92,710.01,609.38],[0,0,0,0],[16052.42,9340,15909.51,9341.540000000001],[693.0599999999999,652.92,676.04,639.0700000000001],[261.16,174.8,254.94,171.91],[539.78,445.69,529.0599999999999,435.31],[975.89,851.8200000000001,951.77,836.13],[23106,14300,22900,14172],[16818921.2,8907705.699999999,16259129.83,8636096.98],[727.9,385.51,710.01,377.12],[4.56,5.46,4.47,5.37],[718.97,612.21,701.25,598.85],[736.84,633.62,718.76,619.9]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean_exposed<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>q1<\/th>\n      <th>median<\/th>\n      <th>q3<\/th>\n      <th>n_exposed<\/th>\n      <th>total_costs<\/th>\n      <th>mean_all_patients<\/th>\n      <th>se<\/th>\n      <th>lower<\/th>\n      <th>upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":12,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":13,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":14,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11,12,13,14]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean_exposed","targets":2},{"name":"min","targets":3},{"name":"max","targets":4},{"name":"sd","targets":5},{"name":"q1","targets":6},{"name":"median","targets":7},{"name":"q3","targets":8},{"name":"n_exposed","targets":9},{"name":"total_costs","targets":10},{"name":"mean_all_patients","targets":11},{"name":"se","targets":12},{"name":"lower","targets":13},{"name":"upper","targets":14}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render","options.columnDefs.10.render","options.columnDefs.11.render","options.columnDefs.12.render"],"jsHooks":[]}</script>
 </div>
 <div id="bootstrap-6" class="section level5">
 <h5><strong>Bootstrap</strong></h5>
 <p>Confidence intervals derived using normal, basic, and percentile
 methods.</p>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-2abc594e624a4e376fb5" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-2abc594e624a4e376fb5">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[727.829,622.9880000000001,709.951,609.2569999999999],[19.474,28.962,20.774,28.683],[4.413,5.382,4.558,5.356],[0.14,0.17,0.144,0.169],[719.327,612.297,701.127,599.001],[736.626,633.393,718.994,619.995],[718.954,612.381,701.0599999999999,598.766],[736.765,633.3200000000001,718.798,620.0309999999999],[719.0410000000001,612.513,701.213,598.724],[736.852,633.452,718.952,619.9880000000001]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_lower_norm<\/th>\n      <th>ci_upper_norm<\/th>\n      <th>ci_lower_basic<\/th>\n      <th>ci_upper_basic<\/th>\n      <th>ci_lower_perc<\/th>\n      <th>ci_upper_perc<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean","targets":2},{"name":"variance","targets":3},{"name":"sd","targets":4},{"name":"se","targets":5},{"name":"ci_lower_norm","targets":6},{"name":"ci_upper_norm","targets":7},{"name":"ci_lower_basic","targets":8},{"name":"ci_upper_basic","targets":9},{"name":"ci_lower_perc","targets":10},{"name":"ci_upper_perc","targets":11}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-670724eb1b68d3c77c2a" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-670724eb1b68d3c77c2a">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[727.829,622.9880000000001,709.951,609.2569999999999],[19.474,28.962,20.774,28.683],[4.413,5.382,4.558,5.356],[0.14,0.17,0.144,0.169],[719.327,612.297,701.127,599.001],[736.626,633.393,718.994,619.995],[718.954,612.381,701.0599999999999,598.766],[736.765,633.3200000000001,718.798,620.0309999999999],[719.0410000000001,612.513,701.213,598.724],[736.852,633.452,718.952,619.9880000000001]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_lower_norm<\/th>\n      <th>ci_upper_norm<\/th>\n      <th>ci_lower_basic<\/th>\n      <th>ci_upper_basic<\/th>\n      <th>ci_lower_perc<\/th>\n      <th>ci_upper_perc<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean","targets":2},{"name":"variance","targets":3},{"name":"sd","targets":4},{"name":"se","targets":5},{"name":"ci_lower_norm","targets":6},{"name":"ci_upper_norm","targets":7},{"name":"ci_lower_basic","targets":8},{"name":"ci_upper_basic","targets":9},{"name":"ci_lower_perc","targets":10},{"name":"ci_upper_perc","targets":11}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 </div>
 <div id="users-only-4" class="section level4 tabset">
 <h4 class="tabset"><strong>Users Only</strong></h4>
 <div id="observed-7" class="section level5">
 <h5><strong>Observed</strong></h5>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-2608d6c2210b1756169d" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-2608d6c2210b1756169d">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[747.98,627.87,728.72,614.13],[0,0,0,0],[16052.42,9340,15909.51,9341.540000000001],[692.04,653.14,675.17,639.29],[284.32,180.5,277.01,176.95],[560.42,449.61,545.7,441.46],[992.36,856.25,967.73,840.64],[22478,14187,22302,14062],[16813002.84,8907582.939999999,16251961.38,8635953.529999999],[747.98,396.28,728.72,387.23],[4.62,5.48,4.52,5.39],[738.9299999999999,617.12,719.86,603.5700000000001],[757.02,638.62,737.58,624.7]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean_exposed<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>q1<\/th>\n      <th>median<\/th>\n      <th>q3<\/th>\n      <th>n_exposed<\/th>\n      <th>total_costs<\/th>\n      <th>mean_all_patients<\/th>\n      <th>se<\/th>\n      <th>lower<\/th>\n      <th>upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":12,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":13,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":14,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11,12,13,14]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean_exposed","targets":2},{"name":"min","targets":3},{"name":"max","targets":4},{"name":"sd","targets":5},{"name":"q1","targets":6},{"name":"median","targets":7},{"name":"q3","targets":8},{"name":"n_exposed","targets":9},{"name":"total_costs","targets":10},{"name":"mean_all_patients","targets":11},{"name":"se","targets":12},{"name":"lower","targets":13},{"name":"upper","targets":14}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render","options.columnDefs.10.render","options.columnDefs.11.render","options.columnDefs.12.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-ff248e673d1fd66d2d22" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-ff248e673d1fd66d2d22">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[747.98,627.87,728.72,614.13],[0,0,0,0],[16052.42,9340,15909.51,9341.540000000001],[692.04,653.14,675.17,639.29],[284.32,180.5,277.01,176.95],[560.42,449.61,545.7,441.46],[992.36,856.25,967.73,840.64],[22478,14187,22302,14062],[16813002.84,8907582.939999999,16251961.38,8635953.529999999],[747.98,396.28,728.72,387.23],[4.62,5.48,4.52,5.39],[738.9299999999999,617.12,719.86,603.5700000000001],[757.02,638.62,737.58,624.7]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean_exposed<\/th>\n      <th>min<\/th>\n      <th>max<\/th>\n      <th>sd<\/th>\n      <th>q1<\/th>\n      <th>median<\/th>\n      <th>q3<\/th>\n      <th>n_exposed<\/th>\n      <th>total_costs<\/th>\n      <th>mean_all_patients<\/th>\n      <th>se<\/th>\n      <th>lower<\/th>\n      <th>upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":12,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":13,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":14,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11,12,13,14]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean_exposed","targets":2},{"name":"min","targets":3},{"name":"max","targets":4},{"name":"sd","targets":5},{"name":"q1","targets":6},{"name":"median","targets":7},{"name":"q3","targets":8},{"name":"n_exposed","targets":9},{"name":"total_costs","targets":10},{"name":"mean_all_patients","targets":11},{"name":"se","targets":12},{"name":"lower","targets":13},{"name":"upper","targets":14}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render","options.columnDefs.10.render","options.columnDefs.11.render","options.columnDefs.12.render"],"jsHooks":[]}</script>
 </div>
 <div id="bootstrap-7" class="section level5">
 <h5><strong>Bootstrap</strong></h5>
-<div class="datatables html-widget html-fill-item" id="htmlwidget-bffb9863f1af887067d2" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-bffb9863f1af887067d2">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[747.963,627.665,728.975,614.337],[23.174,30.861,21.464,31.789],[4.814,5.555,4.633,5.638],[0.152,0.176,0.147,0.178],[738.553,617.186,719.389,602.881],[757.424,638.962,737.55,624.982],[738.603,616.597,719.513,603.2670000000001],[757.597,638.846,738.299,625.324],[738.355,616.893,719.145,602.944],[757.349,639.141,737.931,625.002]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_lower_norm<\/th>\n      <th>ci_upper_norm<\/th>\n      <th>ci_lower_basic<\/th>\n      <th>ci_upper_basic<\/th>\n      <th>ci_lower_perc<\/th>\n      <th>ci_upper_perc<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean","targets":2},{"name":"variance","targets":3},{"name":"sd","targets":4},{"name":"se","targets":5},{"name":"ci_lower_norm","targets":6},{"name":"ci_upper_norm","targets":7},{"name":"ci_lower_basic","targets":8},{"name":"ci_upper_basic","targets":9},{"name":"ci_lower_perc","targets":10},{"name":"ci_upper_perc","targets":11}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-af0cb43e27d40ea4a73f" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-af0cb43e27d40ea4a73f">{"x":{"filter":"none","vertical":false,"data":[["SOURCE","SOURCE","OMOP","OMOP"],[1,2,1,2],[747.963,627.665,728.975,614.337],[23.174,30.861,21.464,31.789],[4.814,5.555,4.633,5.638],[0.152,0.176,0.147,0.178],[738.553,617.186,719.389,602.881],[757.424,638.962,737.55,624.982],[738.603,616.597,719.513,603.2670000000001],[757.597,638.846,738.299,625.324],[738.355,616.893,719.145,602.944],[757.349,639.141,737.931,625.002]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Cohort<\/th>\n      <th>year<\/th>\n      <th>mean<\/th>\n      <th>variance<\/th>\n      <th>sd<\/th>\n      <th>se<\/th>\n      <th>ci_lower_norm<\/th>\n      <th>ci_upper_norm<\/th>\n      <th>ci_lower_basic<\/th>\n      <th>ci_upper_basic<\/th>\n      <th>ci_lower_perc<\/th>\n      <th>ci_upper_perc<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"dom":"t","ordering":false,"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":3,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":7,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":8,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":9,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":10,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"targets":11,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 2, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11]},{"name":"Cohort","targets":0},{"name":"year","targets":1},{"name":"mean","targets":2},{"name":"variance","targets":3},{"name":"sd","targets":4},{"name":"se","targets":5},{"name":"ci_lower_norm","targets":6},{"name":"ci_upper_norm","targets":7},{"name":"ci_lower_basic","targets":8},{"name":"ci_upper_basic","targets":9},{"name":"ci_lower_perc","targets":10},{"name":"ci_upper_perc","targets":11}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render","options.columnDefs.4.render","options.columnDefs.5.render","options.columnDefs.6.render","options.columnDefs.7.render","options.columnDefs.8.render","options.columnDefs.9.render"],"jsHooks":[]}</script>
 </div>
 </div>
 </div>

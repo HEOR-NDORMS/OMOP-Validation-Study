@@ -41,11 +41,17 @@ Results are stratified by:
 
 # Inputs
 
--   Unit costs were assigned using the latest (2024 edition) PSSRU Unit Costs of Health and Social Care manual. OMOP specialties were costed based on their corresponding SOURCE CPRD specialties.
+-   Unit costs were assigned using the latest (2024 edition) PSSRU Unit Costs of Health and Social Care manual.
+
+-   Source specialties were costed based on unit costs and mean estimates of encounter duration provided by clinical expert opinion.
+
+-   OMOP specialties were costed based on their corresponding SOURCE CPRD specialties.
 
 -   Where multiple SOURCE CPRD specialties mapped to the same OMOP concept ID, an average of their costs was used to assign a single unit cost in OMOP.
 
 -   For SOURCE CPRD specialties that did not map to an OMOP concept ID (i.e., no matching concept id), their costs were averaged and applied uniformly to all *Uncategorised* specialties in OMOP.
+
+-   All specialties were categorised into groups (e.g., Admin, GP, Nurse etc) as provided by clinical expert opinion. Where assumptions were made, they're reported in appendix.
 
 ## Mapping specialties
 
@@ -334,6 +340,8 @@ grid.arrange(Exposure_Time_Raw_g_with_title, Exposure_Time_OMOP_g_with_title, nc
 ```
 
 ### Specialties
+
+Total number of encounters, by specialty category.
 
 ```{r message=FALSE, warning=FALSE, out.width="49%"}
 library(here)
