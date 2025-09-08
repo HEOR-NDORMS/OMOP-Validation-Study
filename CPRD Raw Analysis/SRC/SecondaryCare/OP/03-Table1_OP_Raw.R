@@ -3,7 +3,7 @@
 #	Author: Njoki Njuki	
 # Do file name: OP Table 1: description of the patients
 # Date: 16.07.2025
-# Last date edited: 21.08.2025
+# Last date edited: 08.09.2025
 # ****************************************************************************** #
 
 # Some info about the variables
@@ -472,12 +472,89 @@ table_one_op_raw_appt_recoded <- table_one_op_raw_appt_recoded %>%
     ) %>%
     gtsummary::modify_header(label = "**Variable**"))
 
-# Export ----
-op_gt_summary_table_df <- as_tibble(op_gt_summary_table) %>% 
-  rename("Variable" = "**Variable**",
-         "N (Appointments) = 170,321" = "**N = 170,321**") %>% 
-  mutate(across(everything(), ~ ifelse(is.na(.), "", .))) %>% 
-  filter(Variable != "&")
+# List of summaries
+summaries_op <- list(
+  attended_recoded_summary = table_one_op_raw_appt_recoded %>% 
+    select(patid, attendkey, attended_recoded) %>% distinct() %>%
+    filter(!is.na(attended_recoded)) %>%
+    count(attended_recoded, name = "count_of_epi") %>%
+    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
+           Variable = "Attended or Did Not Attend",
+           Category = attended_recoded),
+  
+  atentype_recoded_summary = table_one_op_raw_appt_recoded %>% 
+    select(patid, attendkey, atentype_recoded) %>% distinct() %>%
+    filter(!is.na(atentype_recoded)) %>%
+    count(atentype_recoded, name = "count_of_epi") %>%
+    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
+           Variable = "Attendance Type",
+           Category = atentype_recoded),
+  
+  firstatt_recoded_summary = table_one_op_raw_appt_recoded %>%
+    select(patid, attendkey, firstatt_recoded) %>% 
+    distinct() %>%
+    filter(firstatt_recoded != "NA-NA") %>%
+    count(firstatt_recoded, name = "count_of_epi") %>%
+    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
+           Variable = "First Attendance",
+           Category = firstatt_recoded),
+  
+ mainspef_recoded_summary = table_one_op_raw_appt_recoded %>% 
+    select(patid, attendkey, mainspef_recoded) %>% distinct() %>%
+    filter(!is.na(mainspef_recoded)) %>%
+    count(mainspef_recoded, name = "count_of_epi") %>%
+    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
+           Variable = "Main Specialty",
+           Category = mainspef_recoded),
+  
+  tretspef_recoded_summary = table_one_op_raw_appt_recoded %>% 
+    select(patid, attendkey, tretspef_recoded) %>% distinct() %>%
+    filter(!is.na(tretspef_recoded)) %>%
+    count(tretspef_recoded, name = "count_of_epi") %>%
+    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
+           Variable = "Treatment Specialty",
+           Category = tretspef_recoded),
+ 
+ diag_01_description_summary = table_one_op_raw_appt_recoded %>%
+   select(patid, attendkey, diag_01_description) %>% 
+   distinct() %>%
+   filter(diag_01_description != "NA-NA") %>%
+   count(diag_01_description, name = "count_of_epi") %>%
+   mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
+          Variable = "Main Diagnosis",
+          Category = diag_01_description),
+ 
+ opertn_01_description_summary = table_one_op_raw_appt_recoded %>%
+   select(patid, attendkey, opertn_01_description) %>% 
+   distinct() %>%
+   filter(opertn_01_description != "NA-NA") %>%
+   count(opertn_01_description, name = "count_of_epi") %>%
+   mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
+          Variable = "Main Specialty",
+          Category = opertn_01_description),
+  
+  user_status_summary = table_one_op_raw_appt_recoded %>% 
+    select(patid, user_status) %>% distinct() %>%
+    count(user_status, name = "count_of_epi") %>%
+    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
+           Variable = "OP Health Care Service Status",
+           Category = user_status)
+)
 
-rio::export(op_gt_summary_table_df, here::here("CPRD Raw Analysis", "Results",
+# Combine them
+table2_combined_summary_op <- bind_rows(summaries_op, .id = "summary_name") %>%
+  select(Variable, Category, count_of_epi, percent_epi) %>%
+  arrange(Variable, desc(count_of_epi)) %>% 
+  mutate(Result = paste0(count_of_epi, " (", percent_epi, "%)")) %>% 
+  select(!c(count_of_epi, percent_epi))
+
+
+# Export ----
+# op_gt_summary_table_df <- as_tibble(op_gt_summary_table) %>% 
+#   rename("Variable" = "**Variable**",
+#          "N (Appointments) = 170,321" = "**N = 170,321**") %>% 
+#   mutate(across(everything(), ~ ifelse(is.na(.), "", .))) %>% 
+#   filter(Variable != "&")
+
+rio::export(table2_combined_summary_op, here::here("CPRD Raw Analysis", "Results",
                                                "SecondaryCareAnalysis", "Table1_OP_Raw.xlsx"))
