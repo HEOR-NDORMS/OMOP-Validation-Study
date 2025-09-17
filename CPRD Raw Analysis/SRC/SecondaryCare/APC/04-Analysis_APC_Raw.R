@@ -226,11 +226,12 @@ ggsave(here::here(
 validation_old <- my_dm$`_validation_old` %>% collect()
 
 # Merge with the above to get the sex and age which are required in the grouper
-costs_data_hrg_apc <- left_join(table_two_apc_raw, validation_old %>% select(patid, gender, yob), 
-                            by = "patid") 
+costs_data_hrg_apc_users <- left_join(table_two_apc_raw, validation_old %>% select(patid, gender, yob), 
+                            by = "patid") %>% 
+  filter(!is.na(admidate) & !is.na(discharged))
 
 # Create the variables required by the grouper:
-costs_data_hrg_apc_1 <- costs_data_hrg_apc %>% 
+costs_data_hrg_apc_users_1 <- costs_data_hrg_apc_users %>% 
   mutate(neocare = NA,
          diag_02 = NA, diag_03 = NA, diag_04 = NA, diag_05 = NA,
          diag_06 = NA, diag_07 = NA, diag_08 = NA, diag_09 = NA,
