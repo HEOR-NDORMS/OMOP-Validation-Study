@@ -30,7 +30,7 @@ library(purrr)
 library(MatchIt)
 library(ggsurvfit)
 # library(tidycmprsk)
-library(htmltools)
+# library(htmltools)
 library(matrixStats)
 # library(hrbrthemes)
 # library(htmlwidgets) # to save the interactive plots as html file
