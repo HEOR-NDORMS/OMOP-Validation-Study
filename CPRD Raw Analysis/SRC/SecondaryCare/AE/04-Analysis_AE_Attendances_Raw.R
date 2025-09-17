@@ -251,3 +251,11 @@ ggsave(here::here(
   height = 6,
   bg = "white"
 )
+
+
+# AE with treat codes C109, D101, D102, D105, E101, E104, E105, E110, U212, Y981, Z411, Z413, Z421
+# that should be in diagnosis
+
+rule1_ae_treat <- ae_attendance_data %>% 
+  filter(user_status == "User") %>% 
+  filter(treat %in% c("C109", "D101", "D102", "D105", "E101", "E104", "E105", "E110", "U212", "Y981", "Z411", "Z413", "Z421"))
