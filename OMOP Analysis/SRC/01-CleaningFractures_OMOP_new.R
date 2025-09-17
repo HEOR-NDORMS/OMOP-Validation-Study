@@ -103,7 +103,12 @@ any_fracture_id <- conditions_sheet1 %>%
 cdm[["condition_occurrence_primary"]] <- 
   cdm[["condition_occurrence"]] %>% 
   dplyr::filter(condition_type_concept_id == 32827) %>% 
+  # you can use the name argument to save the data as a permanent table
+  # the name must be the same than cdm$my_name -> name = "my_name"
   dplyr::compute()
+
+# you can reda a permanent table from the database using this:
+# cdm$condition_occurrence_primary <- dplyr::tbl(con, "condition_occurrence_primary")
 
 # cdm[["observation_primary"]] <- 
 #   cdm[["observation"]] %>% 
