@@ -3,8 +3,24 @@
 #	Author: Njoki Njuki	
 # Do file name: AE Table 2: description of the patients' AE attendances
 # Date: 16.07.2025
-# Last date edited: 28.08.2025
+# Last date edited: 08.09.2025
 # ****************************************************************************** #
+
+# From Antonella:
+
+# 2.	The following tables have been added
+# validation._hes_ccare
+# validation._hes_diagnosis_epi
+# validation._hes_episodes
+# validation._hes_hospital
+# validation._hes_hrg
+# validation._hes_procedures_epi
+# validation._hesae_attendance
+# validation._hesae_hrg
+# validation._hesae_investigation
+# validation._hesae_treatment
+# validation._hesop_appointment
+# validation._hesop_cliinical
 
 # Starting with cohort_table from CleaningCohort_Raw_new.R ----
 table_two_ae_raw <- cohort_table %>% 
