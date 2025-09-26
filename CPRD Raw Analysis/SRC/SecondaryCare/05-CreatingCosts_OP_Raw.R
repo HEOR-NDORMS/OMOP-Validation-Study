@@ -10,7 +10,7 @@ library(bit64)
 
 ## Read the files ----
 op_hrg_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OP/op_costs_output_attend.csv"
+  "H:/Projects/Validation/HES HRG/OP/OP_costs_HRG_output_attend.csv"
   ) |> 
   clean_names()
 
@@ -27,7 +27,7 @@ op_hrg_costs_df <- cbind(op_study_ids_df, op_hrg_df_min) |>
   mutate(patid = as.integer64(patid))
 
 costs_hrg_df<- import(
-  "H:/Projects/Validation/HES HRG/2_National_schedule_of_NHS_costs_FY21-22_v3.xlsx",
+  "H:/Projects/Validation/HES HRG/NHS_Collection_Costs_2023_2024.xlsx",
   sheet = "OP"
   ) |> 
   clean_names() |> 
@@ -35,43 +35,33 @@ costs_hrg_df<- import(
          "tretspef" = "service_code")
 
 ## Select variables of interest ----
-costs_hrg_df.1 <- costs_hrg_df |> 
-  select(department_description, tretspef, service_description, nac_hrg, 
-         number_of_attendances,
-         national_average_unit_cost, total_costs) %>%
-  
+# Step 1: Clean and flag rows with '*'
+costs_hrg_clean <- costs_hrg_df |>
+  select(department_description, tretspef, service_description, nac_hrg,
+         number_of_attendances, national_average_unit_cost, cost) |>
   mutate(
-    # Replace * in national_average_unit_cost with total_costs
-    national_average_unit_cost = ifelse(
-      grepl("\\*", as.character(national_average_unit_cost)),
-      total_costs,
-      national_average_unit_cost
-    ),
-    # Clean and convert national_average_unit_cost to numeric
+    has_star_cost = grepl("\\*", as.character(national_average_unit_cost)),
     national_average_unit_cost = as.numeric(gsub("[^0-9\\.]", "", as.character(national_average_unit_cost))),
-    
-    # Replace * in number_of_attendances with 0
-    number_of_attendances = ifelse(
-      grepl("\\*", as.character(number_of_attendances)),
-      0,
-      number_of_attendances
-    ),
-    # Convert number_of_attendances to numeric
     number_of_attendances = as.numeric(gsub("[^0-9\\.]", "", as.character(number_of_attendances)))
-  ) |> 
+  )
+
+# Step 2: Impute cost based on your logic
+costs_hrg_imputed <- costs_hrg_clean |>
   group_by(tretspef, nac_hrg) |>
-  summarise(
-    unit_cost = weighted.mean(
-      as.numeric(national_average_unit_cost),
-      as.numeric(number_of_attendances),
-      na.rm = TRUE
-    )) |> 
-  ungroup()
+  mutate(
+    unit_cost = case_when(
+      has_star_cost & all(has_star_cost)~ mean(cost, na.rm = TRUE),
+      # has_star_cost ~ cost[!has_star_cost][1],
+      TRUE ~ weighted.mean(national_average_unit_cost, number_of_attendances, na.rm = TRUE)
+    )
+  ) |>
+  ungroup() |> 
+  distinct(tretspef, nac_hrg, unit_cost)
 
 ## Merge on both hrg_code and tretspef ----
 op_hrg_df_merged <- left_join(
-  op_hrg_costs_df,
-  costs_hrg_df.1,
+  op_hrg_costs_df |> mutate(tretspef = as.character(tretspef)),
+  costs_hrg_imputed,
   by = c("nac_hrg", "tretspef")
 ) |> 
   mutate(user_status = "User")
@@ -311,7 +301,7 @@ users_overall_by_tretspef_c <- op_costs_final_data_recoded |>
   summarise(n_costs = sum(unit_cost), .groups = "drop") %>% 
   group_by(tretspef_recoded) %>%
   summarise(tot_costs = round(sum(n_costs, na.rm = TRUE), 2),
-            mean_costs = round(sum(n_costs, na.rm = TRUE)),
+            mean_costs = round(mean(n_costs, na.rm = TRUE)),
             sd_costs = round(sd(n_costs, na.rm = TRUE), 2),
             min_costs = round(min(n_costs, na.rm = TRUE), 2),
             max_costs = round(max(n_costs, na.rm = TRUE), 2),
@@ -327,7 +317,7 @@ users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   summarise(n_appts = n(), .groups = "drop") %>% 
   group_by(tretspef_recoded) %>%
   summarise(tot_visits = round(sum(n_appts, na.rm = TRUE), 2),
-            mean_visits = round(sum(n_appts, na.rm = TRUE)),
+            mean_visits = round(mean(n_appts, na.rm = TRUE)),
             sd_visits = round(sd(n_appts, na.rm = TRUE), 2),
             min_visit = round(min(n_appts, na.rm = TRUE), 2),
             max_visits = round(max(n_appts, na.rm = TRUE), 2),
@@ -368,7 +358,7 @@ all_overall_by_tretspef_c <- op_costs_final_data_recoded |>
   summarise(n_costs = sum(unit_cost), .groups = "drop") %>% 
   group_by(tretspef_recoded) %>%
   summarise(tot_costs = round(sum(n_costs, na.rm = TRUE), 2),
-            mean_costs = round(sum(n_costs, na.rm = TRUE)),
+            mean_costs = round(mean(n_costs, na.rm = TRUE)),
             sd_costs = round(sd(n_costs, na.rm = TRUE), 2),
             min_costs = round(min(n_costs, na.rm = TRUE), 2),
             max_costs = round(max(n_costs, na.rm = TRUE), 2),
@@ -386,7 +376,7 @@ all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   mutate(n_appts = if_else(tretspef_recoded == "Non-User", 0, n_appts)) |> 
   group_by(tretspef_recoded) %>%
   summarise(tot_visits = round(sum(n_appts, na.rm = TRUE), 2),
-            mean_visits = round(sum(n_appts, na.rm = TRUE)),
+            mean_visits = round(mean(n_appts, na.rm = TRUE)),
             sd_visits = round(sd(n_appts, na.rm = TRUE), 2),
             min_visit = round(min(n_appts, na.rm = TRUE), 2),
             max_visits = round(max(n_appts, na.rm = TRUE), 2),
