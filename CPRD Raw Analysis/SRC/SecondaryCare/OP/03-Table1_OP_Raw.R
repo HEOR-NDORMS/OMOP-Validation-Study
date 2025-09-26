@@ -439,38 +439,38 @@ table_one_op_raw_appt_recoded <- table_one_op_raw_appt_recoded %>%
                                          paste(collapsed_opertn_01, opertn_01_description, sep = "-"), NA))
 
 ## Reorder factor by frequency ----
-table_one_op_raw_appt_recoded <- table_one_op_raw_appt_recoded %>%
-  mutate_at(c("mainspef_recoded", "tretspef_recoded"), as.factor) %>%
-  mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason),
-         attended_recoded = forcats::fct_infreq(attended_recoded),
-         atentype_recoded = forcats::fct_infreq(atentype_recoded),
-         firstatt_recoded = forcats::fct_infreq(firstatt_recoded),
-         mainspef_recoded = forcats::fct_infreq(mainspef_recoded),
-         tretspef_recoded = forcats::fct_infreq(tretspef_recoded),
-         diag_01_description = forcats::fct_infreq(diag_01_description),
-         opertn_01_description = forcats::fct_infreq(opertn_01_description)) %>% 
-  mutate(follow_up_time = as.numeric(follow_up_time))
+# table_one_op_raw_appt_recoded <- table_one_op_raw_appt_recoded %>%
+#   mutate_at(c("mainspef_recoded", "tretspef_recoded"), as.factor) %>%
+#   mutate(follow_up_reason = forcats::fct_infreq(follow_up_reason),
+#          attended_recoded = forcats::fct_infreq(attended_recoded),
+#          atentype_recoded = forcats::fct_infreq(atentype_recoded),
+#          firstatt_recoded = forcats::fct_infreq(firstatt_recoded),
+#          mainspef_recoded = forcats::fct_infreq(mainspef_recoded),
+#          tretspef_recoded = forcats::fct_infreq(tretspef_recoded),
+#          diag_01_description = forcats::fct_infreq(diag_01_description),
+#          opertn_01_description = forcats::fct_infreq(opertn_01_description)) %>% 
+#   mutate(follow_up_time = as.numeric(follow_up_time))
 
 ## Gtsumaary table ----
-(op_gt_summary_table <- table_one_op_raw_appt_recoded %>% 
-    gtsummary::tbl_summary(
-      include = c(attended_recoded,
-                  atentype_recoded, firstatt_recoded, mainspef_recoded,
-                  tretspef_recoded,diag_01_description, 
-                  opertn_01_description,user_status),
-      label = list(
-        attended_recoded = "Attended or Did Not Attend",
-        atentype_recoded = "Attendance Type",
-        firstatt_recoded = "First Attendance",
-        mainspef_recoded = "Main Specialty",
-        tretspef_recoded = "Treatment Specialty",
-        diag_01_description = "Main Diagnosis",
-        opertn_01_description = "Main Procedure",
-        user_status = "OP HealthCare Status"
-      ),
-      missing = "no"
-    ) %>%
-    gtsummary::modify_header(label = "**Variable**"))
+# (op_gt_summary_table <- table_one_op_raw_appt_recoded %>% 
+#     gtsummary::tbl_summary(
+#       include = c(attended_recoded,
+#                   atentype_recoded, firstatt_recoded, mainspef_recoded,
+#                   tretspef_recoded,diag_01_description, 
+#                   opertn_01_description,user_status),
+#       label = list(
+#         attended_recoded = "Attended or Did Not Attend",
+#         atentype_recoded = "Attendance Type",
+#         firstatt_recoded = "First Attendance",
+#         mainspef_recoded = "Main Specialty",
+#         tretspef_recoded = "Treatment Specialty",
+#         diag_01_description = "Main Diagnosis",
+#         opertn_01_description = "Main Procedure",
+#         user_status = "OP HealthCare Status"
+#       ),
+#       missing = "no"
+#     ) %>%
+#     gtsummary::modify_header(label = "**Variable**"))
 
 # List of summaries
 summaries_op <- list(
@@ -505,7 +505,12 @@ summaries_op <- list(
     count(mainspef_recoded, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Main Specialty",
-           Category = mainspef_recoded),
+           Category = mainspef_recoded) %>% 
+   mutate(Category = if_else(percent_epi < 1, "Other Main Specialty", Category)) %>% 
+   group_by(Variable, Category) %>%
+   summarise(count_of_epi = sum(count_of_epi),
+             percent_epi = round(sum(percent_epi), 2),
+             .groups = "drop"),
   
   tretspef_recoded_summary = table_one_op_raw_appt_recoded %>% 
     select(patid, attendkey, tretspef_recoded) %>% distinct() %>%
@@ -513,7 +518,12 @@ summaries_op <- list(
     count(tretspef_recoded, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Treatment Specialty",
-           Category = tretspef_recoded),
+           Category = tretspef_recoded) %>% 
+   mutate(Category = if_else(percent_epi < 1, "Other Treatment Specialty", Category)) %>% 
+   group_by(Variable, Category) %>%
+   summarise(count_of_epi = sum(count_of_epi),
+             percent_epi = round(sum(percent_epi), 2),
+             .groups = "drop"),
  
  diag_01_description_summary = table_one_op_raw_appt_recoded %>%
    select(patid, attendkey, diag_01_description) %>% 
@@ -522,7 +532,12 @@ summaries_op <- list(
    count(diag_01_description, name = "count_of_epi") %>%
    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
           Variable = "Main Diagnosis",
-          Category = diag_01_description),
+          Category = diag_01_description) %>% 
+   mutate(Category = if_else(percent_epi < 1, "Other Main Diagnosis", Category)) %>% 
+   group_by(Variable, Category) %>%
+   summarise(count_of_epi = sum(count_of_epi),
+             percent_epi = round(sum(percent_epi), 2),
+             .groups = "drop"),
  
  opertn_01_description_summary = table_one_op_raw_appt_recoded %>%
    select(patid, attendkey, opertn_01_description) %>% 
@@ -530,8 +545,13 @@ summaries_op <- list(
    filter(opertn_01_description != "NA-NA") %>%
    count(opertn_01_description, name = "count_of_epi") %>%
    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
-          Variable = "Main Specialty",
-          Category = opertn_01_description),
+          Variable = "Main Procedure",
+          Category = opertn_01_description) %>% 
+   mutate(Category = if_else(percent_epi < 1, "Other Main Procedure", Category)) %>% 
+   group_by(Variable, Category) %>%
+   summarise(count_of_epi = sum(count_of_epi),
+             percent_epi = round(sum(percent_epi), 2),
+             .groups = "drop"),
   
   user_status_summary = table_one_op_raw_appt_recoded %>% 
     select(patid, user_status) %>% distinct() %>%
@@ -557,4 +577,4 @@ table2_combined_summary_op <- bind_rows(summaries_op, .id = "summary_name") %>%
 #   filter(Variable != "&")
 
 rio::export(table2_combined_summary_op, here::here("CPRD Raw Analysis", "Results",
-                                               "SecondaryCareAnalysis", "Table1_OP_Raw.xlsx"))
+                                               "SecondaryCareAnalysis", "OP","Table1_OP_Raw.xlsx"))
