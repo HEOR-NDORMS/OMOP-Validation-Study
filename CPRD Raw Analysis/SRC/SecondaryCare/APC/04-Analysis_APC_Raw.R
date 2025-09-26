@@ -7,8 +7,8 @@
 # ****************************************************************************** #
 
 
-# Starting with table_two_apc_raw dataset ----
-spells_apc_data <- table_two_apc_raw %>% 
+# Starting with table_two_apc_raw_wide dataset ----
+spells_apc_data <- table_two_apc_raw_wide %>% 
   mutate(
     user_status = if_else(is.na(admidate) & is.na(discharged), "Non-User", "User")
   )
@@ -44,9 +44,9 @@ table2_spells_data <- spells_apc_full_data %>%
   select(patid, n_spells, user_status) %>% 
   distinct()
 # Sense check for the patient with the largest no. of spells
-# View(validation_apc_hospital %>% filter(patid == 1423438520834) %>% 
-#        filter(admidate >= study_start_date & discharged <= study_end_date) %>% 
-#        filter(admidate >= as.Date("2016-02-13") & discharged <= as.Date("2018-02-12")))
+View(validation_apc_hospital %>% filter(patid == 1423438520834) %>%
+       filter(admidate >= study_start_date & discharged <= study_end_date) %>%
+       filter(admidate >= as.Date("2016-02-13") & discharged <= as.Date("2018-02-12")))
 
 ## Users ----
 summary_spells_users_df <- table2_spells_data %>% 
