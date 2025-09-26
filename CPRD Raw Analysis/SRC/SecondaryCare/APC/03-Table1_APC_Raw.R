@@ -27,6 +27,8 @@
 # 
 # 3.	The AURUM validation tables have not been modified
 
+# Refer to this data dictionary: https://www.cprd.com/sites/default/files/2022-02/Data_Dictionary_HES_APC.pdf
+
 # Starting with cohort_table from CleaningCohort_Raw_new.R ----
 table_two_apc_raw <- cohort_table %>% 
   # Select the variables of interest
@@ -48,27 +50,55 @@ validation_apc_hospital <- my_dm$validation_hes_hospital %>% collect()
 table_two_apc_raw <- left_join(table_two_apc_raw, validation_apc_hospital,
                                  by = c("patid", "spno"))
 
+table_two_apc_raw_wide <- table_two_apc_raw %>%
+  mutate(icd = gsub("\\.", "", icd)) %>% 
+  group_by(patid, d_order) %>%
+  mutate(row = row_number()) %>%
+  ungroup() %>%
+  pivot_wider(
+    names_from = d_order,
+    values_from = icd,
+    names_prefix = "diag_",
+    names_glue = "diag_{sprintf('%02d', d_order)}", 
+    values_fn = list(icd = list)
+  ) %>%
+  unnest(cols = starts_with("diag_")) %>%
+  select(-c(row, diag_NA)) %>% 
+  group_by(patid, p_order) %>%
+  mutate(row = row_number()) %>%
+  ungroup() %>%
+  pivot_wider(
+    names_from = p_order,
+    values_from = opcs,
+    names_prefix = "oper_",
+    names_glue = "oper_{sprintf('%02d', p_order)}", 
+    values_fn = list(opcs = list)
+  ) %>%
+  unnest(cols = starts_with("oper_")) %>%
+  select(-c(row, oper_NA))
+  
+# 5497900821193
+# 572901420128
+
 # Filter data ----
-table_two_apc_raw <- table_two_apc_raw %>% 
+table_two_apc_raw_wide <- table_two_apc_raw_wide %>% 
   # Filter such that we have the episodes between the study start and study end dates
   filter(admidate >= study_start_date & discharged <= study_end_date) %>% 
   # in order to count all the episodes  from index date until follow-up end date.
   filter(epistart >= index_date & epiend <= follow_up_end) 
 
 # Merge back to cohort data ----
-table_two_apc_raw <- left_join(cohort_table %>% select(patid, index_date, follow_up_end), 
-                               table_two_apc_raw, 
+table_two_apc_raw_wide <- left_join(cohort_table %>% select(patid, index_date, follow_up_end), 
+                                    table_two_apc_raw_wide, 
                                by = c("patid", "index_date", "follow_up_end"))
 
-n_distinct(table_two_apc_raw$patid)
+n_distinct(table_two_apc_raw_wide$patid)
 
 # Recode variables ----
-table_two_apc_raw_recoded <- table_two_apc_raw %>% 
-  rename(diag_01 = icd,
-         opertn_01 = opcs,
-         disdate = discharged) %>% 
+table_two_apc_raw_wide_recoded <- table_two_apc_raw_wide %>% 
+  rename(disdate = discharged) %>% 
   mutate_at(c("admimeth","admisorc", "mainspef", "tretspef","dismeth",
-              "disdest", "diag_01", "opertn_01"), as.factor) %>% 
+              "disdest", "diag_01", "oper_01"), as.factor) %>% 
   mutate(
     admimeth_recoded = forcats::fct_recode(
       admimeth,
@@ -457,9 +487,7 @@ table_two_apc_raw_recoded <- table_two_apc_raw %>%
     "Diabetic Education Service (From April 2013)" = "920",
     "Other Maternity Event" = "Null",
     "Not known" = "&")
-  ) %>% 
-  mutate(diag_01_cleaned = gsub("\\.", "", diag_01))
-
+  ) 
 
 ## Codes data  ----
 # ICD-10 Codes and Labels are maintained by the World Health Organisation. For more information please visit www.who.int/classifications/icd
@@ -468,14 +496,14 @@ diag_codes_data <- import(here("HRG_ICD10_OPCS_ICD10.csv")) %>%
   clean_names() %>% 
   select(!icd_10_edition)
 
-table_two_apc_raw_recoded <- table_two_apc_raw_recoded %>% 
-  left_join(diag_codes_data %>% rename("diag_01_cleaned" = "icd_10_code",
+table_two_apc_raw_wide_recoded <- table_two_apc_raw_wide_recoded %>% 
+  left_join(diag_codes_data %>% rename("diag_01" = "icd_10_code",
                                        "diag_01_description" =  "description"), 
-            by = "diag_01_cleaned")
+            by = "diag_01")
 
-table_two_apc_raw_recoded <- table_two_apc_raw_recoded %>% 
-  mutate(collapsed_diag_01 = str_sub(diag_01_cleaned, 1, 4)) %>% 
-  mutate(diag_01_code_description = paste(
+table_two_apc_raw_wide_recoded <- table_two_apc_raw_wide_recoded %>% 
+  mutate(collapsed_diag_01 = str_sub(diag_01, 1, 4)) %>% 
+  mutate(diag_01_description = paste(
     collapsed_diag_01 , diag_01_description, sep = "-"))
 
 
@@ -484,21 +512,21 @@ table_two_apc_raw_recoded <- table_two_apc_raw_recoded %>%
 opertn_codes_data <- import(here("HRG_ICD10_OPCS_OPCS4.csv")) %>% 
   clean_names() 
 
-table_two_apc_raw_recoded <- table_two_apc_raw_recoded %>% 
-  left_join(opertn_codes_data %>% rename("opertn_01" = "opcs_code",
-                                         "opertn_01_description" =  "description"), 
-            by = "opertn_01")
+table_two_apc_raw_wide_recoded <- table_two_apc_raw_wide_recoded %>% 
+  left_join(opertn_codes_data %>% rename("oper_01" = "opcs_code",
+                                         "oper_01_description" =  "description"), 
+            by = "oper_01")
 
-table_two_apc_raw_recoded <- table_two_apc_raw_recoded %>% 
-  mutate(collapsed_opertn_01 = str_sub(opertn_01, 1, 4)) %>% 
-  mutate(opertn_01_description = if_else(!is.na(collapsed_opertn_01),
-                                         paste(collapsed_opertn_01, opertn_01_description, sep = "-"), NA))
+table_two_apc_raw_wide_recoded <- table_two_apc_raw_wide_recoded %>% 
+  mutate(collapsed_oper_01 = str_sub(oper_01, 1, 4)) %>% 
+  mutate(oper_01_description = if_else(!is.na(collapsed_oper_01),
+                                         paste(collapsed_oper_01, oper_01_description, sep = "-"), NA))
 # Minimise the columns
-table_two_apc_raw_recoded_min <- table_two_apc_raw_recoded %>% 
+table_two_apc_raw_wide_recoded_min <- table_two_apc_raw_wide_recoded %>% 
   select(patid, epikey,epistart, epiend, admidate, disdate,
          admimeth_recoded, admisorc_recoded, mainspef_recoded,
          tretspef_recoded, dismeth_recoded, disdest_recoded,
-         diag_01_code_description, opertn_01_description
+         diag_01_description, oper_01_description
          ) %>% 
   mutate(
     user_status = if_else(is.na(admidate) & is.na(disdate), "Non-User", "User")
@@ -583,7 +611,7 @@ table_two_apc_raw_recoded_min <- table_two_apc_raw_recoded %>%
 
 # List of summaries
 summaries_apc <- list(
-  admimeth_recoded_summary = table_two_apc_raw_recoded_min %>% 
+  admimeth_recoded_summary = table_two_apc_raw_wide_recoded_min %>% 
     select(patid, epikey, admimeth_recoded) %>% distinct() %>%
     filter(!is.na(admimeth_recoded)) %>%
     count(admimeth_recoded, name = "count_of_epi") %>%
@@ -591,7 +619,7 @@ summaries_apc <- list(
            Variable = "Method of Admission",
            Category = admimeth_recoded),
   
-  admisorc_recoded_summary = table_two_apc_raw_recoded_min %>% 
+  admisorc_recoded_summary = table_two_apc_raw_wide_recoded_min %>% 
     select(patid, epikey, admisorc_recoded) %>% distinct() %>%
     filter(!is.na(admisorc_recoded)) %>%
     count(admisorc_recoded, name = "count_of_epi") %>%
@@ -599,41 +627,61 @@ summaries_apc <- list(
            Variable = "Source of Admission",
            Category = admisorc_recoded),
   
-  main_diag_summary = table_two_apc_raw_recoded_min %>%
-    select(patid, epikey, diag_01_code_description) %>% 
+  main_diag_summary = table_two_apc_raw_wide_recoded_min %>%
+    select(patid, epikey, diag_01_description) %>% 
     distinct() %>%
-    filter(diag_01_code_description != "NA-NA") %>%
-    count(diag_01_code_description, name = "count_of_epi") %>%
+    filter(diag_01_description != "NA-NA") %>%
+    count(diag_01_description, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Main Diagnosis",
-           Category = diag_01_code_description),
+           Category = diag_01_description) %>% 
+    mutate(Category = if_else(percent_epi < 1, "Other Main Diagnosis", Category)) %>% 
+    group_by(Variable, Category) %>%
+    summarise(count_of_epi = sum(count_of_epi),
+              percent_epi = round(sum(percent_epi), 2),
+              .groups = "drop"),
   
-  main_proc_summary = table_two_apc_raw_recoded_min %>%
-    select(patid, epikey, opertn_01_description) %>% 
+  main_proc_summary = table_two_apc_raw_wide_recoded_min %>%
+    select(patid, epikey, oper_01_description) %>% 
     distinct() %>%
-    filter(opertn_01_description != "NA-NA") %>%
-    count(opertn_01_description, name = "count_of_epi") %>%
+    filter(oper_01_description != "NA-NA") %>%
+    count(oper_01_description, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Main Procedure",
-           Category = opertn_01_description),
+           Category = oper_01_description) %>% 
+    mutate(Category = if_else(percent_epi < 1, "Other Main Procedure", Category)) %>% 
+    group_by(Variable, Category) %>%
+    summarise(count_of_epi = sum(count_of_epi),
+              percent_epi = round(sum(percent_epi), 2),
+              .groups = "drop"),
   
-  mainspef_recoded_summary = table_two_apc_raw_recoded_min %>% 
+  mainspef_recoded_summary = table_two_apc_raw_wide_recoded_min %>% 
     select(patid, epikey, mainspef_recoded) %>% distinct() %>%
     filter(!is.na(mainspef_recoded)) %>%
     count(mainspef_recoded, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Main Specialty",
-           Category = mainspef_recoded),
+           Category = mainspef_recoded) %>% 
+    mutate(Category = if_else(percent_epi < 1, "Other Main Specialty", Category)) %>% 
+    group_by(Variable, Category) %>%
+    summarise(count_of_epi = sum(count_of_epi),
+              percent_epi = round(sum(percent_epi), 2),
+              .groups = "drop"),
   
-  tretspef_recoded_summary = table_two_apc_raw_recoded_min %>% 
+  tretspef_recoded_summary = table_two_apc_raw_wide_recoded_min %>% 
     select(patid, epikey, tretspef_recoded) %>% distinct() %>%
     filter(!is.na(tretspef_recoded)) %>%
     count(tretspef_recoded, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Treatment Specialty",
-           Category = tretspef_recoded),
+           Category = tretspef_recoded) %>% 
+    mutate(Category = if_else(percent_epi < 1, "Other Treatment Specialty", Category)) %>% 
+    group_by(Variable, Category) %>%
+    summarise(count_of_epi = sum(count_of_epi),
+              percent_epi = round(sum(percent_epi), 2),
+              .groups = "drop"),
   
-  dismeth_recoded_summary = table_two_apc_raw_recoded_min %>% 
+  dismeth_recoded_summary = table_two_apc_raw_wide_recoded_min %>% 
     select(patid, epikey, dismeth_recoded) %>% distinct() %>%
     filter(!is.na(dismeth_recoded)) %>%
     count(dismeth_recoded, name = "count_of_epi") %>%
@@ -641,7 +689,7 @@ summaries_apc <- list(
            Variable = "Method of Discharge",
            Category = dismeth_recoded),
   
-  disdest_recoded_summary = table_two_apc_raw_recoded_min %>% 
+  disdest_recoded_summary = table_two_apc_raw_wide_recoded_min %>% 
     select(patid, epikey, disdest_recoded) %>% distinct() %>%
     filter(!is.na(disdest_recoded)) %>%
     count(disdest_recoded, name = "count_of_epi") %>%
@@ -649,7 +697,7 @@ summaries_apc <- list(
            Variable = "Destination on Discharge",
            Category = disdest_recoded),
   
-  user_status_summary = table_two_apc_raw_recoded_min %>% 
+  user_status_summary = table_two_apc_raw_wide_recoded_min %>% 
     select(patid, user_status) %>% distinct() %>%
     count(user_status, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
