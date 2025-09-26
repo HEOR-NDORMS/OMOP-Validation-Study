@@ -14,23 +14,23 @@ ae_attendance_data <- table_two_ae_raw
 users_ae_attendance_data <- ae_attendance_data %>%
   filter(user_status == "User") 
 
-users_ae_attendances <- users_ae_attendance_data %>% 
-  group_by(patid) %>%                     # group data by patid
-  select(patid, arrivaldate, aekey) %>%  # select only variables of interest: patid, apptdate, attendkey
-  arrange(patid, arrivaldate) %>%            # sort data according to appointment date
-  distinct() %>%                          # deduplicate       
-  mutate(att_no  = 1:n()) %>%            # generate an appointment counter
-  ungroup()
+# users_ae_attendances <- users_ae_attendance_data %>% 
+#   group_by(patid) %>%                     # group data by patid
+#   
+#   arrange(patid, arrivaldate) %>%            # sort data according to appointment date
+#   distinct() %>%                          # deduplicate       
+#   mutate(att_no  = 1:n()) %>%            # generate an appointment counter
+#   ungroup()
+# 
+# users_ae_attendance_data_final <- merge(users_ae_attendance_data, users_ae_attendances , 
+#                                 all.x=T, all.y=T,
+#                                 by=c("patid", "arrivaldate", "aekey")) %>% 
+#   arrange(patid)
+# rm(users_ae_attendances)
 
-users_ae_attendance_data_final <- merge(users_ae_attendance_data, users_ae_attendances , 
-                                all.x=T, all.y=T,
-                                by=c("patid", "arrivaldate", "aekey")) %>% 
-  arrange(patid)
-rm(users_ae_attendances)
-
-users_ae_attendance_per_patient <- users_ae_attendance_data_final %>%
+users_ae_attendance_per_patient <- users_ae_attendance_data %>%
   group_by(patid) %>%                     # group data per patient
-  summarise(n_att = max(att_no)) %>%   # derive total number of appointments by picking max value of apptorder
+  summarise(n_att = n()) %>%   # derive total number of appointments by picking max value of apptorder
   ungroup()  %>%                          # now, ungroup the data and save only one row summary per patient
   select(patid, n_att)  %>%             # save only patid and nr of appts
   distinct()
@@ -99,14 +99,14 @@ all_overall_summary_ae_attendance <-  all_ae_attendance_per_patient %>%
 
 library(writexl)
 
-ae_attandances_list <- list(
-  users_overall_summary_atts = users_overall_summary_ae_attendance,
-  all_overall_summary_atts = all_overall_summary_ae_attendance
-)
-
-# Write to an Excel file
-write_xlsx(ae_attandances_list, here::here("CPRD Raw Analysis", "Results",
-                                  "SecondaryCareAnalysis", "AE","Output_AE_attdances_Raw.xlsx"))
+# ae_attandances_list <- list(
+#   users_overall_summary_atts = users_overall_summary_ae_attendance,
+#   all_overall_summary_atts = all_overall_summary_ae_attendance
+# )
+# 
+# # Write to an Excel file
+# write_xlsx(ae_attandances_list, here::here("CPRD Raw Analysis", "Results",
+#                                   "SecondaryCareAnalysis", "AE","Output_AE_attdances_Raw.xlsx"))
 # Plot ----
 library(ggplot2)
 
