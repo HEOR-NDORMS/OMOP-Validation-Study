@@ -1684,17 +1684,35 @@ df_boot_means <- df_boot_means %>%
          mean = as.numeric(mean))  # Ensure mean is numeric
 
 # Plot
-ggplot(df_boot_means, aes(x = month, y = mean, color = group)) +
-  geom_line(size = 1) +
-  geom_point() +
-  labs(
+(boot_mean_visits_plot <- ggplot(df_boot_means, aes(x = month, y = mean, color = group)) +
+    geom_line(size = 1) +
+    geom_point() +
+    labs(
     title = "Bootstrap Mean Monthly Encounters Over Time",
     x = "Month After Index",
     y = "Mean Number of Encounters",
     color = "Group"
   ) +
-  theme_minimal() +
-  scale_x_continuous(breaks = 1:24)
+    scale_x_continuous(breaks = 1:24) +
+    theme_minimal(base_size = 14, base_family = "Times") +
+    theme(
+      plot.title = element_text(face = "bold", size = 16),
+      plot.subtitle = element_text(size = 13),
+      axis.title = element_text(face = "bold"),
+      axis.text = element_text(size = 10),
+      plot.caption = element_text(size = 10, hjust = 0)
+    )
+)
+
+# Save the plot
+ggsave(here::here(
+  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Plots",
+  "Boot_mean_visits_plot-Raw.PNG"),
+  plot = boot_mean_visits_plot,
+  width = 10,
+  height = 7,
+  bg = "white"
+)
 
 ### Costs plot ----
 
