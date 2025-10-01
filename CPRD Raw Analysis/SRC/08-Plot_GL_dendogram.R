@@ -9,12 +9,12 @@ library(igraph)
 # library(colorspace)
 
 # --- Caricamento dati ---
-df <- read_excel("plot_map_specialties.xlsx") %>%
+df <- read_excel("plot_map_specialties_after_lindsey.xlsx") %>%
   filter(!is.na(source_specialties), !is.na(omop_specialties)) %>%
   distinct(
     source_specialties, omop_specialties,
-    unit_cost_source, clinical_relevance_source,
-    unit_cost_omop, clinical_relevance_omop
+    unit_cost_source,
+    unit_cost_omop, 
     ) %>%
   mutate(
     omop_abbr = if_else(
@@ -354,21 +354,20 @@ p <- ggraph(lay) +
   theme(
     legend.position = "right",
     legend.key = element_blank(),
-    plot.background = element_rect(fill = "white", colour = NA),
+    plot.background = element_rect(fill = NA, colour = NA),
     plot.margin = margin(80, 80, 80, 80, unit = "pt")
-  )
+  )+ theme(legend.position = "none")
 
-print(p)
+#print(p)
 
 # ---- Salva (quadrato, centrato, non tagliato) ----
 options(bitmapType = "cairo")
 ggsave(
-  here::here("CPRD Raw Analysis", "Results", "Cohort", 
-             "circular_dendrogram.png"),
+  here::here("CPRD Raw Analysis", "Results", "Cohort", "circular_dendrogram.png"),
   plot = p,
   device = ragg::agg_png,
-  width = 20, height = 20, units = "in", dpi = 300,
-  limitsize = FALSE, bg = "white"
+  width = 20, height = 20, units = "in", dpi = 600,
+  limitsize = FALSE, bg = "transparent"
 )
 
 

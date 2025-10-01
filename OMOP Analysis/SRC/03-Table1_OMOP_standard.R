@@ -34,8 +34,8 @@ cohort_table <- cohort_table %>%
 
 
 # 2. Import unit costs
-provider_cost_inputs <- rio::import("provider_specialty_cprd_omop_final.xlsx", sheet = "omop")
-provider_cost_inputs <- provider_cost_inputs %>% select(specialty_concept_id, concept_name, is_clinically_relevant, unit_cost, category)
+provider_cost_inputs <- rio::import("provider_specialty_cprd_omop_final_after_lindsey.xlsx", sheet = "omop")
+provider_cost_inputs <- provider_cost_inputs %>% select(specialty_concept_id, concept_name,unit_cost_encounter, category)
 
 
 # 3. Prepare visit table
@@ -61,11 +61,12 @@ cdm[["visit_data"]] <- cdm$visit_detail %>%
   dplyr::select(
     person_id, visit_detail_id, visit_detail_start_date, visit_detail_concept_id,
     provider_id, specialty_concept_id, concept_name,
-    is_clinically_relevant, unit_cost, category
+    unit_cost_encounter, category
   ) %>%
   dplyr::rename(
     specialty = concept_name,
-    specialty_reduced = category
+    specialty_reduced = category,
+    unit_cost = unit_cost_encounter
   ) %>%
   computeQuery()
 
@@ -81,14 +82,14 @@ cohort_visit_data_user <- cohort_table %>%
          visit_detail_start_date <= follow_up_end)%>% 
   select(subject_id, index_date, follow_up_end, follow_up_reason, follow_up_time, visit_detail_id, 
          visit_detail_start_date, specialty,
-         specialty_reduced, unit_cost, is_clinically_relevant)
+         specialty_reduced, unit_cost)
 
 # 5. Deduplicate based on visit date and provider
 cohort_visit_data_user <- cohort_visit_data_user %>% 
   filter(!is.na(specialty)) %>% # keep only records with specialties (there were some with provider but not specialty)
   distinct(subject_id, visit_detail_start_date, specialty , .keep_all = TRUE) 
 
-# 6. Define User (any visit with clinically relevant) vs Non-Users (all non clinically relevant or no visits)
+# 6. Create a dataframe where all patients are included (also those without visits)
 cohort_visit_data_all <- left_join(
   cohort_table, 
   cohort_visit_data_user %>%
@@ -96,8 +97,9 @@ cohort_visit_data_all <- left_join(
   by = "subject_id"
 ) %>% 
   group_by(subject_id) %>%
-  mutate(user_status = case_when( # Define User status
-    any(is_clinically_relevant == 1, na.rm = TRUE) ~ "User",
+  mutate(user_status = case_when( 
+    # define user status (user= at least 1 non admin, non user= no clinical or no visits)
+    any(specialty_reduced != "Admin", na.rm = TRUE) ~ "User",
     TRUE ~ "Non-User"
   )) %>%
   ungroup()
@@ -143,6 +145,10 @@ mean_follow_up_time <- mean(table_one_omop_visit_data$follow_up_time, na.rm = TR
 sd_follow_up_time <- sd(table_one_omop_visit_data$follow_up_time, na.rm = TRUE)
 median_followup_time <- median(table_one_omop_visit_data$follow_up_time, na.rm = TRUE)
 iqr_followup_time <- IQR(table_one_omop_visit_data$follow_up_time, na.rm = TRUE)
+
+# Age
+mean_age<-mean(table_one_omop_visit_data$age_fracture, na.rm = TRUE)
+sd_age <- sd(table_one_omop_visit_data$age_fracture, na.rm = TRUE)
 
 # Number of patients
 number_of_patients <- n_distinct(table_one_omop_visit_data$subject_id)

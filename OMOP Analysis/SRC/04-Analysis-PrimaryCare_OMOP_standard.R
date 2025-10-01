@@ -44,9 +44,9 @@ visit_data_all <- cohort_visit_data_all
 
 # --- a) All patients & all encounters
 all_patients_all_encounters_counts <- visit_data_all %>%
-  group_by(patid) %>%
+  group_by(subject_id) %>%
   summarise(
-    total_patient_encounters = sum(!is.na(consid)), # this way non users have 0 count
+    total_patient_encounters = sum(!is.na(visit_detail_id)), # this way non users have 0 count
     .groups = "drop"
   )
 
@@ -67,37 +67,37 @@ summary_all_patients_all_encounters <- all_patients_all_encounters_counts %>%
   ) %>%
   mutate(across(everything(), round, 2))
 
-# --- b) All patients & relevant encounters
-all_patients_relevant_encounters_counts <- visit_data_all %>%
-  filter(is_clinically_relevant == 1) %>% # only relevant encounters
-  group_by(subject_id) %>%
-  summarise(
-    total_patient_encounters = n(),
-    .groups = "drop"
-  )
-
-all_patients_relevant_encounters_counts <- left_join(cohort_table, all_patients_relevant_encounters_counts,
-                                                     by = "subject_id") %>%
-  replace_na(list(total_patient_encounters = 0)) %>% # assign 0 to patients with no relevant encounters
-  select(subject_id, total_patient_encounters) 
-
-# Summary statistics
-summary_all_patients_relevant_encounters <- all_patients_relevant_encounters_counts %>%
-  summarise(
-    n                = n(),
-    mean      = mean(total_patient_encounters),
-    min       = min(total_patient_encounters),
-    max       = max(total_patient_encounters),
-    sd        = sd(total_patient_encounters),
-    median    = quantile(total_patient_encounters, 0.5),
-    lower_q   = quantile(total_patient_encounters, 0.25),
-    upper_q   = quantile(total_patient_encounters, 0.75),
-    se               = sd / sqrt(n),
-    ci_lower         = mean - qt(0.975, df = n - 1) * se,
-    ci_upper         = mean + qt(0.975, df = n - 1) * se
-  ) %>%
-  mutate(across(everything(), round, 2))
-
+# # --- b) All patients & relevant encounters
+# all_patients_relevant_encounters_counts <- visit_data_all %>%
+#   filter(is_clinically_relevant == 1) %>% # only relevant encounters
+#   group_by(subject_id) %>%
+#   summarise(
+#     total_patient_encounters = n(),
+#     .groups = "drop"
+#   )
+# 
+# all_patients_relevant_encounters_counts <- left_join(cohort_table, all_patients_relevant_encounters_counts,
+#                                                      by = "subject_id") %>%
+#   replace_na(list(total_patient_encounters = 0)) %>% # assign 0 to patients with no relevant encounters
+#   select(subject_id, total_patient_encounters) 
+# 
+# # Summary statistics
+# summary_all_patients_relevant_encounters <- all_patients_relevant_encounters_counts %>%
+#   summarise(
+#     n                = n(),
+#     mean      = mean(total_patient_encounters),
+#     min       = min(total_patient_encounters),
+#     max       = max(total_patient_encounters),
+#     sd        = sd(total_patient_encounters),
+#     median    = quantile(total_patient_encounters, 0.5),
+#     lower_q   = quantile(total_patient_encounters, 0.25),
+#     upper_q   = quantile(total_patient_encounters, 0.75),
+#     se               = sd / sqrt(n),
+#     ci_lower         = mean - qt(0.975, df = n - 1) * se,
+#     ci_upper         = mean + qt(0.975, df = n - 1) * se
+#   ) %>%
+#   mutate(across(everything(), round, 2))
+# 
 
 ## User-only ----
 
@@ -140,39 +140,39 @@ summary_users_all_encounters <- users_all_encounters_counts %>%
 
 # --- b) Users & relevant encounters
 
-# Filter encounters for users and clinically relevant specialties
-users_relevant_encounters <- visit_data_all %>%
-  filter(user_status == "User", is_clinically_relevant == 1)
-
-# Compute total encounters per user
-users_relevant_encounters_counts <- users_relevant_encounters %>%
-  group_by(subject_id) %>%
-  summarise(
-    total_patient_encounters = n(),
-    .groups = "drop"
-  )
-
-users_relevant_encounters_counts <- left_join(cohort_table_users, users_relevant_encounters_counts, 
-                                              by = "subject_id") %>%
-  replace_na(list(total_patient_encounters = 0)) %>%  # assign 0 to users with no relevant encounters
-  select(subject_id, total_patient_encounters) 
-
-# Summary statistics for user-only group
-summary_users_relevant_encounters <- users_relevant_encounters_counts %>%
-  summarise(
-    n                = n(),
-    mean      = mean(total_patient_encounters),
-    min       = min(total_patient_encounters),
-    max       = max(total_patient_encounters),
-    sd        = sd(total_patient_encounters),
-    median    = quantile(total_patient_encounters, 0.5),
-    lower_q   = quantile(total_patient_encounters, 0.25),
-    upper_q   = quantile(total_patient_encounters, 0.75),
-    se               = sd / sqrt(n),
-    ci_lower         = mean - qt(0.975, df = n - 1) * se,
-    ci_upper         = mean + qt(0.975, df = n - 1) * se
-  ) %>%
-  mutate(across(everything(), round, 2))
+# # Filter encounters for users and clinically relevant specialties
+# users_relevant_encounters <- visit_data_all %>%
+#   filter(user_status == "User", is_clinically_relevant == 1)
+# 
+# # Compute total encounters per user
+# users_relevant_encounters_counts <- users_relevant_encounters %>%
+#   group_by(subject_id) %>%
+#   summarise(
+#     total_patient_encounters = n(),
+#     .groups = "drop"
+#   )
+# 
+# users_relevant_encounters_counts <- left_join(cohort_table_users, users_relevant_encounters_counts, 
+#                                               by = "subject_id") %>%
+#   replace_na(list(total_patient_encounters = 0)) %>%  # assign 0 to users with no relevant encounters
+#   select(subject_id, total_patient_encounters) 
+# 
+# # Summary statistics for user-only group
+# summary_users_relevant_encounters <- users_relevant_encounters_counts %>%
+#   summarise(
+#     n                = n(),
+#     mean      = mean(total_patient_encounters),
+#     min       = min(total_patient_encounters),
+#     max       = max(total_patient_encounters),
+#     sd        = sd(total_patient_encounters),
+#     median    = quantile(total_patient_encounters, 0.5),
+#     lower_q   = quantile(total_patient_encounters, 0.25),
+#     upper_q   = quantile(total_patient_encounters, 0.75),
+#     se               = sd / sqrt(n),
+#     ci_lower         = mean - qt(0.975, df = n - 1) * se,
+#     ci_upper         = mean + qt(0.975, df = n - 1) * se
+#   ) %>%
+#   mutate(across(everything(), round, 2))
 
 
 # --- Output: Combine All Summaries 
@@ -182,14 +182,14 @@ combined_summary_encounters <- bind_rows(
   summary_all_patients_all_encounters %>%
     mutate(group = "All Patients & all encounters"),
   
-  summary_all_patients_relevant_encounters %>%
-    mutate(group = "All Patients & relevant encounters"),
+  # summary_all_patients_relevant_encounters %>%
+  #   mutate(group = "All Patients & relevant encounters"),
   
   summary_users_all_encounters %>%
     mutate(group = "Users & all encounters"),
   
-  summary_users_relevant_encounters %>%
-    mutate(group = "Users & relevant encounters")
+  # summary_users_relevant_encounters %>%
+  #   mutate(group = "Users & relevant encounters")
 ) %>%
   select(group, everything())
 
@@ -239,27 +239,27 @@ bootstrap_summary <- function(data, varname = "total_patient_encounters", R = 10
 boot_summary_all_patients_all_encounters <- bootstrap_summary(all_patients_all_encounters_counts, varname = "total_patient_encounters")
 
 # --- Bootstrap: All Patients & Relevant Encounters
-boot_summary_all_patients_relevant_encounters <- bootstrap_summary(all_patients_relevant_encounters_counts, varname = "total_patient_encounters")
+# boot_summary_all_patients_relevant_encounters <- bootstrap_summary(all_patients_relevant_encounters_counts, varname = "total_patient_encounters")
 
 # --- Bootstrap: Users Only & All Encounters
 boot_summary_users_all_encounters <- bootstrap_summary(users_all_encounters_counts, varname = "total_patient_encounters")
 
 # --- Bootstrap: Users Only & Relevant Encounters
-boot_summary_users_relevant_encounters <- bootstrap_summary(users_relevant_encounters_counts, varname = "total_patient_encounters")
+# boot_summary_users_relevant_encounters <- bootstrap_summary(users_relevant_encounters_counts, varname = "total_patient_encounters")
 
 
 combined_bootstrap_summary_encounters <- bind_rows(
   boot_summary_all_patients_all_encounters %>%
     mutate(group = "All Patients & all encounters"),
   
-  boot_summary_all_patients_relevant_encounters %>%
-    mutate(group = "All Patients & relevant encounters"),
+  # boot_summary_all_patients_relevant_encounters %>%
+  #   mutate(group = "All Patients & relevant encounters"),
   
   boot_summary_users_all_encounters %>%
     mutate(group = "Users & all encounters"),
   
-  boot_summary_users_relevant_encounters %>%
-    mutate(group = "Users & relevant encounters")
+  # boot_summary_users_relevant_encounters %>%
+  #   mutate(group = "Users & relevant encounters")
 ) %>%
   select(group, everything())
 
@@ -298,35 +298,35 @@ summary_all_patients_all_encounters_costs <- all_patients_all_encounters_costs %
 
 
 # --- b) All patients & relevant encounters
-all_patients_relevant_encounters_costs <- visit_data_all %>%
-  filter(is_clinically_relevant == 1) %>%
-  group_by(subject_id) %>%
-  summarise(
-    total_patient_cost = sum(unit_cost, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-all_patients_relevant_encounters_costs <- left_join(cohort_table, all_patients_relevant_encounters_costs,
-                                                    by = "subject_id") %>%
-  replace_na(list(total_patient_cost = 0)) %>% # assign 0 to patients with no relevant encounters
-  select(subject_id, total_patient_cost)
-
-# Summary statistics
-summary_all_patients_relevant_encounters_costs <- all_patients_relevant_encounters_costs %>%
-  summarise(
-    n                  = n(),
-    mean          = mean(total_patient_cost),
-    min           = min(total_patient_cost),
-    max           = max(total_patient_cost),
-    sd            = sd(total_patient_cost),
-    median        = quantile(total_patient_cost, 0.5),
-    lower_q       = quantile(total_patient_cost, 0.25),
-    upper_q       = quantile(total_patient_cost, 0.75),
-    se                 = sd / sqrt(n),
-    ci_lower           = mean - qt(0.975, df = n - 1) * se,
-    ci_upper           = mean + qt(0.975, df = n - 1) * se
-  ) %>%
-  mutate(across(everything(), round, 2))
+# all_patients_relevant_encounters_costs <- visit_data_all %>%
+#   filter(is_clinically_relevant == 1) %>%
+#   group_by(subject_id) %>%
+#   summarise(
+#     total_patient_cost = sum(unit_cost, na.rm = TRUE),
+#     .groups = "drop"
+#   )
+# 
+# all_patients_relevant_encounters_costs <- left_join(cohort_table, all_patients_relevant_encounters_costs,
+#                                                     by = "subject_id") %>%
+#   replace_na(list(total_patient_cost = 0)) %>% # assign 0 to patients with no relevant encounters
+#   select(subject_id, total_patient_cost)
+# 
+# # Summary statistics
+# summary_all_patients_relevant_encounters_costs <- all_patients_relevant_encounters_costs %>%
+#   summarise(
+#     n                  = n(),
+#     mean          = mean(total_patient_cost),
+#     min           = min(total_patient_cost),
+#     max           = max(total_patient_cost),
+#     sd            = sd(total_patient_cost),
+#     median        = quantile(total_patient_cost, 0.5),
+#     lower_q       = quantile(total_patient_cost, 0.25),
+#     upper_q       = quantile(total_patient_cost, 0.75),
+#     se                 = sd / sqrt(n),
+#     ci_lower           = mean - qt(0.975, df = n - 1) * se,
+#     ci_upper           = mean + qt(0.975, df = n - 1) * se
+#   ) %>%
+#   mutate(across(everything(), round, 2))
 
 
 ## Users only ----
@@ -368,35 +368,35 @@ summary_users_all_encounters_costs <- users_all_encounters_costs %>%
 
 
 # --- b) Users & relevant encounters
-users_relevant_encounters_costs <- visit_data_all %>%
-  filter(user_status == "User", is_clinically_relevant == 1) %>%
-  group_by(subject_id) %>%
-  summarise(
-    total_patient_cost = sum(unit_cost, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-users_relevant_encounters_costs <- left_join(cohort_table_users, users_relevant_encounters_costs,
-                                             by = "subject_id") %>%
-  replace_na(list(total_patient_cost = 0)) %>% # assign 0 to users with no relevant encounters
-  select(subject_id, total_patient_cost) 
-
-# Summary statistics
-summary_users_relevant_encounters_costs <- users_relevant_encounters_costs %>%
-  summarise(
-    n                  = n(),
-    mean          = mean(total_patient_cost),
-    min           = min(total_patient_cost),
-    max           = max(total_patient_cost),
-    sd            = sd(total_patient_cost),
-    median        = quantile(total_patient_cost, 0.5),
-    lower_q       = quantile(total_patient_cost, 0.25),
-    upper_q       = quantile(total_patient_cost, 0.75),
-    se                 = sd / sqrt(n),
-    ci_lower           = mean - qt(0.975, df = n - 1) * se,
-    ci_upper           = mean + qt(0.975, df = n - 1) * se
-  ) %>%
-  mutate(across(everything(), round, 2))
+# users_relevant_encounters_costs <- visit_data_all %>%
+#   filter(user_status == "User", is_clinically_relevant == 1) %>%
+#   group_by(subject_id) %>%
+#   summarise(
+#     total_patient_cost = sum(unit_cost, na.rm = TRUE),
+#     .groups = "drop"
+#   )
+# 
+# users_relevant_encounters_costs <- left_join(cohort_table_users, users_relevant_encounters_costs,
+#                                              by = "subject_id") %>%
+#   replace_na(list(total_patient_cost = 0)) %>% # assign 0 to users with no relevant encounters
+#   select(subject_id, total_patient_cost) 
+# 
+# # Summary statistics
+# summary_users_relevant_encounters_costs <- users_relevant_encounters_costs %>%
+#   summarise(
+#     n                  = n(),
+#     mean          = mean(total_patient_cost),
+#     min           = min(total_patient_cost),
+#     max           = max(total_patient_cost),
+#     sd            = sd(total_patient_cost),
+#     median        = quantile(total_patient_cost, 0.5),
+#     lower_q       = quantile(total_patient_cost, 0.25),
+#     upper_q       = quantile(total_patient_cost, 0.75),
+#     se                 = sd / sqrt(n),
+#     ci_lower           = mean - qt(0.975, df = n - 1) * se,
+#     ci_upper           = mean + qt(0.975, df = n - 1) * se
+#   ) %>%
+#   mutate(across(everything(), round, 2))
 
 
 # --- Combine summaries 
@@ -404,36 +404,36 @@ combined_summary_costs <- bind_rows(
   summary_all_patients_all_encounters_costs %>%
     mutate(group = "All Patients & all encounters"),
   
-  summary_all_patients_relevant_encounters_costs %>%
-    mutate(group = "All Patients & relevant encounters"),
+  # summary_all_patients_relevant_encounters_costs %>%
+  #   mutate(group = "All Patients & relevant encounters"),
   
   summary_users_all_encounters_costs %>%
     mutate(group = "Users & all encounters"),
   
-  summary_users_relevant_encounters_costs %>%
-    mutate(group = "Users & relevant encounters")
+  # summary_users_relevant_encounters_costs %>%
+  #   mutate(group = "Users & relevant encounters")
 ) %>%
   select(group, everything())
 
 # Bootstrap cost  ----
 boot_summary_all_patients_all_encounters_costs <- bootstrap_summary(all_patients_all_encounters_costs, varname = "total_patient_cost")
-boot_summary_all_patients_relevant_encounters_costs <- bootstrap_summary(all_patients_relevant_encounters_costs, varname = "total_patient_cost")
+# boot_summary_all_patients_relevant_encounters_costs <- bootstrap_summary(all_patients_relevant_encounters_costs, varname = "total_patient_cost")
 boot_summary_users_all_encounters_costs <- bootstrap_summary(users_all_encounters_costs, varname = "total_patient_cost")
-boot_summary_users_relevant_encounters_costs <- bootstrap_summary(users_relevant_encounters_costs, varname = "total_patient_cost")
+# boot_summary_users_relevant_encounters_costs <- bootstrap_summary(users_relevant_encounters_costs, varname = "total_patient_cost")
 
 # Combine bootstrap summaries
 combined_bootstrap_costs_summary <- bind_rows(
   boot_summary_all_patients_all_encounters_costs %>%
     mutate(group = "All Patients & all encounters"),
   
-  boot_summary_all_patients_relevant_encounters_costs %>%
-    mutate(group = "All Patients & relevant encounters"),
+  # boot_summary_all_patients_relevant_encounters_costs %>%
+  #   mutate(group = "All Patients & relevant encounters"),
   
   boot_summary_users_all_encounters_costs %>%
     mutate(group = "Users & all encounters"),
   
-  boot_summary_users_relevant_encounters_costs %>%
-    mutate(group = "Users & relevant encounters")
+  # boot_summary_users_relevant_encounters_costs %>%
+  #   mutate(group = "Users & relevant encounters")
 ) %>%
   select(group, everything())
 combined_bootstrap_costs_summary
@@ -476,7 +476,7 @@ overall_healthcare_role_list <- list(
 
 write_xlsx(
   overall_healthcare_role_list,
-  here("OMOP Analysis", "Results", "Results_GL", "Cohort", "Output_overall_healthcare_roles-OMOP.xlsx")
+  here("OMOP Analysis", "Results", "Cohort", "Output_overall_healthcare_roles-OMOP.xlsx")
 )
 
 # --- Create gtsummary Table ---
@@ -502,19 +502,19 @@ gt_table_export <- as_tibble(gt_overall_healthcare_roles_count)
 # Export 
 library(writexl)
 # Write to an Excel file
-write_xlsx(combined_summary_encounters, here::here("OMOP Analysis", "Results", "Results_GL", "Overall",
+write_xlsx(combined_summary_encounters, here::here("OMOP Analysis", "Results", "Overall",
                                                    "overall_combined_summary_encounters_OMOP.xlsx"))
 
-write_xlsx(combined_bootstrap_summary_encounters, here::here("OMOP Analysis", "Results", "Results_GL", "Overall",
+write_xlsx(combined_bootstrap_summary_encounters, here::here("OMOP Analysis", "Results", "Overall",
                                                              "overall_combined_bootstrap_summary_encounters_OMOP.xlsx"))
 
-write_xlsx(combined_summary_costs, here::here("OMOP Analysis", "Results", "Results_GL","Overall",
+write_xlsx(combined_summary_costs, here::here("OMOP Analysis", "Results", "Overall",
                                               "overall_combined_summary_costs_OMOP.xlsx"))
 
-write_xlsx(combined_bootstrap_costs_summary, here::here("OMOP Analysis", "Results", "Results_GL", "Overall",
+write_xlsx(combined_bootstrap_costs_summary, here::here("OMOP Analysis", "Results", "Overall",
                                                         "overall_combined_bootstrap_summary_costs_OMOP.xlsx"))
 
-write_xlsx(gt_table_export, here::here("OMOP Analysis", "Results", "Results_GL", "Cohort",
+write_xlsx(gt_table_export, here::here("OMOP Analysis", "Results", "Cohort",
                                        "Output_gt_overall_healthcare_roles_count_OMOP.xlsx"))
 
 

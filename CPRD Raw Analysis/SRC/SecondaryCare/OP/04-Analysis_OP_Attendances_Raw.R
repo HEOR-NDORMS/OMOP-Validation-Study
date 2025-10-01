@@ -147,7 +147,6 @@ all_overall_summary_appts <-  all_appts_per_patient %>%
   mutate(across(everything(), round, 2))
 
 # Export the file
-
 library(writexl)
 
 appts_list <- list(
@@ -157,7 +156,7 @@ appts_list <- list(
 
 # Write to an Excel file
 write_xlsx(appts_list, here::here("CPRD Raw Analysis", "Results",
-                                              "SecondaryCareAnalysis", "Output_appointments_Raw.xlsx"))
+                                              "SecondaryCareAnalysis", "OP","Output_appointments_Raw.xlsx"))
 
 
 # Plot ----
@@ -167,7 +166,7 @@ library(ggplot2)
 # Calculate the mean number of appointments
 users_mean_appts <- mean(users_appts_per_patient$n_appts, na.rm = TRUE)
 
-(users_appts_plot_hist_va <- ggplot(users_appts_per_patient, 
+(users_appts_plot_hist <- ggplot(users_appts_per_patient, 
                            aes(x = n_appts)) +
     geom_histogram(binwidth = 2, 
                    fill = "cadetblue1", 
@@ -184,98 +183,53 @@ users_mean_appts <- mean(users_appts_per_patient$n_appts, na.rm = TRUE)
              hjust = 0.5, 
              color = "red", 
              fontface = "bold") +
-    labs(title = "Distribution of Outpatient Appointments", 
-         subtitle = "OP Healthcare Service Users",
-         x = "Number of Admissions (bin width = 2)", 
+    labs(title = "", 
+         subtitle = "",
+         x = "Number of Appointments (bin width = 2)", 
          y = "Count of Patients",
-         caption = "Each bar represents a 2-appointment range e.g., 1-2, 3-4, ...
-         \n up to the range of the data.\n Red line shows the average appointments per OP Healthcare Service User.")) +
-  theme_minimal()
+         caption = "Each bar represents a 2-appointment range e.g., 1-2, 3-4, ...up to the range of the data.\nRed line shows the average appointments per OP Healthcare Service User.") +
+  theme_minimal(base_size = 14, base_family = "Times") +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 13),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(size = 12),
+    plot.caption = element_text(size = 10, hjust = 0)
+  )
+)
 
 # Save the plot
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" ,"Plots",
-  "Mean_appts_hist-Users_va.PNG"),
-  plot = users_appts_plot_hist_va,
+  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Plots",
+  "Mean_appts_hist_users-Raw.PNG"),
+  plot = users_appts_plot_hist,
   width = 10,
   height = 7,
   bg = "white"
 )
 
-# # Build the initial plot first
-# users_appts_plot_hist_vb <- ggplot(users_appts_per_patient, 
-#                                  aes(x = n_appts)) +
-#   geom_histogram(binwidth = 2, 
-#                  fill = "cadetblue1", 
-#                  color = "cadetblue")
-# 
-# # Calculate the maximum y-value for annotation placement
-# users_max_count <- max(ggplot_build(users_appts_plot_hist_vb)$data[[1]]$count)
-# 
-# # Update the plot with a specific y-value for the annotation
-# (users_appts_plot_hist_vb <- users_appts_plot_hist_vb +
-#   geom_vline(xintercept = mean_appts, 
-#              linetype = "dashed", 
-#              color = "red", 
-#              size = 0.5) +
-#   annotate("text",
-#            x = users_mean_appts,
-#            y = users_max_count + 5,
-#            label = paste0("Mean = ", round(users_mean_appts, 1)),
-#            vjust = 0,
-#            hjust = 0.5,
-#            color = "red",
-#            fontface = "bold") +
-#   labs(title = "Distribution of Outpatient Appointments", 
-#        subtitle = "OP Healthcare Service Users",
-#        x = "Number of Admissions (bin width = 2)", 
-#        y = "Count of Patients",
-#        caption = "Each bar represents a 2-appointment range e.g., 1-2, 3-4, ...\n
-#        up to the range of the data") +
-#     theme_minimal() +
-#     theme(
-#       plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
-#       axis.title = element_text(hjust = 0.5, size = 14),
-#       axis.text = element_text(size = 12),
-#       plot.caption = element_text(size = 12),
-#       panel.spacing = unit(2, "lines")
-#     ))
-# 
-# 
-# # Save the plot
-# ggsave(here::here(
-#   "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" ,"Plots",
-#   "Mean_appts_hist-Users_vb.PNG"),
-#   plot = users_appts_plot_hist_vb,
-#   width = 9.5,
-#   height = 7,
-#   bg = "white"
-# )
-# 
-# 
 (users_appts_plot_density <- ggplot(users_appts_per_patient,
        aes(x = n_appts)) +
-    geom_density(fill = "cadetblue1",
-                 color = "cadetblue") +
+    geom_density(fill = "#008000",
+                 color = "#006400") +
     labs(
-      title = "Density Plot of Outpatient Appointments",
-      subtitle = "OP Healthcare Service Users",
-       x = "Number of Admissions",
+      title = "",
+      subtitle = "",
+       x = "Number of Appointments",
        y = "Density") +
-    theme_minimal() +
+    theme_minimal(base_size = 14, base_family = "Times") +
     theme(
       plot.title = element_text(face = "bold", size = 16),
-      axis.title = element_text(hjust = 0.5, size = 14),
+      plot.subtitle = element_text(size = 13),
+      axis.title = element_text(face = "bold"),
       axis.text = element_text(size = 12),
-      plot.caption = element_text(size = 12),
-      panel.spacing = unit(2, "lines")
-    )
-  )
+      plot.caption = element_text(size = 10, hjust = 0)
+    ))
 
 # Save the plot
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" ,"Plots",
-  "Mean_appts_density-Users.PNG"),
+  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Plots",
+  "Mean_appts_density_users-Raw.PNG"),
   plot = users_appts_plot_density,
   width = 7.5,
   height = 6,
@@ -286,7 +240,7 @@ ggsave(here::here(
 # Calculate the mean number of appointments
 all_mean_appts <- mean(all_appts_per_patient$n_appts, na.rm = TRUE)
 
-(all_appts_plot_hist_va <- ggplot(all_appts_per_patient, 
+(all_appts_plot_hist <- ggplot(all_appts_per_patient, 
                                     aes(x = n_appts)) +
     geom_histogram(binwidth = 2, 
                    fill = "#FF7F50", 
@@ -295,29 +249,25 @@ all_mean_appts <- mean(all_appts_per_patient$n_appts, na.rm = TRUE)
                linetype = "dashed", 
                color = "#2F4F4F", 
                size = 0.5) +
-    # annotate("text", 
-    #          x = all_mean_appts, 
-    #          y = Inf, 
-    #          label = paste0("Mean = ", round(all_mean_appts, 1)), 
-    #          vjust = -0.5, 
-    #          hjust = 0.5, 
-    #          color = "#2F4F4F", 
-    #          fontface = "bold") +
-    labs(title = "Distribution of Outpatient Appointments", 
-         subtitle = "OP Healthcare Service All patients",
-         x = "Number of Admissions (bin width = 2)", 
+    labs(title = "", 
+         subtitle = "",
+         x = "Number of Appointments (bin width = 2)", 
          y = "Count of Patients",
-         caption = "Each bar represents a 2-appointment range e.g., 1-2, 3-4, ...
-         \n up to the range of the data. 
-         \nGreen line shows the average appointments both OP Healthcare Service 
-         Users & Non-Users.")) +
-  theme_minimal()
+         caption = "Each bar represents a 2-appointment range e.g., 1-2, 3-4, ...up to the range of the data.\nGreen line shows the average appointments both OP Healthcare Service Users & Non-Users.") +
+  theme_minimal(base_size = 14, base_family = "Times") +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 13),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(size = 12),
+    plot.caption = element_text(size = 10, hjust = 0)
+  ))
 
 # Save the plot
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" ,"Plots",
-  "Mean_appts_hist-All_va.PNG"),
-  plot = all_appts_plot_hist_va,
+  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Plots",
+  "Mean_appts_hist_all-Raw.PNG"),
+  plot = all_appts_plot_hist,
   width = 10,
   height = 7,
   bg = "white"
@@ -326,27 +276,27 @@ ggsave(here::here(
 
 (all_appts_plot_density <- ggplot(all_appts_per_patient,
                                     aes(x = n_appts)) +
-    geom_density(fill = "#FF7F50",
-                 color = "#FF7256") +
+    geom_density(fill = "#8b5e34",
+                 color = "#a47148") +
     labs(
-      title = "Density Plot of Outpatient Appointments",
-      subtitle = "OP Healthcare Service All Patients",
-      x = "Number of Admissions",
+      title = "",
+      subtitle = "",
+      x = "Number of Appointments",
       y = "Density") +
-    theme_minimal() +
+    theme_minimal(base_size = 14, base_family = "Times") +
     theme(
       plot.title = element_text(face = "bold", size = 16),
-      axis.title = element_text(hjust = 0.5, size = 14),
+      plot.subtitle = element_text(size = 13),
+      axis.title = element_text(face = "bold"),
       axis.text = element_text(size = 12),
-      plot.caption = element_text(size = 12),
-      panel.spacing = unit(2, "lines")
+      plot.caption = element_text(size = 10, hjust = 0)
     )
 )
 
 # Save the plot
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" ,"Plots",
-  "Mean_appts_density-All.PNG"),
+  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "OP", "Plots",
+  "Mean_appts_density_all-Raw.PNG"),
   plot = all_appts_plot_density,
   width = 7.5,
   height = 6,
@@ -547,7 +497,8 @@ rio::export(rule4_applied_ids, here::here("CPRD Raw Analysis", "Results",
 
 op_costs_non_users <- costs_data_hrg %>% 
   filter(is.na(apptdate))
-
+rio::export(op_costs_non_users, here::here("CPRD Raw Analysis", "Results",
+                                      "SecondaryCareAnalysis", "op_costs_non_users.csv"))
 # Costs have been done from my local R, but the script is uploaded in the Github.
 
 # Remove objects from this analysis

@@ -103,7 +103,12 @@ any_fracture_id <- conditions_sheet1 %>%
 cdm[["condition_occurrence_primary"]] <- 
   cdm[["condition_occurrence"]] %>% 
   dplyr::filter(condition_type_concept_id == 32827) %>% 
+  # you can use the name argument to save the data as a permanent table
+  # the name must be the same than cdm$my_name -> name = "my_name"
   dplyr::compute()
+
+# you can reda a permanent table from the database using this:
+# cdm$condition_occurrence_primary <- dplyr::tbl(con, "condition_occurrence_primary")
 
 # cdm[["observation_primary"]] <- 
 #   cdm[["observation"]] %>% 
@@ -149,7 +154,7 @@ cdm[["fracture"]] <- cdm[["denominator"]] %>%
   else if (condition_concept_id %in% nonspecific_fracture_id) {
     "Nonspecific"
   }
-  )
+  ) %>% computeQuery()
 #rm(hip_fracture_id, femur_fracture_id, foot_fracture_id, tib_fracture_id, rib_fracture_id, forearm_fracture_id, vert_fracture_id, pelvic_fracture_id, humerus_fracture_id, nonspecific_fracture_id)
 
 # The fracture table
