@@ -320,28 +320,24 @@ combined_encounters_bootstrap_summary_yearly <- bind_rows(
 
 
 # --- Costs ------
+# Ran from the local machine
+# Start by running 05-CreatingCosts_OP_Raw.R
+# Then from the server, save cohort_table dataset and table_one_op_raw_appt_recoded
 
-## All patients ----
-# --- Preparation ---
-n_all_pts <- n_distinct(cohort_table$patid)
+cohort_table <- import("H:/Projects/Validation/Data/cohort_data_raw.csv")
 
-# Create exposure matrix for years (partial years are included) ---
-cohort_grid_raw_all_years <- cohort_table %>%
-  mutate(
-    index_date = ymd(index_date),
-    follow_up_end = ymd(follow_up_end),
-    total_years = ceiling(as.numeric(difftime(follow_up_end, index_date, units = "days")) / 365.25)
-  ) %>%
-  rowwise() %>%
-  mutate(year_vector = list(0:1)) %>%  # Always up to 2 years
-  unnest(year_vector) %>%
-  mutate(
-    year_col = paste0("year_", year_vector + 1),
-    value = ifelse(year_vector < total_years, 0, NA_real_)  # mark unexposed years as NA
-  ) %>%
-  select(patid, year_col, value) %>%
-  pivot_wider(names_from = year_col, values_from = value)
+table_one_op_raw_appt_recoded <- import("H:/Projects/Validation/Data/table_one_op_raw_appt_recoded.csv") |> 
+  arrange(patid)
+op_costs_final_data_recoded <- op_costs_final_data_recoded |> 
+  arrange(patid)
+op_costs_final_data_recoded_min <- op_costs_final_data_recoded |> 
+  select(unit_cost)
 
+table_one_op_raw_appt_recoded <- cbind(table_one_op_raw_appt_recoded, 
+                                       op_costs_final_data_recoded_min)
+
+
+                                            
 # Compute max exposed year per patient ---
 cohort_years_all_years <- cohort_table %>%
   mutate(
