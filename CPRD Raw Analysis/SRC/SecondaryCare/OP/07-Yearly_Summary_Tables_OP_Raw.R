@@ -612,14 +612,22 @@ combined_costs_bootstrap_summary_yearly <- bind_rows(
 
 # Export 
 
-write_xlsx(combined_summary_encounters_yearly, here::here("CPRD Raw Analysis", "Results", "Yearly",
-                                                          "yearly_combined_summary_encounters_SOURCE.xlsx"))
+write_xlsx(combined_summary_encounters_yearly, 
+           here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", 
+                      "OP", "Yearly", 
+                      "yearly_combined_summary_encounters_SOURCE.xlsx"))
 
-write_xlsx(combined_encounters_bootstrap_summary_yearly, here::here("CPRD Raw Analysis", "Results", "Yearly", 
-                                                                    "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
+write_xlsx(combined_encounters_bootstrap_summary_yearly,
+           here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", 
+                      "OP", "Yearly", 
+                      "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
 
-write_xlsx(combined_summary_costs_yearly, here::here("CPRD Raw Analysis", "Results", "Yearly",
-                                                     "yearly_combined_summary_costs_SOURCE.xlsx"))
+write_xlsx(combined_summary_costs_yearly, 
+           here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis",
+                      "OP", "Yearly", 
+                      "yearly_combined_summary_costs_SOURCE.xlsx"))
 
-write_xlsx(combined_costs_bootstrap_summary_yearly, here::here("CPRD Raw Analysis", "Results",  "Yearly",
-                                                               "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx"))
+write_xlsx(combined_costs_bootstrap_summary_yearly, 
+           here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", 
+                      "OP", "Yearly",
+                      "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx"))
