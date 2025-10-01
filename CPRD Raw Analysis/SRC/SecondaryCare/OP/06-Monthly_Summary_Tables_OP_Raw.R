@@ -25,7 +25,11 @@
 
 # Note: Bootstrap is currently applied only to the 'all months' definitions but is ready to be run for full-month definitions if needed.
 
-# Load Pack
+# Load Packages
+library(tidyverse)
+library(rio)
+library(boot)
+
 
 ### HCRU -----
 
@@ -843,6 +847,12 @@ write_xlsx(combined_encounters_bootstrap_summary_monthly,
 
 ### COSTS -----
 
+# Ran from the local machine
+# Start by running 05-CreatingCosts_OP_Raw.R
+# Then from the server, save cohort_table dataset and table_one_op_raw_appt_recoded
+
+cohort_table <- import("H:/Projects/Validation/Data/cohort_data_raw.csv")
+
 ## All patients & full months ----
 # Preparation 
 n_all_pts <- n_distinct(cohort_table$patid)
@@ -873,6 +883,15 @@ cohort_months <- cohort_table %>%
 # --- a) All patients & all encounters -----
 
 # Filter encounters to full months only
+table_one_op_raw_appt_recoded <- import("H:/Projects/Validation/Data/table_one_op_raw_appt_recoded.csv") |> 
+  arrange(patid)
+op_costs_final_data_recoded <- op_costs_final_data_recoded |> 
+  arrange(patid)
+op_costs_final_data_recoded_min <- op_costs_final_data_recoded |> 
+  select(unit_cost)
+
+table_one_op_raw_appt_recoded <- cbind(table_one_op_raw_appt_recoded, 
+                                       op_costs_final_data_recoded_min)
 
 merged_matrix_costs <- table_one_op_raw_appt_recoded %>%
   mutate(
@@ -1028,7 +1047,8 @@ observed_cost_summary_all_patients_all_encounters <- final_long_df_costs_all_pat
 
 # Preparation
 
-cohort_table_users <- table_one_op_raw_appt_recoded %>% filter(user_status== "User") %>% 
+cohort_table_users <- table_one_op_raw_appt_recoded %>% 
+  filter(user_status== "User") %>% 
   distinct(patid, index_date, site, follow_up_end, follow_up_reason, follow_up_time)
 
 n_users <- n_distinct(cohort_table_users$patid)
@@ -1630,8 +1650,10 @@ combined_costs_bootstrap_summary_monthly <- bind_rows(
   select(group, everything())
 
 # Export
+library(writexl)
 write_xlsx(combined_costs_bootstrap_summary_monthly, 
-           here::here("CPRD Raw Analysis", "Results", "Monthly",
+           here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", 
+                      "OP", "Monthly", 
                       "monthly_combined_bootstrap_summary_costs_SOURCE.xlsx"))
 
 
@@ -1640,6 +1662,7 @@ write_xlsx(combined_costs_bootstrap_summary_monthly,
 
 library(ggplot2)
 
+### OP visits plots ----
 # Add group identifiers and combine into one dataframe
 df_boot_means <- bind_rows(
   monthly_bootstrap_all_patients_all_encounters_all_months %>%
@@ -1673,7 +1696,7 @@ ggplot(df_boot_means, aes(x = month, y = mean, color = group)) +
   theme_minimal() +
   scale_x_continuous(breaks = 1:24)
 
-## Plot costs
+### Costs plot ----
 
 # Combine cost bootstrap summaries
 df_boot_costs <- bind_rows(
@@ -1696,7 +1719,7 @@ df_boot_costs <- df_boot_costs %>%
          mean = as.numeric(mean))  # Ensure mean is numeric
 
 # Plot
-ggplot(df_boot_costs, aes(x = month, y = mean, color = group)) +
+(boot_mean_costs_plot <- ggplot(df_boot_costs, aes(x = month, y = mean, color = group)) +
   geom_line(linewidth = 1) +
   geom_point() +
   labs(
@@ -1705,9 +1728,26 @@ ggplot(df_boot_costs, aes(x = month, y = mean, color = group)) +
     y = "Mean Monthly Cost (£)",
     color = "Group"
   ) +
-  theme_minimal() +
-  scale_x_continuous(breaks = 1:24)
+  scale_x_continuous(breaks = 1:24) +
+  theme_minimal(base_size = 14, base_family = "Times") +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 13),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(size = 10),
+    plot.caption = element_text(size = 10, hjust = 0)
+  )
+)
 
+# Save the plot
+ggsave(here::here(
+  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Plots",
+  "Boot_mean_costs_plot-Raw.PNG"),
+  plot = boot_mean_costs_plot,
+  width = 10,
+  height = 7,
+  bg = "white"
+)
 
 # Cleaning environment
 
