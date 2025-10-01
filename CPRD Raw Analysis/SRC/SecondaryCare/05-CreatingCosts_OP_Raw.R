@@ -308,9 +308,9 @@ users_overall_by_tretspef_c <- op_costs_final_data_recoded |>
             num_subjects_visited = n_distinct(patid),
             .groups = "drop")
 
-rio::export(users_overall_by_tretspef_c, 
-            here::here("CPRD Raw Analysis", "Results",
-                       "SecondaryCareAnalysis", "Output_costs_by_tretspef-Users_Raw.xlsx"))
+# rio::export(users_overall_by_tretspef_c, 
+#             here::here("CPRD Raw Analysis", "Results",
+#                        "SecondaryCareAnalysis", "Output_costs_by_tretspef-Users_Raw.xlsx"))
 users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   filter(user_status == "User") %>% 
   group_by(patid, tretspef_recoded) %>%                     # group data per patient
@@ -323,9 +323,9 @@ users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
             max_visits = round(max(n_appts, na.rm = TRUE), 2),
             num_subjects_visited = n_distinct(patid),
             .groups = "drop")
-rio::export(users_overall_by_tretspef_v, 
-            here::here("CPRD Raw Analysis", "Results",
-                       "SecondaryCareAnalysis", "Output_appointments_by_tretspef-Users_Raw.xlsx"))
+# rio::export(users_overall_by_tretspef_v, 
+#             here::here("CPRD Raw Analysis", "Results",
+#                        "SecondaryCareAnalysis", "Output_appointments_by_tretspef-Users_Raw.xlsx"))
 
 
 
@@ -366,9 +366,9 @@ all_overall_by_tretspef_c <- op_costs_final_data_recoded |>
             .groups = "drop") |> 
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded))
 
-rio::export(all_overall_by_tretspef_c, 
-            here::here("CPRD Raw Analysis", "Results",
-                       "SecondaryCareAnalysis", "Output_costs_by_tretspef-All_Raw.xlsx"))
+# rio::export(all_overall_by_tretspef_c, 
+#             here::here("CPRD Raw Analysis", "Results",
+#                        "SecondaryCareAnalysis", "Output_costs_by_tretspef-All_Raw.xlsx"))
 all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   group_by(patid, tretspef_recoded) %>%  
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded)) |> # group data per patient
@@ -385,9 +385,9 @@ all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   mutate_at("tretspef_recoded", as.factor) %>%
   mutate(tretspef_recoded = forcats::fct_infreq(tretspef_recoded))
 
-rio::export(all_overall_by_tretspef_v, 
-            here::here("CPRD Raw Analysis", "Results",
-                       "SecondaryCareAnalysis", "Output_appointments_by_tretspef-All_Raw.xlsx"))
+# rio::export(all_overall_by_tretspef_v, 
+#             here::here("CPRD Raw Analysis", "Results",
+#                        "SecondaryCareAnalysis", "Output_appointments_by_tretspef-All_Raw.xlsx"))
 
 
 # Export the file
@@ -399,5 +399,5 @@ costs_list <- list(
 )
 
 # Write to an Excel file
-write_xlsx(costs_list, here::here("CPRD Raw Analysis", "Results",
-                                  "SecondaryCareAnalysis", "Output_Costs_Raw.xlsx"))
+# write_xlsx(costs_list, here::here("CPRD Raw Analysis", "Results",
+#                                   "SecondaryCareAnalysis", "Output_Costs_Raw.xlsx"))
