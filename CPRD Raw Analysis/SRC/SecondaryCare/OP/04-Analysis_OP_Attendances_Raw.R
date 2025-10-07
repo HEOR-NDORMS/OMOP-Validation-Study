@@ -65,30 +65,14 @@ appt_data_min <- appt_data %>%
 users_appts_data <- appt_data_min %>%
   filter(user_status == "User") 
 
-users_appts <- users_appts_data %>% 
-  group_by(patid) %>%                     # group data by patid
-  select(patid, apptdate, attendkey) %>%  # select only variables of interest: patid, apptdate, attendkey
-  arrange(patid, apptdate) %>%            # sort data according to appointment date
-  distinct() %>%                          # deduplicate       
-  mutate(appt_no  = 1:n()) %>%            # generate an appointment counter
-  ungroup()
-
-users_appts_data_final <- merge(users_appts_data, users_appts , 
-                                all.x=T, all.y=T,
-                                by=c("patid", "apptdate", "attendkey")) %>% 
-  arrange(patid)
-rm(users_appts)
-
-users_appts_per_patient <- users_appts_data_final %>%
-  group_by(patid) %>%                     # group data per patient
-  summarise(n_appts = n()) %>%   # derive total number of appointments by picking max value of apptorder
-  ungroup()  %>%                          # now, ungroup the data and save only one row summary per patient
-  select(patid, n_appts)  %>%             # save only patid and nr of appts
-  distinct()
+users_attendance_no  <- users_appts_data %>%
+  group_by(patid) %>%                       
+  summarise(n_appts  = n()) %>%         
+  ungroup()                                 
 
 
 ### Summary table ----
-users_overall_summary_appts <-  users_appts_per_patient %>%
+users_overall_summary_appts <-  users_attendance_no %>%
   summarise(
     n        = n(),
     mean     = mean(n_appts),
@@ -105,32 +89,16 @@ users_overall_summary_appts <-  users_appts_per_patient %>%
   mutate(across(everything(), round, 2))
 
 ## All ----
-# users_appts_data <- appt_data_min 
-all_appts <- appt_data_min %>% 
-  group_by(patid) %>%                     # group data by patid
-  select(patid, apptdate, attendkey) %>%  # select only variables of interest: patid, apptdate, attendkey
-  arrange(patid, apptdate) %>%            # sort data according to appointment date
-  distinct() %>%                          # deduplicate       
-  mutate(appt_no  = 1:n()) %>%            # generate an appointment counter
-  ungroup() %>% 
-  mutate(appt_no = if_else(is.na(apptdate), 0, appt_no))
-
-all_appts_data_final <- merge(all_appts, appt_data_min , 
-                                all.x=T, all.y=T,
-                                by=c("patid", "apptdate", "attendkey")) %>% 
-  arrange(patid)
-rm(all_appts)
-
-all_appts_per_patient <- all_appts_data_final %>%
-  group_by(patid) %>%                     # group data per patient
-  summarise(n_appts = max(appt_no)) %>%   # derive total number of appointments by picking max value of apptorder
-  ungroup()  %>%                          # now, ungroup the data and save only one row summary per patient
-  select(patid, n_appts)  %>%             # save only patid and nr of appts
-  distinct()
+all_attendance_no <- appt_data_min %>%
+  group_by(patid) %>%
+  summarise(
+    n_appts = if (all(is.na(apptdate))) 0L else sum(!is.na(apptdate)),
+    .groups = "drop"
+  )
 
 
 ### Summary table ----
-all_overall_summary_appts <-  all_appts_per_patient %>%
+all_overall_summary_appts <-  all_attendance_no %>%
   summarise(
     n        = n(),
     mean     = mean(n_appts),
@@ -164,9 +132,9 @@ library(ggplot2)
 
 ## Users ----
 # Calculate the mean number of appointments
-users_mean_appts <- mean(users_appts_per_patient$n_appts, na.rm = TRUE)
+users_mean_appts <- mean(users_attendance_no$n_appts, na.rm = TRUE)
 
-(users_appts_plot_hist <- ggplot(users_appts_per_patient, 
+(users_appts_plot_hist <- ggplot(users_attendance_no, 
                            aes(x = n_appts)) +
     geom_histogram(binwidth = 2, 
                    fill = "cadetblue1", 
@@ -208,7 +176,7 @@ ggsave(here::here(
   bg = "white"
 )
 
-(users_appts_plot_density <- ggplot(users_appts_per_patient,
+(users_appts_plot_density <- ggplot(users_attendance_no,
        aes(x = n_appts)) +
     geom_density(fill = "#008000",
                  color = "#006400") +
@@ -238,9 +206,9 @@ ggsave(here::here(
 
 ## All ----
 # Calculate the mean number of appointments
-all_mean_appts <- mean(all_appts_per_patient$n_appts, na.rm = TRUE)
+all_mean_appts <- mean(all_attendance_no$n_appts, na.rm = TRUE)
 
-(all_appts_plot_hist <- ggplot(all_appts_per_patient, 
+(all_appts_plot_hist <- ggplot(all_attendance_no, 
                                     aes(x = n_appts)) +
     geom_histogram(binwidth = 2, 
                    fill = "#FF7F50", 
@@ -274,7 +242,7 @@ ggsave(here::here(
 )
 
 
-(all_appts_plot_density <- ggplot(all_appts_per_patient,
+(all_appts_plot_density <- ggplot(all_attendance_no,
                                     aes(x = n_appts)) +
     geom_density(fill = "#8b5e34",
                  color = "#a47148") +
