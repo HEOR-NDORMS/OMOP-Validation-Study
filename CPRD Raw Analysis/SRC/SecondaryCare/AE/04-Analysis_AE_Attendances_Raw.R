@@ -7,26 +7,12 @@
 # ****************************************************************************** #
 
 # Starting with table_two_ae_raw from 03-Table2_AE_Raw.R ----
-ae_attendance_data <- table_two_ae_raw 
+ae_attendance_data <- table_two_ae_raw_recoded 
 
 # HRCU ----
 ## Users ----
 users_ae_attendance_data <- ae_attendance_data %>%
   filter(user_status == "User") 
-
-# users_ae_attendances <- users_ae_attendance_data %>% 
-#   group_by(patid) %>%                     # group data by patid
-#   
-#   arrange(patid, arrivaldate) %>%            # sort data according to appointment date
-#   distinct() %>%                          # deduplicate       
-#   mutate(att_no  = 1:n()) %>%            # generate an appointment counter
-#   ungroup()
-# 
-# users_ae_attendance_data_final <- merge(users_ae_attendance_data, users_ae_attendances , 
-#                                 all.x=T, all.y=T,
-#                                 by=c("patid", "arrivaldate", "aekey")) %>% 
-#   arrange(patid)
-# rm(users_ae_attendances)
 
 users_ae_attendance_per_patient <- users_ae_attendance_data %>%
   group_by(patid) %>%                     # group data per patient
@@ -54,28 +40,12 @@ users_overall_summary_ae_attendance <-  users_ae_attendance_per_patient %>%
   mutate(across(everything(), round, 2))
 
 ## All ----
-# users_appts_data <- appt_data_min 
-all_ae_attendance <- ae_attendance_data %>% 
-  group_by(patid) %>%                     # group data by patid
-  select(patid, arrivaldate, aekey) %>%  # select only variables of interest: patid, apptdate, attendkey
-  arrange(patid, arrivaldate) %>%            # sort data according to appointment date
-  distinct() %>%                          # deduplicate       
-  mutate(att_no  = 1:n()) %>%            # generate an appointment counter
-  ungroup() %>% 
-  mutate(att_no = if_else(is.na(arrivaldate), 0, att_no))
-
-all_ae_attendance_data_final <- merge(all_ae_attendance, ae_attendance_data , 
-                              all.x=T, all.y=T,
-                              by=c("patid", "arrivaldate", "aekey")) %>% 
-  arrange(patid)
-rm(all_ae_attendance)
-
-all_ae_attendance_per_patient <- all_ae_attendance_data_final %>%
-  group_by(patid) %>%                     # group data per patient
-  summarise(n_att = max(att_no)) %>%   # derive total number of appointments by picking max value of apptorder
-  ungroup()  %>%                          # now, ungroup the data and save only one row summary per patient
-  select(patid, n_att)  %>%             # save only patid and nr of appts
-  distinct()
+all_ae_attendance_per_patient <- ae_attendance_data %>%
+  group_by(patid) %>%                     
+  summarise(
+    n_att = if (all(is.na(arrivaldate))) 0L else sum(!is.na(arrivaldate)),
+    .groups = "drop"
+  )
 
 
 ### Summary table ----
@@ -99,14 +69,14 @@ all_overall_summary_ae_attendance <-  all_ae_attendance_per_patient %>%
 
 library(writexl)
 
-# ae_attandances_list <- list(
-#   users_overall_summary_atts = users_overall_summary_ae_attendance,
-#   all_overall_summary_atts = all_overall_summary_ae_attendance
-# )
-# 
-# # Write to an Excel file
-# write_xlsx(ae_attandances_list, here::here("CPRD Raw Analysis", "Results",
-#                                   "SecondaryCareAnalysis", "AE","Output_AE_attdances_Raw.xlsx"))
+ae_attandances_list <- list(
+  users_overall_summary_atts = users_overall_summary_ae_attendance,
+  all_overall_summary_atts = all_overall_summary_ae_attendance
+)
+
+# Write to an Excel file
+write_xlsx(ae_attandances_list, here::here("CPRD Raw Analysis", "Results",
+                                  "SecondaryCareAnalysis", "AE","Output_AE_attdances_Raw.xlsx"))
 # Plot ----
 library(ggplot2)
 
@@ -252,10 +222,51 @@ ggsave(here::here(
   bg = "white"
 )
 
-
-# AE with treat codes C109, D101, D102, D105, E101, E104, E105, E110, U212, Y981, Z411, Z413, Z421
-# that should be in diagnosis
-
-rule1_ae_treat <- ae_attendance_data %>% 
+# Prepare costs data ----
+# get the age
+validation_old <- my_dm$`_validation_old` %>% collect()
+costs_data_hrg_ae_users <- ae_attendance_data %>% 
   filter(user_status == "User") %>% 
-  filter(treat %in% c("C109", "D101", "D102", "D105", "E101", "E104", "E105", "E110", "U212", "Y981", "Z411", "Z413", "Z421"))
+  arrange(patid)
+
+costs_data_hrg_ae_users <- left_join(costs_data_hrg_ae_users, validation_old %>% select(patid, yob), by = "patid") %>% 
+  mutate(age = as.numeric(format(arrivaldate, "%Y")) - yob) %>% 
+  mutate(aepatientgroup = NA_character_,
+         inv_02 = NA_character_, inv_03  = NA_character_, inv_04 = NA_character_,
+         inv_05 = NA_character_,inv_06 = NA_character_,inv_07 = NA_character_,
+         inv_08 = NA_character_,inv_09 = NA_character_,inv_10 = NA_character_,
+         inv_11 = NA_character_,inv_12 = NA_character_,
+         treat_02 = NA_character_, treat_03 = NA_character_, 
+         treat_04 = NA_character_, treat_05 = NA_character_,
+         treat_06 = NA_character_, treat_07 = NA_character_,
+         treat_08 = NA_character_, treat_09 = NA_character_,
+         treat_10 = NA_character_, treat_11 = NA_character_,
+         treat_12 = NA_character_) %>% 
+  rename(inv_01 = invest_clean,
+         treat_01 = treat_clean)
+
+# Select the variables required
+costs_data_hrg_ae_users_min <- costs_data_hrg_ae_users %>% 
+  select(age, aepatientgroup, inv_01, inv_02, inv_03, inv_04, inv_05, inv_06,
+         inv_07, inv_08, inv_09, inv_10, inv_11, inv_12,
+         treat_01, treat_02, treat_03, treat_04, treat_05,
+         treat_06, treat_07, treat_07, treat_08, treat_09, treat_10,
+         treat_11, treat_12) %>% 
+  rename_with(toupper)
+export(costs_data_hrg_ae_users_min, 
+       here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE",
+            "AE_costs_data_HRG.csv"))
+costs_data_hrg_ae_users_ids <- costs_data_hrg_ae_users %>% 
+  select(patid)
+
+export(costs_data_hrg_ae_users_ids, 
+       here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE",
+            "costs_data_hrg_ae_users_ids.csv"))
+
+costs_data_hrg_ae_non_users <-  ae_attendance_data %>% 
+  filter(user_status == "Non-User") %>% 
+  arrange(patid)
+
+export(costs_data_hrg_ae_non_users, 
+       here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE",
+            "costs_data_hrg_ae_non-users.csv"))
