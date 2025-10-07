@@ -7,8 +7,19 @@
 # ****************************************************************************** #
 
 # Prepare the OP appts data ----
-# Filter visit_detail for outpatient visits within study period
+## Filter visit_detail for outpatient visits within study period ----
+# Sample 100 unique person_ids from the filtered outpatient visits
+
+sampled_ids <- cdm[["visit_detail"]] %>%
+  dplyr::distinct(person_id) %>%
+  dplyr::collect() %>%
+  dplyr::sample_n(100)
+
+# Filter the visit_detail_filtered table to only include those 100 person_ids
+sampled_ids_db <- dplyr::copy_to(cdm$person$src, sampled_ids, name = "sampled_ids_temp", temporary = TRUE)
+
 cdm[["visit_detail_filtered"]] <- cdm[["visit_detail"]] %>%
+  dplyr::semi_join(sampled_ids_db, by = "person_id") %>%
   dplyr::filter(
     visit_detail_concept_id == 9202,
     visit_detail_start_date >= study_start_date,
@@ -17,19 +28,11 @@ cdm[["visit_detail_filtered"]] <- cdm[["visit_detail"]] %>%
   dplyr::select(
     visit_detail_id, person_id, provider_id,
     visit_detail_start_date, visit_detail_concept_id, preceding_visit_detail_id
-  ) |>
+  ) %>%
   dplyr::compute()
 
-# Join with visit_occurrence to get visit_type_concept_id
-cdm[["visit_with_type"]] <- cdm[["visit_detail_filtered"]] %>%
-  dplyr::left_join(
-    cdm[["visit_occurrence"]] %>%
-      dplyr::select(person_id, visit_type_concept_id),
-    by = "person_id"
-  ) %>% dplyr::compute()
-
-# Join with provider to get specialty info
-cdm[["appt_data"]] <- cdm[["visit_with_type"]] %>%
+## Join with provider to get specialty info ----
+cdm[["appt_data"]] <- cdm[["visit_detail_filtered"]] %>%
   dplyr::left_join(
     cdm[["provider"]] %>%
       dplyr::select(provider_id, specialty_concept_id, specialty_source_value),
@@ -38,31 +41,70 @@ cdm[["appt_data"]] <- cdm[["visit_with_type"]] %>%
   dplyr::select(
     visit_detail_id, person_id, provider_id,
     specialty_concept_id, specialty_source_value,
-    visit_detail_start_date, visit_detail_concept_id,
-    preceding_visit_detail_id, visit_type_concept_id
+    visit_detail_start_date, visit_detail_concept_id
   ) %>% dplyr::compute()
 
-# Merge cohort with visit data
+## Prepare diagnoses (all, with primary flag) ----
+all_diagnoses <- cdm[["condition_occurrence"]] %>%
+  mutate(
+    is_primary_diag = if_else(grepl("DIAG_01", condition_source_value), TRUE, FALSE)
+  ) %>%
+  select(
+    person_id, visit_occurrence_id,
+    condition_source_value, is_primary_diag
+  )
+
+## Join diagnoses to appointment data ----
+cdm[["appt_with_diag"]] <- cdm[["appt_data"]] %>%
+  left_join(all_diagnoses, by = c("person_id")) %>%
+  compute()
+
+## Prepare procedures (all, with primary flag) ----
+all_procedures <- cdm[["procedure_occurrence"]] %>%
+  mutate(
+    is_primary_proc = if_else(grepl("OPERTN_01", procedure_source_value), TRUE, FALSE)
+  ) %>%
+  select(
+    person_id, visit_occurrence_id,
+    procedure_concept_id, procedure_source_value, is_primary_proc
+  )
+
+## Join procedures to appointment+diagnosis data ----
+cdm[["appt_with_diag_proc"]] <- cdm[["appt_with_diag"]] %>%
+  left_join(all_procedures, by = c("person_id", "visit_occurrence_id")) %>%
+  compute()
+
+## Add the patient table ----
+cdm[["appt_with_patient_info"]] <- cdm[["appt_with_diag_proc"]] %>%
+  dplyr::left_join(
+    cdm[["person"]] %>%
+      dplyr::select(person_id, year_of_birth, gender_source_value),
+    by = "person_id"
+  ) %>%
+  dplyr::compute()
+
+## Merge cohort with visit data ----
 cohort_appt_data <- cohort_table %>%
   dplyr::left_join(
-    cdm[["appt_data"]] %>% dplyr::collect(),
-    by = c("subject_id" = "person_id")
+    cdm[["appt_with_patient_info"]], 
+    by = c("subject_id" = "person_id"),
+    copy = TRUE
   ) %>%
-  dplyr::filter(# this will keep only patients with visits
+  dplyr::filter(
     visit_detail_start_date >= index_date &
-      visit_detail_start_date <= follow_up_end)
+      visit_detail_start_date <= follow_up_end
+  ) %>% 
+  dplyr::collect()
 
-# Minimise the data variables
-cohort_appt_data_min <- cohort_appt_data %>% 
+## Minimise the data variables ----
+table_one_op_omop_appt <- cohort_appt_data %>% 
   select(subject_id, index_date, follow_up_end,  visit_detail_id, provider_id,
          specialty_concept_id, specialty_source_value, 
-         visit_detail_start_date)
+         visit_detail_start_date, year_of_birth, gender_source_value)
 
 
-# ----------------------
-# Lookup tables as named vectors
-# ----------------------
-
+# Recoding variables ----
+###Specialties ----
 # Mainspef lookup
 mainspef_lookup <- c(
   "General Surgery" = "100", 
@@ -247,17 +289,116 @@ tretspef_lookup <- c(
   "Paediatric Ear Nose and Throat Service" = "215"
 )
 
-# ----------------------
 # Apply mapping
-# ----------------------
 
-cohort_appt_data_min.1 <- cohort_appt_data_min %>%
+table_one_op_omop_appt <- table_one_op_omop_appt %>%
   mutate(
     # mainspef
-    mainspef_code = mainspef_lookup[specialty_source_value],
-    mainspef_desc = ifelse(!is.na(mainspef_code), specialty_source_value, NA),
+    mainspef = mainspef_lookup[specialty_source_value],
+    mainspef_desc = ifelse(!is.na(mainspef), specialty_source_value, NA),
     
     # tretspef
-    tretspef_code = tretspef_lookup[specialty_source_value],
-    tretspef_desc = ifelse(!is.na(tretspef_code), specialty_source_value, NA)
+    tretspef = tretspef_lookup[specialty_source_value],
+    tretspef_desc = ifelse(!is.na(tretspef), specialty_source_value, NA)
   )
+
+## Defining users ----
+
+# Create the users status
+table_one_op_omop_appt <- table_one_op_omop_appt %>% 
+  mutate(
+    user_status = if_else(is.na(visit_detail_start_date), "Non-User", "User")
+  )
+
+### Firstatt ----
+
+# FIRSTATT - First Attendance: an indication of whether a patient is making a 
+# first attendance or follow-up attendance, and whether the consultation was 
+# face-to-face or via telephone/telemedicine consultation.
+# 1 = First attendance face to face 
+# 2 = Follow-up attendance face to face 
+# 3 = First telephone or telemedicine consultation 
+# 4 = Follow-up telephone or telemedicine consultation 
+# X = Not known (from 2008/09) 
+# 9 = Not known (prior to 2008/09)
+
+# Assumption made: random allocation or least resource use choice
+table_one_op_omop_appt <- table_one_op_omop_appt %>%
+  mutate(
+    firstatt = sample(c(1, 2, 3, 4), size = n(), replace = TRUE),
+    firstatt_desc = case_when(
+      firstatt == 1 ~ "First attendance face to face",
+      firstatt == 2 ~ "Follow-up attendance face to face",
+      firstatt == 3 ~ "First telephone/telemedicine consultation",
+      firstatt == 4 ~ "Follow-up telephone/telemedicine consultation"
+      )
+  )
+
+
+# List of summaries
+summaries_op <- list(
+  firstatt_summary = table_one_op_omop_appt %>%
+      # assumed - no actual values in the dataset as this variable isn't mapped
+    select(subject_id, visit_detail_id, firstatt_desc) %>% 
+    distinct() %>%
+    group_by(firstatt_desc) %>%
+    summarise(count_of_appt = n(),
+              .groups = "drop") %>%
+    mutate(percent_epi = round(count_of_appt / sum(count_of_appt) * 100, 2),
+           Variable = "First Attendance",
+           Category = firstatt_desc),
+  
+  mainspef_summary = table_one_op_omop_appt %>% 
+    select(subject_id, visit_detail_id, mainspef_desc) %>% distinct() %>%
+    # filter(!is.na(mainspef_desc)) %>%
+    group_by(mainspef_desc) %>%
+    summarise(count_of_appt = n(),
+              .groups = "drop") %>%
+    mutate(percent_appt = round(count_of_appt / sum(count_of_appt) * 100, 2),
+           Variable = "Main Specialty",
+           Category = mainspef_desc) %>% 
+    mutate(Category = if_else(percent_appt < 1, "Other Main Specialty", Category)) %>% 
+    group_by(Variable, Category) %>%
+    summarise(count_of_appt = sum(count_of_appt),
+              percent_appt = round(sum(percent_appt), 2),
+              .groups = "drop"),
+  
+  tretspef_summary = table_one_op_omop_appt %>% 
+    select(subject_id, visit_detail_id, tretspef_desc) %>% distinct() %>%
+    # filter(!is.na(tretspef_desc)) %>%
+    group_by(tretspef_desc) %>%
+    summarise(count_of_appt = n(),
+              .groups = "drop") %>%
+    mutate(percent_appt = round(count_of_appt / sum(count_of_appt) * 100, 2),
+           Variable = "Treatment Specialty",
+           Category = tretspef_desc) %>% 
+    mutate(Category = if_else(percent_appt < 1, "Other Treatment Specialty", Category)) %>% 
+    group_by(Variable, Category) %>%
+    summarise(count_of_appt = sum(count_of_appt),
+              percent_appt = round(sum(percent_appt), 2),
+              .groups = "drop"),
+  
+  user_status_summary = table_one_op_omop_appt %>% 
+    select(subject_id, user_status) %>% distinct() %>%
+    group_by(user_status) %>%
+    summarise(count_of_appt = n(),
+              .groups = "drop") %>%
+    mutate(percent_appt= round(count_of_appt / sum(count_of_appt) * 100, 2),
+           Variable = "OP Health Care Service Status",
+           Category = user_status)
+)
+
+# Combine them
+table2_combined_summary_op <- bind_rows(summaries_op, .id = "summary_name") %>%
+  select(Variable, Category, count_of_appt, percent_appt) %>%
+  arrange(Variable, desc(count_of_appt)) %>% 
+  mutate(Result = paste0(count_of_appt, " (", percent_appt, "%)")) %>% 
+  select(!c(count_of_appt, percent_appt)) %>% 
+  mutate(Category = if_else(is.na(Category), "Missing", Category))
+
+
+# Export ----
+
+rio::export(table2_combined_summary_op, 
+            here::here("OMOPAnalysis", "Results", "SecondaryCareAnalysis", 
+                       "OP","Table1_OP_OMOP.xlsx"))
