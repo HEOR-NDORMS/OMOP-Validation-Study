@@ -3,23 +3,23 @@
 #	Author: Njoki Njuki	
 # Do file name: OP Table 1: description of the patients
 # Date: 01.09.2025
-# Last date edited: 01.09.2025
+# Last date edited: 03.10.2025
 # ****************************************************************************** #
 
 # Prepare the OP appts data ----
 ## Filter visit_detail for outpatient visits within study period ----
 # Sample 100 unique person_ids from the filtered outpatient visits
 
-sampled_ids <- cdm[["visit_detail"]] %>%
-  dplyr::distinct(person_id) %>%
-  dplyr::collect() %>%
-  dplyr::sample_n(100)
-
-# Filter the visit_detail_filtered table to only include those 100 person_ids
-sampled_ids_db <- dplyr::copy_to(cdm$person$src, sampled_ids, name = "sampled_ids_temp", temporary = TRUE)
+# sampled_ids <- cdm[["visit_detail"]] %>%
+#   dplyr::distinct(person_id) %>%
+#   dplyr::collect() %>%
+#   dplyr::sample_n(100)
+# 
+# # Filter the visit_detail_filtered table to only include those 100 person_ids
+# sampled_ids_db <- dplyr::copy_to(cdm$person$src, sampled_ids, name = "sampled_ids_temp", temporary = TRUE)
 
 cdm[["visit_detail_filtered"]] <- cdm[["visit_detail"]] %>%
-  dplyr::semi_join(sampled_ids_db, by = "person_id") %>%
+  # dplyr::semi_join(sampled_ids_db, by = "person_id") %>%
   dplyr::filter(
     visit_detail_concept_id == 9202,
     visit_detail_start_date >= study_start_date,
@@ -45,37 +45,37 @@ cdm[["appt_data"]] <- cdm[["visit_detail_filtered"]] %>%
   ) %>% dplyr::compute()
 
 ## Prepare diagnoses (all, with primary flag) ----
-all_diagnoses <- cdm[["condition_occurrence"]] %>%
-  mutate(
-    is_primary_diag = if_else(grepl("DIAG_01", condition_source_value), TRUE, FALSE)
-  ) %>%
-  select(
-    person_id, visit_occurrence_id,
-    condition_source_value, is_primary_diag
-  )
+# all_diagnoses <- cdm[["condition_occurrence"]] %>%
+#   mutate(
+#     is_primary_diag = if_else(grepl("DIAG_01", condition_source_value), TRUE, FALSE)
+#   ) %>%
+#   select(
+#     person_id, visit_occurrence_id,
+#     condition_source_value, is_primary_diag
+#   )
 
 ## Join diagnoses to appointment data ----
-cdm[["appt_with_diag"]] <- cdm[["appt_data"]] %>%
-  left_join(all_diagnoses, by = c("person_id")) %>%
-  compute()
+# cdm[["appt_with_diag"]] <- cdm[["appt_data"]] %>%
+#   left_join(all_diagnoses, by = c("person_id")) %>%
+#   compute()
 
 ## Prepare procedures (all, with primary flag) ----
-all_procedures <- cdm[["procedure_occurrence"]] %>%
-  mutate(
-    is_primary_proc = if_else(grepl("OPERTN_01", procedure_source_value), TRUE, FALSE)
-  ) %>%
-  select(
-    person_id, visit_occurrence_id,
-    procedure_concept_id, procedure_source_value, is_primary_proc
-  )
+# all_procedures <- cdm[["procedure_occurrence"]] %>%
+#   mutate(
+#     is_primary_proc = if_else(grepl("OPERTN_01", procedure_source_value), TRUE, FALSE)
+#   ) %>%
+#   select(
+#     person_id, visit_occurrence_id,
+#     procedure_concept_id, procedure_source_value, is_primary_proc
+#   )
 
 ## Join procedures to appointment+diagnosis data ----
-cdm[["appt_with_diag_proc"]] <- cdm[["appt_with_diag"]] %>%
-  left_join(all_procedures, by = c("person_id", "visit_occurrence_id")) %>%
-  compute()
+# cdm[["appt_with_diag_proc"]] <- cdm[["appt_with_diag"]] %>%
+#   left_join(all_procedures, by = c("person_id", "visit_occurrence_id")) %>%
+#   compute()
 
 ## Add the patient table ----
-cdm[["appt_with_patient_info"]] <- cdm[["appt_with_diag_proc"]] %>%
+cdm[["appt_with_patient_info"]] <- cdm[["appt_data"]] %>%
   dplyr::left_join(
     cdm[["person"]] %>%
       dplyr::select(person_id, year_of_birth, gender_source_value),
@@ -109,7 +109,7 @@ table_one_op_omop_appt <- cohort_appt_data %>%
 mainspef_lookup <- c(
   "General Surgery" = "100", 
   "Urology" = "101",
-  "Trauma and Orthopaedics" = "110",
+  "Trauma & Orthopaedics" = "110",
   "Ear Nose and Throat" = "120",
   "Ophthalmology" = "130", 
   "Oral Surgery" = "140", 
@@ -184,7 +184,7 @@ tretspef_lookup <- c(
   "Colorectal Surgery Service" = "104", 
   "Vascular Surgery Service" = "107",
   "Spinal Surgery Service" = "108",
-  "Trauma and Orthopaedic Service" = "110", 
+  "Trauma & Orthopaedic Service" = "110", 
   "Ophthalmology Service" = "130", 
   "Oral Surgery Service" = "140", 
   "Maxillofacial Surgery Service" = "144", 
