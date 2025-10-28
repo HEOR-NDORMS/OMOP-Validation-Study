@@ -69,10 +69,11 @@ costs_hrg_imputed <- costs_hrg_clean |>
     )
   ) |>
   
-  ungroup() |>
-  
-  # Keep distinct rows with imputed unit cost and attendance for next step
-  distinct(tretspef, nac_hrg, unit_cost, number_of_attendances)
+  ungroup() 
+# |>
+#   
+#   # Keep distinct rows with imputed unit cost and attendance for next step
+#   distinct(tretspef, nac_hrg, unit_cost, number_of_attendances)
 
 ## Cluster HRGs and apply second weighting ----
 # Step 3: Cluster HRGs so WF01A–D, WF02A–D share same unit cost etc
@@ -90,6 +91,30 @@ costs_hrg_clustered <- costs_hrg_imputed |>
       mean(unit_cost, na.rm = TRUE)
     } else {
       weighted.mean(unit_cost, number_of_attendances, na.rm = TRUE)
+    }
+  ) |>
+  ungroup() |>
+  # Keep distinct rows with final clustered unit cost
+  distinct(tretspef, nac_hrg, cluster_unit_cost) |>
+  # Rename final unit cost column
+  rename(unit_cost = cluster_unit_cost)
+
+
+# Step 3: Cluster HRGs so WF01A–D, WF02A–D share same unit cost etc
+costs_hrg_clustered_t <- costs_hrg_imputed |>
+  # Create HRG cluster by extracting first 4 characters (e.g., WF01A–D → WF01)
+  mutate(hrg_cluster = substr(nac_hrg, 1, 4)) |>
+  # Group by treatment specialty and HRG cluster
+  group_by(tretspef, hrg_cluster) |>
+  mutate(
+    # Apply second weighting:
+    # If any HRG in the cluster has missing attendance (due to having * before), 
+    # use simple mean of unit cost
+    # Otherwise, use weighted mean based on number of attendances
+    cluster_unit_cost = if (any(is.na(number_of_attendances))) {
+      mean(unit_cost, na.rm = TRUE)
+    } else {
+      weighted.mean(national_average_unit_cost, number_of_attendances, na.rm = TRUE)
     }
   ) |>
   ungroup() |>
