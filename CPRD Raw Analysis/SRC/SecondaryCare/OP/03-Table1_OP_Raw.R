@@ -476,7 +476,7 @@ table_one_op_raw_appt_recoded <- table_one_op_raw_appt_recoded %>%
 summaries_op <- list(
   attended_recoded_summary = table_one_op_raw_appt_recoded %>% 
     select(patid, attendkey, attended_recoded) %>% distinct() %>%
-    filter(!is.na(attended_recoded)) %>%
+    # filter(!is.na(attended_recoded)) %>%
     count(attended_recoded, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Attended or Did Not Attend",
@@ -484,7 +484,7 @@ summaries_op <- list(
   
   atentype_recoded_summary = table_one_op_raw_appt_recoded %>% 
     select(patid, attendkey, atentype_recoded) %>% distinct() %>%
-    filter(!is.na(atentype_recoded)) %>%
+    # filter(!is.na(atentype_recoded)) %>%
     count(atentype_recoded, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Attendance Type",
@@ -493,7 +493,7 @@ summaries_op <- list(
   firstatt_recoded_summary = table_one_op_raw_appt_recoded %>%
     select(patid, attendkey, firstatt_recoded) %>% 
     distinct() %>%
-    filter(firstatt_recoded != "NA-NA") %>%
+    # filter(firstatt_recoded != "NA-NA") %>%
     count(firstatt_recoded, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "First Attendance",
@@ -501,7 +501,7 @@ summaries_op <- list(
   
  mainspef_recoded_summary = table_one_op_raw_appt_recoded %>% 
     select(patid, attendkey, mainspef_recoded) %>% distinct() %>%
-    filter(!is.na(mainspef_recoded)) %>%
+    # filter(!is.na(mainspef_recoded)) %>%
     count(mainspef_recoded, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Main Specialty",
@@ -514,7 +514,7 @@ summaries_op <- list(
   
   tretspef_recoded_summary = table_one_op_raw_appt_recoded %>% 
     select(patid, attendkey, tretspef_recoded) %>% distinct() %>%
-    filter(!is.na(tretspef_recoded)) %>%
+    # filter(!is.na(tretspef_recoded)) %>%
     count(tretspef_recoded, name = "count_of_epi") %>%
     mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
            Variable = "Treatment Specialty",
@@ -528,7 +528,7 @@ summaries_op <- list(
  diag_01_description_summary = table_one_op_raw_appt_recoded %>%
    select(patid, attendkey, diag_01_description) %>% 
    distinct() %>%
-   filter(diag_01_description != "NA-NA") %>%
+   # filter(diag_01_description != "NA-NA") %>%
    count(diag_01_description, name = "count_of_epi") %>%
    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
           Variable = "Main Diagnosis",
@@ -542,7 +542,7 @@ summaries_op <- list(
  opertn_01_description_summary = table_one_op_raw_appt_recoded %>%
    select(patid, attendkey, opertn_01_description) %>% 
    distinct() %>%
-   filter(opertn_01_description != "NA-NA") %>%
+   # filter(opertn_01_description != "NA-NA") %>%
    count(opertn_01_description, name = "count_of_epi") %>%
    mutate(percent_epi = round(count_of_epi / sum(count_of_epi) * 100, 2),
           Variable = "Main Procedure",
@@ -566,7 +566,8 @@ table2_combined_summary_op <- bind_rows(summaries_op, .id = "summary_name") %>%
   select(Variable, Category, count_of_epi, percent_epi) %>%
   arrange(Variable, desc(count_of_epi)) %>% 
   mutate(Result = paste0(count_of_epi, " (", percent_epi, "%)")) %>% 
-  select(!c(count_of_epi, percent_epi))
+  select(!c(count_of_epi, percent_epi)) %>% 
+  mutate(Category = if_else(is.na(Category), "Missing", Category))
 
 
 # Export ----
