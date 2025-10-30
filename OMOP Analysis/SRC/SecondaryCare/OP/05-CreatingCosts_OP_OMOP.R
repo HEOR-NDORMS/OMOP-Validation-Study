@@ -10,7 +10,7 @@ library(bit64)
 
 ## Read the files ----
 op_hrg_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_output-sample_attend.csv"
+  "H:/Projects/Validation/HES HRG/OMOP/OP/op_users_costs-output_attend.csv"
 ) |> 
   clean_names()
 
@@ -19,7 +19,7 @@ op_hrg_df_min <- op_hrg_df |>
   select(startage, sex, mainspef, tretspef, firstatt, nac_hrg)
 
 op_study_ids_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_data_ids-sample.csv"
+  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_data_ids.csv"
 )
 
 # Merge the two together 
@@ -133,13 +133,9 @@ op_hrg_df_merged <- left_join(
 
 ## Bring back the non-users ----
 op_costs_non_users_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_non_users_data-sample.csv"
+  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_non_users_data.csv"
 ) |> 
   mutate(subject_id = as.integer64(subject_id)) |> 
-  mutate(gender_source_value = if_else(gender_source_value == "F", 2, 1)) |> 
-  mutate(startage = as.numeric(format(visit_detail_start_date, "%Y") - year_of_birth)) |>
-  rename(mainspef = mainspef_code,
-         tretspef = tretspef_code) |> 
   select(subject_id, startage, sex, mainspef, tretspef,
          firstatt) |> 
   mutate(nac_hrg = NA,
@@ -376,9 +372,9 @@ users_overall_by_tretspef_c <- op_costs_final_data_recoded |>
             num_subjects_visited = n_distinct(subject_id),
             .groups = "drop")
 
-# rio::export(users_overall_by_tretspef_c, 
-#             here::here("OMOP Analysis", "Results",
-#                        "SecondaryCareAnalysis", "OP","Output_costs_by_tretspef-Users_OMOP.xlsx"))
+rio::export(users_overall_by_tretspef_c,
+            here::here("OMOP Analysis", "Results",
+                       "SecondaryCareAnalysis", "OP", "Overall","Output_costs_by_tretspef-Users_OMOP.xlsx"))
 users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   filter(user_status == "User") %>% 
   group_by(subject_id, tretspef_recoded) %>%                     # group data per patient
