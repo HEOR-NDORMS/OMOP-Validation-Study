@@ -374,7 +374,8 @@ users_overall_by_tretspef_c <- op_costs_final_data_recoded |>
 
 rio::export(users_overall_by_tretspef_c,
             here::here("OMOP Analysis", "Results",
-                       "SecondaryCareAnalysis", "OP", "Overall","Output_costs_by_tretspef-Users_OMOP.xlsx"))
+                       "SecondaryCareAnalysis", "OP", "Overall",
+                       "Output_costs_by_tretspef-Users_OMOP.xlsx"))
 users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   filter(user_status == "User") %>% 
   group_by(subject_id, tretspef_recoded) %>%                     # group data per patient
@@ -387,9 +388,11 @@ users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
             max_visits = round(max(n_appts, na.rm = TRUE), 2),
             num_subjects_visited = n_distinct(subject_id),
             .groups = "drop")
-# rio::export(users_overall_by_tretspef_v, 
-#             here::here("OMOP Analysis", "Results",
-#                        "SecondaryCareAnalysis", "OP", "Output_appointments_by_tretspef-Users_OMOP.xlsx"))
+
+rio::export(users_overall_by_tretspef_v,
+            here::here("OMOP Analysis", "Results",
+                       "SecondaryCareAnalysis", "OP",  "Overall", 
+                       "Output_appointments_by_tretspef-Users_OMOP.xlsx"))
 
 
 
@@ -430,9 +433,11 @@ all_overall_by_tretspef_c <- op_costs_final_data_recoded |>
             .groups = "drop") |> 
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded))
 
-# rio::export(all_overall_by_tretspef_c, 
-#             here::here("OMOP Analysis", "Results",
-#                        "SecondaryCareAnalysis", "OP", "Output_costs_by_tretspef-All_OMOP.xlsx"))
+rio::export(all_overall_by_tretspef_c,
+            here::here("OMOP Analysis", "Results",
+                       "SecondaryCareAnalysis", "OP",  "Overall", 
+                       "Output_costs_by_tretspef-All_OMOP.xlsx"))
+
 all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   group_by(subject_id, tretspef_recoded) %>%  
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded)) |> # group data per patient
@@ -449,9 +454,10 @@ all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   mutate_at("tretspef_recoded", as.factor) %>%
   mutate(tretspef_recoded = forcats::fct_infreq(tretspef_recoded))
 
-# rio::export(all_overall_by_tretspef_v, 
-#             here::here("OMOP Analysis", "Results",
-#                        "SecondaryCareAnalysis", "OP","Output_appointments_by_tretspef-All_OMOP.xlsx"))
+rio::export(all_overall_by_tretspef_v,
+            here::here("OMOP Analysis", "Results",
+                       "SecondaryCareAnalysis", "OP", "Overall",
+                       "Output_appointments_by_tretspef-All_OMOP.xlsx"))
 
 
 # Export the file
@@ -463,6 +469,7 @@ costs_list <- list(
 )
 
 # Write to an Excel file
-# write_xlsx(costs_list, here::here("OMOP Analysis", "Results",
-#                                   "SecondaryCareAnalysis", "OP","Output_Costs_OMOP.xlsx"))
+write_xlsx(costs_list, here::here("OMOP Analysis", "Results",
+                                  "SecondaryCareAnalysis", "OP",  "Overall", 
+                                  "Output_Costs_OMOP.xlsx"))
 
