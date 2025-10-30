@@ -6,6 +6,7 @@
 # Last date edited: 03.10.2025
 # ****************************************************************************** #
 
+library(stringdist)
 # Prepare the OP appts data ----
 ## Filter visit_detail for outpatient visits within study period ----
 # Sample 100 unique person_ids from the filtered outpatient visits
@@ -98,209 +99,127 @@ cohort_appt_data <- cohort_table %>%
 
 ## Minimise the data variables ----
 table_one_op_omop_appt <- cohort_appt_data %>% 
-  select(subject_id, index_date, follow_up_end,  visit_detail_id, provider_id,
+  select(subject_id, index_date, follow_up_end,  follow_up_reason, 
+         follow_up_time, visit_detail_id, provider_id,
          specialty_concept_id, specialty_source_value, 
          visit_detail_start_date, year_of_birth, gender_source_value)
 
 
+# Merge back to the cohort table
+table_one_op_omop_appt <- left_join(
+  cohort_table %>% select(
+    subject_id, index_date, follow_up_end, follow_up_end, 
+    follow_up_reason, follow_up_time),
+  table_one_op_omop_appt,
+  by = c("subject_id", "index_date", "follow_up_end", "follow_up_reason", 
+         "follow_up_time"))
+
 # Recoding variables ----
 ###Specialties ----
-# Mainspef lookup
-mainspef_lookup <- c(
-  "General Surgery" = "100", 
-  "Urology" = "101",
-  "Trauma & Orthopaedics" = "110",
-  "Ear Nose and Throat" = "120",
-  "Ophthalmology" = "130", 
-  "Oral Surgery" = "140", 
-  "Oral Surgery" = "145", 
-  "Neurosurgery" = "150", 
-  "Plastic Surgery" = "160",
-  "Emergency Medicine" = "180",
-  "Anaesthetics" = "190", 
-  "General Internal Medicine" = "300",
-  "Gastroenterology" = "301", 
-  "Endocrinology and Diabetes" = "302",
-  "Clinical Haematology" = "303", 
-  "Cardiology" = "320",
-  "Acute Internal Medicine" = "326",
-  "Dermatology" = "330", 
-  "Respiratory Medicine" = "340",
-  "Infectious Diseases" = "350",
-  "Renal Medicine" = "361",
-  "Medical Oncology" = "370",
-  "Neurology" = "400",
-  "Rheumatology" = "410",
-  "Geriatric Medicine" = "430",
-  "Obstetrics" = "501",
-  "Gynaecology" = "502",
-  "Adult Mental Illness" = "710",
-  "Clinical Oncology" = "800", 
-  "Radiology" = "810",
-  "Radiology" = "823",
-  "Restorative Dentistry" = "141",
-  "Orthodontics" = "143", 
-  "Clinical Physiology" = "304",
-  "Audio Vestibular Medicine" = "310", 
-  "Clinical Genetics" = "311", 
-  "Clinical Immunology" = "313" ,
-  "Rehabilitation Medicine" =  "314",
-  "Clinical Neurophysiology" = "401", 
-  "Midwifery" = "560", 
-  "Learning Disability" = "700",
-  "Medical Microbiology" = "833",
-  "Medical Psychotherapy" = "713",
-  "Paediatrics" = "420", 
-  "Community Medicine" = "900",
-  "Nursing " = "950",
-  "Allied Health Professional" = "960",
-  "Old Age Psychiatry" = "715",
-  "Cardiothoracic Surgery" = "170",
-  "General Medical Practice" = "600",
-  "Palliative Medicine" = "315",
-  "Dental Medicine" = "450",
-  "Nuclear Medicine" = "371",
-  "Clinical Pharmacology" = "305",
-  "Chemical Pathology" = "822",
-  "General Pathology" = "820",
-  "Medical Ophthalmology" = "460",
-  "Intensive Care Medicine" = "192",
-  "Occupational Medicine" = "901",
-  "Prosthodontics" = "148",
-  "Periodontics" = "147",
-  "Immunopathology" = "830",
-  "Genitourinary Medicine" = "360",
-  "Child and Adolescent Psychiatry" = "711",
-  "Tropical Medicine" = "352",
-  "Sport and Exercise Medicine" = "325"
-)
+specialty_mapping_data <- import("check_mainspef_tretspef_outpatient_GF.xlsx",
+                         sheet = "mapping_mainspef_tretspef")
 
-# Tretspef lookup
-tretspef_lookup <- c(
-  "General Surgery Service" = "100", 
-  "Urology Service" = "101", 
-  "Urology Service" = "103", 
-  "Upper Gastrointenstinal Surgery Service" = "106", 
-  "Colorectal Surgery Service" = "104", 
-  "Vascular Surgery Service" = "107",
-  "Spinal Surgery Service" = "108",
-  "Trauma & Orthopaedic Service" = "110", 
-  "Ophthalmology Service" = "130", 
-  "Oral Surgery Service" = "140", 
-  "Maxillofacial Surgery Service" = "144", 
-  "Neurosurgical Service" = "150", 
-  "Plastic Surgery Service" = "160", 
-  "Emergency Medicine Service" = "180", 
-  "Anaesthetic Service" = "190", 
-  "Pain Management Service" = "191",
-  "Intensive Care Medicine Service" = "192",
-  "Paediatric Trauma and Orthopaedic Service" = "214", 
-  "General Internal Medicine Service" = "300", 
-  "Gastroenterology Service" = "301", 
-  "Clinical Haematology Service" = "303", 
-  "Endocrinology Service" = "302", 
-  "Hepatology Service" = "306", 
-  "Cardiology Service" = "320",
-  "Transient Ischaemic Attack Service" = "329", 
-  "Dermatology Service" = "330", 
-  "Respiratory Medicine Service" = "340", 
-  "Respiratory Physiology Service" = "341",
-  "Medical Oncology Service" = "370", 
-  "Neurology Service" = "400", 
-  "Rheumatology Service" = "410", 
-  "Obstetrics Service" = "501", 
-  "Gynaecology Service" = "502", 
-  "Gynaecological Oncology Service" = "503",
-  "Adult Mental Health Service" = "710",  
-  "Clinical Oncology Service" = "800", 
-  "Interventional Radiology Service" = "811",
-  "Ear Nose and Throat Service" = "120",
-  "Hepatobiliary and Pancreatic Surgery Service" = "105",
-  "Bariatric Surgery Service" = "109",
-  "Restorative Dentistry Service" = "141",
-  "Orthodontic Service" = "143",
-  "Oral and Maxillofacial Surgery Service"  = "145",
-  "Paediatric Diabetes Service" = "263",
-  "Clinical Physiology Service" = "304",
-  "Diabetes Service" = "307",
-  "Blood and Marrow Transplantation Service" = "308",
-  "Audio Vestibular Medicine Service" = "310",
-  "Clinical Genetics Service" = "311",
-  "Clinical Immunology and Allergy Service" = "313",
-  "Rehabilitation Medicine Service" = "314",
-  "Allergy Service" = "317",
-  "Anticoagulant Service" = "324",
-  "Congenital Heart Disease Service" = "331",
-  "Specialist Rehabilitation Service" = "345", 
-  "Infectious Diseases Service" = "350",
-  "Renal Medicine Service" = "361",
-  "Nuclear Medicine Service" = "371",
-  "Clinical Neurophysiology Service" = "401",
-  "Elderly Medicine Service" = "430",
-  "Medical Ophthalmology Service" = "460",
-  "Fetal Medicine Service" = "505",
-  "Midwifery Service" = "560",
-  "Physiotherapy Service" = "650",
-  "Occupational Therapy Service" = "651",
-  "Speech and Language Therapy Service" = "652",
-  "Podiatry Service" = "653",
-  "Dietetics Service" = "654",
-  "Orthoptics Service" = "655",
-  "Clinical Psychology Service" = "656",
-  "Orthotics Service" = "658",
-  "Optometry Service" = "662",
-  "Podiatric Surgery Service" = "663",
-  "Cardiac Physiology Service" = "675",
-  "Learning Disability Service" = "700",
-  "Diagnostic Imaging Service" = "812",
-  "Medical Virology Service" = "834",
-  "Audiology Service" = "840",
-  "Diabetic Education Service" = "920",
-  "Intermediate Care Service" = "318",
-  "Old Age Psychiatry Service" = "715",
-  "Palliative Medicine Service" = "315",
-  "Dental Medicine Service" = "450",
-  "Cardiac Rehabilitation Service" = "327",
-  "Liaison Psychiatry Service" = "722",
-  "Chemical Pathology Service" = "822",
-  "Stroke Medicine Service" = "328",
-  "Cardiac Surgery Service" = "172",
-  "Cardiothoracic Transplantation Service" = "174",
-  "Cardiothoracic Surgery Service" = "170",
-  "Burns Care Service" = "161",
-  "Thoracic Surgery Service" = "173",
-  "Clinical Immunology Service" = "316",
-  "Spinal Injuries Service" = "323",
-  "Transplant Surgery Service" = "102",
-  "Clinical Pharmacology Service" = "305",
-  "Paediatric Ophthalmology Service" = "216",
-  "Haemophilia Service" = "309",
-  "Clinical Microbiology Service" = "322",
-  "Pulmonary Rehabilitation Service" = "342",
-  "Genitourinary Medicine Service" = "360",
-  "Prosthetics Service" = "657",
-  "Medical Psychotherapy Service" = "713",
-  "Sport and Exercise Medicine Service" = "325",
-  "Complex Specialised Rehabilitation Service" = "344",
-  "Genitourinary Medicine Service" = "360",
-  "Tropical Medicine Service" = "352",
-  "Child and Adolescent Psychiatry Service" = "711",
-  "Paediatric Service" = "420",
-  "Paediatric Ear Nose and Throat Service" = "215"
-)
+### Create unique lookup tables ----
+mainspef_lookup <- specialty_mapping_data %>%
+  filter(!is.na(mainspef)) %>%
+  distinct(mainspef, mainspef_code)
 
-# Apply mapping
+tretspef_lookup <- specialty_mapping_data %>%
+  filter(!is.na(tretspef)) %>%
+  distinct(tretspef, tretspef_code)
 
+### Extract only the vectors for fuzzy matching ----
+main_specialties  <- mainspef_lookup$mainspef
+treat_specialties <- tretspef_lookup$tretspef
+
+
+### Clean outpatient data ----
 table_one_op_omop_appt <- table_one_op_omop_appt %>%
   mutate(
-    # mainspef
-    mainspef = mainspef_lookup[specialty_source_value],
-    mainspef_desc = ifelse(!is.na(mainspef), specialty_source_value, NA),
-    
-    # tretspef
-    tretspef = tretspef_lookup[specialty_source_value],
-    tretspef_desc = ifelse(!is.na(tretspef), specialty_source_value, NA)
+    specialty_source_value_modified = specialty_source_value %>%
+      str_remove("\\s*\\([^\\)]+\\)") %>%   # remove parentheses
+      str_replace_all("&", "and") %>%
+      str_to_lower() %>%
+      str_trim()
   )
+
+
+### Fuzzy matching function (Jaro–Winkler similarity) ----
+
+# The function find_best_match() tries to find the closest match to a given
+# word or phrase (value) from a list of possible options (lookup_vector).
+# “fuzzy matching” function because it doesn’t require exact matches.
+# Even if there are small spelling mistakes or differences, it can still find the best match.
+
+# Jaro–Winkler similarity is a way to measure how similar two strings (words) are, 
+# based on:
+#  1. Matching characters (letters that appear in both words and 
+# are close to the same position).
+#  2. Number of transpositions (how many letters are swapped).
+#  3. Common prefix bonus (if the start of the words is the same, 
+# it scores slightly higher).
+# It gives a score between:
+#   0 = completely different
+#   1 = exactly the same
+
+find_best_match <- function(value, lookup_vector, min_similarity = 0.90) {
+  # If the input is missing (NA), empty, or there’s nothing to compare to, 
+  # it returns NA (nothing found).
+  if (is.na(value) || value == "" || length(lookup_vector) == 0) return(NA_character_)
+  
+  # Calculates how similar the value is to every word in lookup_vector using 
+  # the Jaro–Winkler method.
+  # stringdist() gives a distance (0 = identical, 1 = very different),
+  # so 1 - distance gives a similarity (1 = identical, 0 = completely different).
+  sim <- 1 - stringdist(value, lookup_vector, method = "jw")
+  
+  # Finds the index of the most similar word (best_idx) and 
+  # its similarity score (best_sim).
+  best_idx <- which.max(sim)
+  best_sim <- sim[best_idx]
+  
+  # If the best match is at least 90% similar (or the threshold you set), 
+  # it returns that word.
+  # Otherwise, it returns NA, meaning no good enough match was found.
+  if (best_sim >= min_similarity) {
+    return(lookup_vector[best_idx])
+  } else {
+    return(NA_character_)
+  }
+}
+
+### Optimized fuzzy matching on unique specialties ----
+unique_specialties <- unique(
+  na.omit(
+    table_one_op_omop_appt$specialty_source_value_modified
+    )
+  )
+
+### Match only once per unique name ----
+main_matches <- tibble(
+  specialty_source_value_modified = unique_specialties,
+  mainspef = sapply(unique_specialties, find_best_match,
+                    lookup_vector = main_specialties,
+                    min_similarity = 0.85)
+)
+
+treat_matches <- tibble(
+  specialty_source_value_modified = unique_specialties,
+  tretspef = sapply(unique_specialties, find_best_match,
+                    lookup_vector = treat_specialties,
+                    min_similarity = 0.85)
+)
+
+### Merge back to the full dataset ----
+table_one_op_omop_appt <- table_one_op_omop_appt %>%
+  left_join(main_matches,  by = "specialty_source_value_modified") %>%
+  left_join(treat_matches, by = "specialty_source_value_modified")
+
+
+###  Add back corresponding codes from the mapping ----
+table_one_op_omop_appt <- table_one_op_omop_appt %>%
+  left_join(mainspef_lookup, by = "mainspef") %>%
+  left_join(tretspef_lookup, by = "tretspef")
 
 ## Defining users ----
 
@@ -310,53 +229,16 @@ table_one_op_omop_appt <- table_one_op_omop_appt %>%
     user_status = if_else(is.na(visit_detail_start_date), "Non-User", "User")
   )
 
-### Firstatt ----
-
-# FIRSTATT - First Attendance: an indication of whether a patient is making a 
-# first attendance or follow-up attendance, and whether the consultation was 
-# face-to-face or via telephone/telemedicine consultation.
-# 1 = First attendance face to face 
-# 2 = Follow-up attendance face to face 
-# 3 = First telephone or telemedicine consultation 
-# 4 = Follow-up telephone or telemedicine consultation 
-# X = Not known (from 2008/09) 
-# 9 = Not known (prior to 2008/09)
-
-# Assumption made: random allocation or least resource use choice
-table_one_op_omop_appt <- table_one_op_omop_appt %>%
-  mutate(
-    firstatt = sample(c(1, 2, 3, 4), size = n(), replace = TRUE),
-    firstatt_desc = case_when(
-      firstatt == 1 ~ "First attendance face to face",
-      firstatt == 2 ~ "Follow-up attendance face to face",
-      firstatt == 3 ~ "First telephone/telemedicine consultation",
-      firstatt == 4 ~ "Follow-up telephone/telemedicine consultation"
-      )
-  )
-
-
-# List of summaries
+# List of summaries ----
 summaries_op <- list(
-  firstatt_summary = table_one_op_omop_appt %>%
-      # assumed - no actual values in the dataset as this variable isn't mapped
-    select(subject_id, visit_detail_id, firstatt_desc) %>% 
-    distinct() %>%
-    group_by(firstatt_desc) %>%
-    summarise(count_of_appt = n(),
-              .groups = "drop") %>%
-    mutate(percent_epi = round(count_of_appt / sum(count_of_appt) * 100, 2),
-           Variable = "First Attendance",
-           Category = firstatt_desc),
-  
   mainspef_summary = table_one_op_omop_appt %>% 
-    select(subject_id, visit_detail_id, mainspef_desc) %>% distinct() %>%
-    # filter(!is.na(mainspef_desc)) %>%
-    group_by(mainspef_desc) %>%
+    select(subject_id, visit_detail_id, mainspef) %>% distinct() %>%
+    group_by(mainspef) %>%
     summarise(count_of_appt = n(),
               .groups = "drop") %>%
     mutate(percent_appt = round(count_of_appt / sum(count_of_appt) * 100, 2),
            Variable = "Main Specialty",
-           Category = mainspef_desc) %>% 
+           Category = mainspef) %>% 
     mutate(Category = if_else(percent_appt < 1, "Other Main Specialty", Category)) %>% 
     group_by(Variable, Category) %>%
     summarise(count_of_appt = sum(count_of_appt),
@@ -364,14 +246,13 @@ summaries_op <- list(
               .groups = "drop"),
   
   tretspef_summary = table_one_op_omop_appt %>% 
-    select(subject_id, visit_detail_id, tretspef_desc) %>% distinct() %>%
-    # filter(!is.na(tretspef_desc)) %>%
-    group_by(tretspef_desc) %>%
+    select(subject_id, visit_detail_id, tretspef) %>% distinct() %>%
+    group_by(tretspef) %>%
     summarise(count_of_appt = n(),
               .groups = "drop") %>%
     mutate(percent_appt = round(count_of_appt / sum(count_of_appt) * 100, 2),
            Variable = "Treatment Specialty",
-           Category = tretspef_desc) %>% 
+           Category = tretspef) %>% 
     mutate(Category = if_else(percent_appt < 1, "Other Treatment Specialty", Category)) %>% 
     group_by(Variable, Category) %>%
     summarise(count_of_appt = sum(count_of_appt),
@@ -398,7 +279,6 @@ table2_combined_summary_op <- bind_rows(summaries_op, .id = "summary_name") %>%
 
 
 # Export ----
-
 rio::export(table2_combined_summary_op, 
             here::here("OMOPAnalysis", "Results", "SecondaryCareAnalysis", 
                        "OP","Table1_OP_OMOP.xlsx"))
