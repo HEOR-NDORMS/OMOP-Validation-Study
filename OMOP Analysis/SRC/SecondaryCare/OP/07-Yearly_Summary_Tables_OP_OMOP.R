@@ -30,6 +30,21 @@ library(lubridate)
 
 # --- Visits ------
 
+# Ran from the local machine
+# Start by running 05-CreatingCosts_OP_omop.R
+# Then from the server, save cohort_table dataset and appt_data
+
+cohort_table <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
+
+appt_data <- import("H:/Projects/Validation/Data/appt_data_omop.csv") |> 
+  arrange(subject_id)
+op_costs_final_data_recoded <- op_costs_final_data_recoded |> 
+  arrange(subject_id)
+op_costs_final_data_recoded_min <- op_costs_final_data_recoded |> 
+  select(unit_cost)
+
+appt_data <- cbind(appt_data, op_costs_final_data_recoded_min)
+
 ## All patients ----
 
 # --- Preparation ---
@@ -332,9 +347,7 @@ op_costs_final_data_recoded <- op_costs_final_data_recoded |>
 op_costs_final_data_recoded_min <- op_costs_final_data_recoded |> 
   select(unit_cost)
 
-appt_data <- cbind(appt_data, 
-                                       op_costs_final_data_recoded_min)
-
+appt_data <- cbind(appt_data, op_costs_final_data_recoded_min)
 
 
 # Compute max exposed year per patient ---
@@ -605,7 +618,7 @@ combined_costs_bootstrap_summary_yearly <- bind_rows(
 ) %>%
   select(group, everything())
 
-# Export 
+# Export ----
 
 write_xlsx(combined_summary_encounters_yearly, 
            here::here("OMOP Analysis", "Results", "SecondaryCareAnalysis", 
