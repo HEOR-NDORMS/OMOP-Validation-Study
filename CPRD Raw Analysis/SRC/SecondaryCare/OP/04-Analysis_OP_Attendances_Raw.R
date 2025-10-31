@@ -271,6 +271,83 @@ ggsave(here::here(
   bg = "white"
 )
 
+# Bootstrap visits -----
+
+# --- Function to compute bootstrap summary for a given dataset
+
+bootstrap_summary <- function(data, varname = "n_appts", R = 1000, seed = 626) {
+  
+  stat_fn <- function(d, i) {
+    d_sample <- d[i, ]
+    mean(d_sample[[varname]], na.rm = TRUE)
+  }
+  
+  set.seed(seed)
+  boot_result <- boot(data = data, statistic = stat_fn, R = R)
+  boot_ci <- boot.ci(boot_result, type = c("norm", "basic", "perc"))
+  
+  boot_mean     <- mean(boot_result$t)
+  boot_values   <- boot_result$t
+  boot_variance <- var(as.numeric(boot_values))
+  boot_sd       <- sd(boot_values)
+  boot_se       <- boot_sd / sqrt(length(boot_values))
+  
+  ci_norm  <- boot_ci$normal[2:3]
+  ci_basic <- boot_ci$basic[4:5]
+  ci_perc  <- boot_ci$perc[4:5]
+  
+  # Return in wide format
+  tibble(
+    mean     = boot_mean,
+    variance = boot_variance,
+    sd       = boot_sd,
+    se       = boot_se,
+    ci_norm_lower = ci_norm[1],
+    ci_norm_upper = ci_norm[2],
+    ci_basic_lower = ci_basic[1],
+    ci_basic_upper = ci_basic[2],
+    ci_perc_lower = ci_perc[1],
+    ci_perc_upper = ci_perc[2]
+  ) %>%
+    mutate(across(everything(), ~round(.x, 3)))
+}
+
+# --- Bootstrap: All Patients & All Encounters
+boot_summary_all_patients_all_encounters <- bootstrap_summary(all_attendance_no, varname = "n_appts")
+
+# --- Bootstrap: All Patients & Relevant Encounters
+# boot_summary_all_patients_relevant_encounters <- bootstrap_summary(all_patients_relevant_encounters_counts, varname = "total_patient_encounters")
+
+# --- Bootstrap: Users Only & All Encounters
+boot_summary_users_all_encounters <- bootstrap_summary(users_attendance_no, varname = "n_appts")
+
+# --- Bootstrap: Users Only & Relevant Encounters
+# boot_summary_users_relevant_encounters <- bootstrap_summary(users_relevant_encounters_counts, varname = "total_patient_encounters")
+
+
+combined_bootstrap_summary_encounters <- bind_rows(
+  boot_summary_all_patients_all_encounters %>%
+    mutate(group = "All Patients & all encounters"),
+  
+  # boot_summary_all_patients_relevant_encounters %>%
+  #   mutate(group = "All Patients & relevant encounters"),
+  
+  boot_summary_users_all_encounters %>%
+    mutate(group = "Users & all encounters"),
+  
+  # boot_summary_users_relevant_encounters %>%
+  #   mutate(group = "Users & relevant encounters")
+) %>%
+  select(group, everything())
+
+combined_bootstrap_summary_encounters
+
+
+# Export
+export(combined_bootstrap_summary_encounters, 
+       here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "OP",
+            "Overall", "overall_bootstrap_summary_encounters_SOURCE.xlsx"))
+
 # Costs ----
 
 ## Prepare the data ----
@@ -468,6 +545,31 @@ op_costs_non_users <- costs_data_hrg %>%
 rio::export(op_costs_non_users, here::here("CPRD Raw Analysis", "Results",
                                       "SecondaryCareAnalysis", "op_costs_non_users.csv"))
 # Costs have been done from my local R, but the script is uploaded in the Github.
+
+# Bootstrap cost summaries ----
+boot_summary_all_patients_all_encounters_costs <- bootstrap_summary(all_patients_all_encounters_costs, varname = "total_patient_cost")
+# boot_summary_all_patients_relevant_encounters_costs <- bootstrap_summary(all_patients_relevant_encounters_costs, varname = "total_patient_cost")
+boot_summary_users_all_encounters_costs <- bootstrap_summary(users_all_encounters_costs, varname = "total_patient_cost")
+# boot_summary_users_relevant_encounters_costs <- bootstrap_summary(users_relevant_encounters_costs, varname = "total_patient_cost")
+
+# Combine bootstrap summaries
+combined_bootstrap_costs_summary <- bind_rows(
+  boot_summary_all_patients_all_encounters_costs %>%
+    mutate(group = "All Patients & all encounters"),
+  
+  # boot_summary_all_patients_relevant_encounters_costs %>%
+  #   mutate(group = "All Patients & relevant encounters"),
+  
+  boot_summary_users_all_encounters_costs %>%
+    mutate(group = "Users & all encounters"),
+  
+  # boot_summary_users_relevant_encounters_costs %>%
+  #   mutate(group = "Users & relevant encounters")
+) %>%
+  select(group, everything())
+combined_bootstrap_costs_summary
+
+
 
 # Remove objects from this analysis
 rm(all_ae_attendance, all_ae_attendance_data_final, all_ae_attendance_per_patient, 
