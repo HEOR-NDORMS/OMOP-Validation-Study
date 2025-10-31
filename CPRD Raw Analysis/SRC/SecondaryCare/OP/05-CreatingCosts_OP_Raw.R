@@ -10,7 +10,7 @@ library(bit64)
 
 ## Read the files ----
 op_hrg_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OP/OP_costs_HRG_output_attend.csv"
+  "H:/Projects/Validation/HES HRG/Source/OP/OP_costs_HRG_output_attend.csv"
   ) |> 
   clean_names()
 
@@ -19,7 +19,7 @@ op_hrg_df_min <- op_hrg_df |>
   select(startage, sex, mainspef, tretspef, firstatt, nac_hrg)
 
 op_study_ids_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OP/op_costs_data_ids.csv"
+  "H:/Projects/Validation/HES HRG/Source/OP/op_costs_data_ids.csv"
 )
 
 # Merge the two together 
@@ -36,25 +36,36 @@ costs_hrg_df<- import(
 
 ## Select variables of interest ----
 # Step 1: Clean and flag rows with '*'
-costs_hrg_clean <- costs_hrg_df |>
+costs_hrg_clean_op <- costs_hrg_df |>
   select(department_description, tretspef, service_description, nac_hrg,
          number_of_attendances, national_average_unit_cost, cost) |>
   mutate(
+    # Flag rows where the cost field contains '*'
     has_star_cost = grepl("\\*", as.character(national_average_unit_cost)),
+    # Remove non-numeric characters and convert to numeric
     national_average_unit_cost = as.numeric(gsub("[^0-9\\.]", "", as.character(national_average_unit_cost))),
     number_of_attendances = as.numeric(gsub("[^0-9\\.]", "", as.character(number_of_attendances)))
   )
-
-# Step 2: Impute cost based on your logic
-costs_hrg_imputed <- costs_hrg_clean |>
-  group_by(tretspef, nac_hrg) |>
+costs_hrg_clean_op <- costs_hrg_clean_op |> 
   mutate(
-    unit_cost = case_when(
-      has_star_cost & all(has_star_cost)~ mean(cost, na.rm = TRUE),
-      # has_star_cost ~ cost[!has_star_cost][1],
-      TRUE ~ weighted.mean(national_average_unit_cost, number_of_attendances, na.rm = TRUE)
+    # Replace * (indicating <5) with 3
+    number_of_attendances =
+      ifelse(has_star_cost & is.na(number_of_attendances), 3,
+             number_of_attendances),
+    # Replace missing unit costs with cost value where appropriate
+    national_average_unit_cost = ifelse(
+      is.na(national_average_unit_cost) & has_star_cost,
+      cost,
+      national_average_unit_cost
     )
-  ) |>
+  )
+# Step 2: Impute cost based on your logic
+op_costs_hrg_imputed <- costs_hrg_clean_op |>
+  group_by(tretspef, nac_hrg) |>
+  summarise(
+    unit_cost = weighted.mean(national_average_unit_cost, 
+                              number_of_attendances, na.rm = TRUE)
+    ) |>
   ungroup() |> 
   distinct(tretspef, nac_hrg, unit_cost)
 

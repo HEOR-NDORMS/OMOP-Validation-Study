@@ -10,7 +10,7 @@ library(bit64)
 
 ## Read the files ----
 op_hrg_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_output-sample_attend.csv"
+  "H:/Projects/Validation/HES HRG/OMOP/OP/op_users_costs-output_attend.csv"
 ) |> 
   clean_names()
 
@@ -19,7 +19,7 @@ op_hrg_df_min <- op_hrg_df |>
   select(startage, sex, mainspef, tretspef, firstatt, nac_hrg)
 
 op_study_ids_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_data_ids-sample.csv"
+  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_data_ids.csv"
 )
 
 # Merge the two together 
@@ -69,10 +69,11 @@ costs_hrg_imputed <- costs_hrg_clean |>
     )
   ) |>
   
-  ungroup() |>
-  
-  # Keep distinct rows with imputed unit cost and attendance for next step
-  distinct(tretspef, nac_hrg, unit_cost, number_of_attendances)
+  ungroup() 
+# |>
+#   
+#   # Keep distinct rows with imputed unit cost and attendance for next step
+#   distinct(tretspef, nac_hrg, unit_cost, number_of_attendances)
 
 ## Cluster HRGs and apply second weighting ----
 # Step 3: Cluster HRGs so WF01A–D, WF02A–D share same unit cost etc
@@ -98,6 +99,30 @@ costs_hrg_clustered <- costs_hrg_imputed |>
   # Rename final unit cost column
   rename(unit_cost = cluster_unit_cost)
 
+
+# Step 3: Cluster HRGs so WF01A–D, WF02A–D share same unit cost etc
+costs_hrg_clustered_t <- costs_hrg_imputed |>
+  # Create HRG cluster by extracting first 4 characters (e.g., WF01A–D → WF01)
+  mutate(hrg_cluster = substr(nac_hrg, 1, 4)) |>
+  # Group by treatment specialty and HRG cluster
+  group_by(tretspef, hrg_cluster) |>
+  mutate(
+    # Apply second weighting:
+    # If any HRG in the cluster has missing attendance (due to having * before), 
+    # use simple mean of unit cost
+    # Otherwise, use weighted mean based on number of attendances
+    cluster_unit_cost = if (any(is.na(number_of_attendances))) {
+      mean(unit_cost, na.rm = TRUE)
+    } else {
+      weighted.mean(national_average_unit_cost, number_of_attendances, na.rm = TRUE)
+    }
+  ) |>
+  ungroup() |>
+  # Keep distinct rows with final clustered unit cost
+  distinct(tretspef, nac_hrg, cluster_unit_cost) |>
+  # Rename final unit cost column
+  rename(unit_cost = cluster_unit_cost)
+
 ## Merge on both hrg_code and tretspef ----
 op_hrg_df_merged <- left_join(
   op_hrg_costs_df |> mutate(tretspef = as.character(tretspef)),
@@ -108,13 +133,9 @@ op_hrg_df_merged <- left_join(
 
 ## Bring back the non-users ----
 op_costs_non_users_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_non_users_data-sample.csv"
+  "H:/Projects/Validation/HES HRG/OMOP/OP/op_costs_non_users_data.csv"
 ) |> 
   mutate(subject_id = as.integer64(subject_id)) |> 
-  mutate(gender_source_value = if_else(gender_source_value == "F", 2, 1)) |> 
-  mutate(startage = as.numeric(format(visit_detail_start_date, "%Y") - year_of_birth)) |>
-  rename(mainspef = mainspef_code,
-         tretspef = tretspef_code) |> 
   select(subject_id, startage, sex, mainspef, tretspef,
          firstatt) |> 
   mutate(nac_hrg = NA,
@@ -351,9 +372,10 @@ users_overall_by_tretspef_c <- op_costs_final_data_recoded |>
             num_subjects_visited = n_distinct(subject_id),
             .groups = "drop")
 
-# rio::export(users_overall_by_tretspef_c, 
-#             here::here("OMOP Analysis", "Results",
-#                        "SecondaryCareAnalysis", "OP","Output_costs_by_tretspef-Users_OMOP.xlsx"))
+rio::export(users_overall_by_tretspef_c,
+            here::here("OMOP Analysis", "Results",
+                       "SecondaryCareAnalysis", "OP", "Overall",
+                       "Output_costs_by_tretspef-Users_OMOP.xlsx"))
 users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   filter(user_status == "User") %>% 
   group_by(subject_id, tretspef_recoded) %>%                     # group data per patient
@@ -366,9 +388,11 @@ users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
             max_visits = round(max(n_appts, na.rm = TRUE), 2),
             num_subjects_visited = n_distinct(subject_id),
             .groups = "drop")
-# rio::export(users_overall_by_tretspef_v, 
-#             here::here("OMOP Analysis", "Results",
-#                        "SecondaryCareAnalysis", "OP", "Output_appointments_by_tretspef-Users_OMOP.xlsx"))
+
+rio::export(users_overall_by_tretspef_v,
+            here::here("OMOP Analysis", "Results",
+                       "SecondaryCareAnalysis", "OP",  "Overall", 
+                       "Output_appointments_by_tretspef-Users_OMOP.xlsx"))
 
 
 
@@ -409,9 +433,11 @@ all_overall_by_tretspef_c <- op_costs_final_data_recoded |>
             .groups = "drop") |> 
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded))
 
-# rio::export(all_overall_by_tretspef_c, 
-#             here::here("OMOP Analysis", "Results",
-#                        "SecondaryCareAnalysis", "OP", "Output_costs_by_tretspef-All_OMOP.xlsx"))
+rio::export(all_overall_by_tretspef_c,
+            here::here("OMOP Analysis", "Results",
+                       "SecondaryCareAnalysis", "OP",  "Overall", 
+                       "Output_costs_by_tretspef-All_OMOP.xlsx"))
+
 all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   group_by(subject_id, tretspef_recoded) %>%  
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded)) |> # group data per patient
@@ -428,9 +454,10 @@ all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   mutate_at("tretspef_recoded", as.factor) %>%
   mutate(tretspef_recoded = forcats::fct_infreq(tretspef_recoded))
 
-# rio::export(all_overall_by_tretspef_v, 
-#             here::here("OMOP Analysis", "Results",
-#                        "SecondaryCareAnalysis", "OP","Output_appointments_by_tretspef-All_OMOP.xlsx"))
+rio::export(all_overall_by_tretspef_v,
+            here::here("OMOP Analysis", "Results",
+                       "SecondaryCareAnalysis", "OP", "Overall",
+                       "Output_appointments_by_tretspef-All_OMOP.xlsx"))
 
 
 # Export the file
@@ -442,6 +469,7 @@ costs_list <- list(
 )
 
 # Write to an Excel file
-# write_xlsx(costs_list, here::here("OMOP Analysis", "Results",
-#                                   "SecondaryCareAnalysis", "OP","Output_Costs_OMOP.xlsx"))
+write_xlsx(costs_list, here::here("OMOP Analysis", "Results",
+                                  "SecondaryCareAnalysis", "OP",  "Overall", 
+                                  "Output_Costs_OMOP.xlsx"))
 
