@@ -1,0 +1,436 @@
+---
+title: "Secondary Care Analysis Report"
+output: html_document
+date: "2025-10-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, include=FALSE}
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(here)
+library(DT)
+library(rio)
+library(gt)
+library(png)
+library(grid)
+library(patchwork)
+library(gridExtra)
+library(gtExtras)
+library(htmltools)
+```
+
+Outpatient data were cleaned to ensure completeness of specialty information required by the HRG Grouper. When the main specialty (MAINSPEF) was missing but the treatment specialty (TRETSPEF) was valid, MAINSPEF was replaced with TRETSPEF, and vice versa when TRETSPEF was missing but MAINSPEF was valid. If MAINSPEF was missing and TRETSPEF contained an invalid code (for example, a text description such as “cardiology”), MAINSPEF was imputed using the most frequent MAINSPEF (mode) observed among all records sharing the same TRETSPEF. Similarly, if TRETSPEF was missing, it was imputed using the mode of TRETSPEF among records with the same MAINSPEF. When both specialties were missing and the appointment was attended, missing values were replaced with the overall (global) mode for each respective specialty variable. Non-attended records with both specialties missing were excluded. Invalid or unrecognized specialty codes were also replaced using the global mode, but only for attended appointments.
+The variable FIRSTATT (first attendance indicator) was cleaned by replacing the value “X” (denoting missingness) with “4”, corresponding to the least resource-intensive attendance category. This step was restricted to attended appointments (attendance code = 5) to maintain consistency with OMOP preprocessing standards.
+For cost data, missing or suppressed values in the national average unit cost field (denoted by “*”) were imputed within each combination of treatment specialty (TRETSPEF) and NAC HRG code. When all rows in a group contained suppressed values, the mean of available unit costs across the dataset was used. When some valid cost values were available, a weighted mean was calculated using the number of attendances as weights. In the OMOP dataset, HRG codes were clustered by their first four characters (for example, WF01A–D grouped as WF01), and unit costs were harmonized within each cluster using either a simple mean (if all costs were suppressed) or a weighted mean (if valid costs existed). This ensured consistency of cost estimates across HRG clusters while preserving relationships between specialty, activity level, and resource use.
+In the Admitted Patient Care (APC) data, missing Procode3 values required for grouper classification were replaced with valid codes drawn from a validated random sample. Validation was performed by checking 20 randomly selected patient records to confirm that the resulting HRG assignments were unchanged.
+For Accident & Emergency (AE) data, diagnosis codes misclassified under the treatment variable (Treatment_01)—including C109, D101, D102, D105, E101, E104, E105, E110, U212, Y981, Z411, Z413, and Z421—were identified and removed. AE attendances missing both main investigation and main treatment fields were excluded from the cost analysis.
+
+
+# HRCU
+
+## Outpatients {.tabset}
+
+### Table 2
+
+
+### Overall{.tabset}
+
+#### Observed
+
+```{r}
+source_overall_observed_users <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Overall","Output_appointments_Raw.xlsx"),
+                                  sheet = "users_overall_summary_appts") %>% 
+  mutate(`Patient Category` = "Users & all encounters") %>% 
+  select(`Patient Category`, everything())
+
+source_overall_observed_all <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Overall","Output_appointments_Raw.xlsx"),
+                                  sheet = "all_overall_summary_appts") %>% 
+  mutate(`Patient Category` = "All Patients & all encounters") %>% 
+  select(`Patient Category`, everything())
+
+source_overall_observed <- rbind(source_overall_observed_all, 
+                                 source_overall_observed_users)
+
+source_overall_observed %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Overall OP Visits**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    n = "Number of Patients",
+    mean = "Mean",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    median = "Median",
+    lower_q = "Lower Quartile",
+    upper_q = "Upper Quartile",
+    se = "Standard Error",
+    ci_lower = "95% CI Lower",
+    ci_upper = "95% CI Upper"
+  )
+```
+
+#### Bootstrap
+
+```{r}
+overall_all_patients_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Overall", "overall_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "All Patients & all encounters") %>%
+  rename(
+    Group = group,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_norm_lower,
+    `95% Upper CI-First order normal approximation` = ci_norm_upper,
+    `95% Lower CI-Basic bootstrap interval` = ci_basic_lower,
+    `95% Upper CI-Basic bootstrap interval` = ci_basic_upper,
+    `95% Lower CI-Bootstrap percentile interval` = ci_perc_lower,
+    `95% Upper CI-Bootstrap percentile interval` = ci_perc_upper
+    )
+ 
+# overall_all_patients_all_enc_boot <- bind_rows(
+#   source_overall_boot %>% filter(group == "All Patients & all encounters") %>% mutate(Cohort = "SOURCE"),
+#   omop_overall_boot   %>% filter(group == "All Patients & all encounters") %>% mutate(Cohort = "OMOP")
+# ) %>%
+#   select(-group) %>%
+#   relocate(Cohort)
+numeric_cols <- overall_all_patients_all_enc_boot %>%
+  select(where(is.numeric)) %>%
+  names()
+
+# DT::datatable(
+#   overall_all_patients_all_enc_boot,
+#   options = list(dom = 't', ordering = FALSE),
+#   rownames = FALSE
+# ) %>%
+#   formatRound(columns = numeric_cols, digits = 2, mark = ",")
+DT::datatable(
+  overall_all_patients_all_enc_boot,
+  options = list(
+    dom = 't',
+    ordering = FALSE,
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#36648B', 'color': '#ecf0f1'});",
+      "}"
+    )
+  ),
+  rownames = FALSE,
+  class = 'stripe hover cell-border'
+) %>%
+  formatRound(columns = numeric_cols, digits = 2, mark = ",")
+
+
+```
+
+```{r}
+overall_users_all_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Overall", "overall_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "Users & all encounters") %>%
+  rename(
+    Group = group,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_norm_lower,
+    `95% Upper CI-First order normal approximation` = ci_norm_upper,
+    `95% Lower CI-Basic bootstrap interval` = ci_basic_lower,
+    `95% Upper CI-Basic bootstrap interval` = ci_basic_upper,
+    `95% Lower CI-Bootstrap percentile interval` = ci_perc_lower,
+    `95% Upper CI-Bootstrap percentile interval` = ci_perc_upper
+  )
+  
+
+numeric_cols <- overall_users_all_enc_obs %>%
+  select(where(is.numeric)) 
+
+DT::datatable(
+  overall_users_all_enc_obs,
+  options = list(
+    dom = 't',
+    ordering = FALSE,
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#36648B', 'color': '#ecf0f1'});",
+      "}"
+    )
+  ),
+  rownames = FALSE,
+  class = 'stripe hover cell-border'
+) %>%
+  formatRound(columns = names(numeric_cols), digits = 2, mark = ",")
+
+```
+
+
+### Yearly {.tabset}
+
+#### Observed
+
+
+```{r}
+yearly_all_patients_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx"))
+
+yearly_all_patients_enc_obs %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Yearly OP Visits**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    group = "Group",
+    year_after_index = "Year After Index Date",
+    mean_exposed = "Mean Exposed",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    q1 = "Lower Quartile",
+    median = "Median",
+    q3 = "Upper Quartile",
+    n_exposed = "Number of Patients Exposed",
+    tot_encounters = "Total Encounters",
+    mean_all_patients = "Mean Number of Patients",
+    se = "Standard Error",
+    lower = "95% Lower CI",
+    upper = "95% Upper CI"
+  )
+  
+```
+
+
+#### Bootstrap
+
+```{r}
+yearly_users_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "Users & all encounters") %>%
+  rename(
+    Group = group,
+    Year = year,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    )
+ 
+# overall_all_patients_all_enc_boot <- bind_rows(
+#   source_overall_boot %>% filter(group == "All Patients & all encounters") %>% mutate(Cohort = "SOURCE"),
+#   omop_overall_boot   %>% filter(group == "All Patients & all encounters") %>% mutate(Cohort = "OMOP")
+# ) %>%
+#   select(-group) %>%
+#   relocate(Cohort)
+numeric_cols <- yearly_users_all_enc_boot %>%
+  select(where(is.numeric)) %>%
+  names()
+
+# DT::datatable(
+#   overall_all_patients_all_enc_boot,
+#   options = list(dom = 't', ordering = FALSE),
+#   rownames = FALSE
+# ) %>%
+#   formatRound(columns = numeric_cols, digits = 2, mark = ",")
+DT::datatable(
+  yearly_users_all_enc_boot,
+  options = list(
+    dom = 't',
+    ordering = FALSE,
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#36648B', 'color': '#ecf0f1'});",
+      "}"
+    )
+  ),
+  rownames = FALSE,
+  class = 'stripe hover cell-border'
+) %>%
+  formatRound(columns = names(numeric_cols), digits = 2, mark = ",")
+
+
+```
+
+```{r}
+yearly_all_patients_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "All Patients & all encounters") %>%
+  rename(
+    Group = group,
+    Year = year,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    )
+ 
+# overall_all_patients_all_enc_boot <- bind_rows(
+#   source_overall_boot %>% filter(group == "All Patients & all encounters") %>% mutate(Cohort = "SOURCE"),
+#   omop_overall_boot   %>% filter(group == "All Patients & all encounters") %>% mutate(Cohort = "OMOP")
+# ) %>%
+#   select(-group) %>%
+#   relocate(Cohort)
+numeric_cols <- yearly_all_patients_all_enc_boot %>%
+  select(where(is.numeric)) %>%
+  names()
+
+# DT::datatable(
+#   overall_all_patients_all_enc_boot,
+#   options = list(dom = 't', ordering = FALSE),
+#   rownames = FALSE
+# ) %>%
+#   formatRound(columns = numeric_cols, digits = 2, mark = ",")
+DT::datatable(
+  yearly_all_patients_all_enc_boot,
+  options = list(
+    dom = 't',
+    ordering = FALSE,
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#36648B', 'color': '#ecf0f1'});",
+      "}"
+    )
+  ),
+  rownames = FALSE,
+  class = 'stripe hover cell-border'
+) %>%
+  formatRound(columns = names(numeric_cols), digits = 2, mark = ",")
+```
+
+
+### Monthly {.tabset}
+
+#### Observed
+
+#### Bootstrap
+
+```{r}
+overall_all_patients_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Monthly", "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "All Patients & all encounters") %>%
+  rename(
+    Group = group,
+    Month = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    )
+ 
+# overall_all_patients_all_enc_boot <- bind_rows(
+#   source_overall_boot %>% filter(group == "All Patients & all encounters") %>% mutate(Cohort = "SOURCE"),
+#   omop_overall_boot   %>%  filter(group == "All Patients & all encounters") %>% mutate(Cohort = "OMOP")
+# ) %>%
+#   select(-group) %>%
+#   relocate(Cohort)
+numeric_cols <- overall_all_patients_all_enc_boot %>%
+  select(where(is.numeric)) %>%
+  names()
+
+# DT::datatable(
+#   overall_all_patients_all_enc_boot,
+#   options = list(dom = 't', ordering = FALSE),
+#   rownames = FALSE
+# ) %>%
+#   formatRound(columns = numeric_cols, digits = 2, mark = ",")
+DT::datatable(
+  overall_all_patients_all_enc_boot,
+  options = list(
+    dom = 't',
+    ordering = FALSE,
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#36648B', 'color': '#ecf0f1'});",
+      "}"
+    )
+  ),
+  rownames = FALSE,
+  class = 'stripe hover cell-border'
+) %>%
+  formatRound(columns = names(numeric_cols), digits = 2, mark = ",")
+
+
+```
+
+```{r}
+overall_users_all_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Monthly", "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "Users & all encounters") %>% 
+  rename(
+    Group = group,
+    Month = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    )
+
+numeric_cols <- overall_users_all_enc_obs %>%
+  select(where(is.numeric)) %>%
+  names()
+
+# DT::datatable(
+#   overall_users_all_enc_obs,
+#   options = list(dom = 't', ordering = FALSE),
+#   rownames = FALSE
+# ) %>%
+#   formatRound(columns = numeric_cols, digits = 2, mark = ",")
+
+DT::datatable(
+  overall_users_all_enc_obs,
+  options = list(
+    dom = 't',
+    ordering = FALSE,
+    initComplete = JS(
+      "function(settings, json) {",
+      "$(this.api().table().header()).css({'background-color': '#36648B', 'color': '#ecf0f1'});",
+      "}"
+    )
+  ),
+  rownames = FALSE,
+  class = 'stripe hover cell-border'
+) %>%
+  formatRound(columns = names(numeric_cols), digits = 2, mark = ",")
+
+```
