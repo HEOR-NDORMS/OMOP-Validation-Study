@@ -280,5 +280,5 @@ table2_combined_summary_op <- bind_rows(summaries_op, .id = "summary_name") %>%
 
 # Export ----
 rio::export(table2_combined_summary_op, 
-            here::here("OMOPAnalysis", "Results", "SecondaryCareAnalysis", 
+            here::here("OMOP Analysis", "Results", "SecondaryCareAnalysis", 
                        "OP","Table1_OP_OMOP.xlsx"))
