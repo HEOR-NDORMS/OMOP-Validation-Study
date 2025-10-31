@@ -346,7 +346,11 @@ costs_data_hrg_op <- costs_data_hrg_op %>%
 # Let's filter out the op non_users, as in primary analysis they'll 
 # have cost = 0, so we will bring them back 
 op_costs_non_users_data <- costs_data_hrg_op %>% 
-  filter(is.na(visit_detail_start_date))
+  filter(is.na(visit_detail_start_date)) %>% 
+  arrange(subject_id) %>% 
+  mutate(startage = NA_integer_) %>% 
+  select(subject_id, startage, sex = gender_source_value, mainspef =  mainspef_code, 
+         tretspef = tretspef_code, firstatt) 
 
 rio::export(op_costs_non_users_data, 
             here::here("OMOP Analysis", "Results",
