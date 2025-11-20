@@ -33,7 +33,7 @@ library(boot)
 
 ### HCRU -----
 
-cohort_table <- import("H:/Projects/Validation/Data/cohort_data_raw.csv")
+cohort_table_raw <- import("H:/Projects/Validation/Data/cohort_data_raw.csv")
 ae_attendance_data <- import("H:/Projects/Validation/Data/ae_attendance_data_raw.csv") |> 
   arrange(patid)
 
