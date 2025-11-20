@@ -45,12 +45,17 @@ costs_hrg_clean <- costs_hrg_df |>
   
   # Clean and transform columns
   mutate(
-    # Flag rows where national average unit cost contains '*'
+    # Flag rows where the cost field contains '*'
     has_star_cost = grepl("\\*", as.character(national_average_unit_cost)),
-    
-    # Remove non-numeric (*) characters and convert to numeric
+    # Remove non-numeric characters and convert to numeric
     national_average_unit_cost = as.numeric(gsub("[^0-9\\.]", "", as.character(national_average_unit_cost))),
     number_of_attendances = as.numeric(gsub("[^0-9\\.]", "", as.character(number_of_attendances)))
+  ) |> 
+  mutate(
+    # Replace * (indicating <5) with 3
+    number_of_attendances =
+      ifelse(has_star_cost & is.na(number_of_attendances), 3,
+             number_of_attendances)
   )
 
 ## Impute unit cost based on attendance and cost ----
@@ -60,20 +65,15 @@ costs_hrg_imputed <- costs_hrg_clean |>
   group_by(tretspef, nac_hrg) |>
  
   mutate(
-    unit_cost = case_when(
-      # If all rows in the group have starred costs, use mean of actual cost column
-      has_star_cost & all(has_star_cost) ~ mean(cost, na.rm = TRUE),
-      
-      # Otherwise, use weighted mean of national average unit cost based on attendances
-      TRUE ~ weighted.mean(national_average_unit_cost, number_of_attendances, na.rm = TRUE)
-    )
-  ) |>
+    total_costs = sum(cost),
+    total_attendances = sum(number_of_attendances),
+    unit_cost = total_costs/total_attendances
+    ) |>
   
-  ungroup() 
-# |>
-#   
-#   # Keep distinct rows with imputed unit cost and attendance for next step
-#   distinct(tretspef, nac_hrg, unit_cost, number_of_attendances)
+  ungroup() |>
+
+  # Keep distinct rows with imputed unit cost and attendance for next step
+  distinct(tretspef, nac_hrg, unit_cost, .keep_all = TRUE)
 
 ## Cluster HRGs and apply second weighting ----
 # Step 3: Cluster HRGs so WF01A–D, WF02A–D share same unit cost etc
@@ -91,30 +91,6 @@ costs_hrg_clustered <- costs_hrg_imputed |>
       mean(unit_cost, na.rm = TRUE)
     } else {
       weighted.mean(unit_cost, number_of_attendances, na.rm = TRUE)
-    }
-  ) |>
-  ungroup() |>
-  # Keep distinct rows with final clustered unit cost
-  distinct(tretspef, nac_hrg, cluster_unit_cost) |>
-  # Rename final unit cost column
-  rename(unit_cost = cluster_unit_cost)
-
-
-# Step 3: Cluster HRGs so WF01A–D, WF02A–D share same unit cost etc
-costs_hrg_clustered_t <- costs_hrg_imputed |>
-  # Create HRG cluster by extracting first 4 characters (e.g., WF01A–D → WF01)
-  mutate(hrg_cluster = substr(nac_hrg, 1, 4)) |>
-  # Group by treatment specialty and HRG cluster
-  group_by(tretspef, hrg_cluster) |>
-  mutate(
-    # Apply second weighting:
-    # If any HRG in the cluster has missing attendance (due to having * before), 
-    # use simple mean of unit cost
-    # Otherwise, use weighted mean based on number of attendances
-    cluster_unit_cost = if (any(is.na(number_of_attendances))) {
-      mean(unit_cost, na.rm = TRUE)
-    } else {
-      weighted.mean(national_average_unit_cost, number_of_attendances, na.rm = TRUE)
     }
   ) |>
   ungroup() |>
@@ -145,7 +121,7 @@ op_costs_non_users_df <- read_csv(
 op_costs_final_data <- rbind(op_hrg_df_merged, op_costs_non_users_df) 
 
 ### Recode specialty variables
-op_costs_final_data_recoded <- op_costs_final_data |> 
+op_costs_final_data_recoded_omop <- op_costs_final_data |> 
   mutate_at(c("mainspef", "tretspef"), as.factor) |> 
   mutate(
     mainspef_recoded = fct_recode(
@@ -334,7 +310,7 @@ op_costs_final_data_recoded <- op_costs_final_data |>
 # Summary Stats ----
 
 ## Users ----
-users_op_costs_df <- op_costs_final_data_recoded |> 
+users_op_costs_df <- op_costs_final_data_recoded_omop |> 
   filter(user_status == "User")
 
 overall_users_costs_df <- users_op_costs_df |> 
@@ -345,7 +321,7 @@ overall_users_costs_df <- users_op_costs_df |>
 # Summary statistics
 summary_users_appts_costs <- overall_users_costs_df %>%
   summarise(
-    n            = n(),
+    n_exposed    = sum(total_patient_cost),
     mean         = mean(total_patient_cost, na.rm = T),
     min          = min(total_patient_cost, na.rm = T),
     max          = max(total_patient_cost, na.rm = T),
@@ -353,13 +329,13 @@ summary_users_appts_costs <- overall_users_costs_df %>%
     median       = quantile(total_patient_cost, 0.5, na.rm = T),
     lower_q      = quantile(total_patient_cost, 0.25, na.rm = T),
     upper_q      = quantile(total_patient_cost, 0.75, na.rm = T),
-    se                 = sd / sqrt(n),
-    ci_lower           = mean - qt(0.975, df = n - 1) * se,
-    ci_upper           = mean + qt(0.975, df = n - 1) * se
+    se                 = sd / sqrt(n_exposed),
+    ci_lower           = mean - qt(0.975, df = n_exposed - 1) * se,
+    ci_upper           = mean + qt(0.975, df = n_exposed - 1) * se
   ) %>%
   mutate(across(everything(), round, 2))
 
-users_overall_by_tretspef_c <- op_costs_final_data_recoded |> 
+users_overall_by_tretspef_c <- op_costs_final_data_recoded_omop |> 
   filter(user_status == "User") |> 
   group_by(subject_id, tretspef_recoded) %>%                     # group data per patient
   summarise(n_costs = sum(unit_cost), .groups = "drop") %>% 
@@ -376,7 +352,7 @@ rio::export(users_overall_by_tretspef_c,
             here::here("OMOP Analysis", "Results",
                        "SecondaryCareAnalysis", "OP", "Overall",
                        "Output_costs_by_tretspef-Users_OMOP.xlsx"))
-users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
+users_overall_by_tretspef_v <- op_costs_final_data_recoded_omop %>%
   filter(user_status == "User") %>% 
   group_by(subject_id, tretspef_recoded) %>%                     # group data per patient
   summarise(n_appts = n(), .groups = "drop") %>% 
@@ -397,7 +373,7 @@ rio::export(users_overall_by_tretspef_v,
 
 
 ## All ----
-overall_all_costs_df <- op_costs_final_data_recoded |> 
+overall_all_costs_df <- op_costs_final_data_recoded_omop |> 
   group_by(subject_id) %>%                     # group data per patient
   summarise(total_patient_cost = sum(unit_cost)) %>%   # derive total number of appointments by picking max value of apptorder
   ungroup()
@@ -405,7 +381,7 @@ overall_all_costs_df <- op_costs_final_data_recoded |>
 # Summary statistics
 summary_all_appts_costs <- overall_all_costs_df %>%
   summarise(
-    n            = n(),
+    n_exposed   = sum(total_patient_cost),
     mean         = mean(total_patient_cost, na.rm = T),
     min          = min(total_patient_cost, na.rm = T),
     max          = max(total_patient_cost, na.rm = T),
@@ -413,14 +389,14 @@ summary_all_appts_costs <- overall_all_costs_df %>%
     median       = quantile(total_patient_cost, 0.5, na.rm = T),
     lower_q      = quantile(total_patient_cost, 0.25, na.rm = T),
     upper_q      = quantile(total_patient_cost, 0.75, na.rm = T),
-    se                 = sd / sqrt(n),
-    ci_lower           = mean - qt(0.975, df = n - 1) * se,
-    ci_upper           = mean + qt(0.975, df = n - 1) * se
+    se                 = sd / sqrt(n_exposed),
+    ci_lower           = mean - qt(0.975, df = n_exposed - 1) * se,
+    ci_upper           = mean + qt(0.975, df = n_exposed - 1) * se
   ) %>%
   mutate(across(everything(), round, 2))
 
 
-all_overall_by_tretspef_c <- op_costs_final_data_recoded |> 
+all_overall_by_tretspef_c <- op_costs_final_data_recoded_omop |> 
   group_by(subject_id, tretspef_recoded) %>%                     # group data per patient
   summarise(n_costs = sum(unit_cost), .groups = "drop") %>% 
   group_by(tretspef_recoded) %>%
@@ -438,7 +414,7 @@ rio::export(all_overall_by_tretspef_c,
                        "SecondaryCareAnalysis", "OP",  "Overall", 
                        "Output_costs_by_tretspef-All_OMOP.xlsx"))
 
-all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
+all_overall_by_tretspef_v <- op_costs_final_data_recoded_omop %>%
   group_by(subject_id, tretspef_recoded) %>%  
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded)) |> # group data per patient
   summarise(n_appts = n(), .groups = "drop") %>%
