@@ -113,7 +113,8 @@ final_long_df_encounters_all_patients_all_encounters_raw <- final_matrix_encount
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 observed_visit_summary_all_patients_all_encounters_raw <- final_long_df_encounters_all_patients_all_encounters_raw %>%
@@ -217,7 +218,8 @@ final_long_df_encounters_users_all_encounters_raw <- final_matrix_encounters_raw
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month))) |> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 
@@ -326,7 +328,8 @@ final_long_df_encounters_all_patients_all_encounters_raw <- final_matrix_encount
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 
@@ -441,7 +444,8 @@ final_long_df_encounters_users_all_encounters_raw <- final_matrix_encounters_raw
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 
@@ -539,6 +543,7 @@ combined_encounters_bootstrap_summary_monthly_raw <- bind_rows(
   select(group, everything())
 
 # Export
+library(writexl)
 write_xlsx(combined_encounters_bootstrap_summary_monthly_raw, 
            here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Monthly",
                       "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
@@ -640,7 +645,8 @@ final_long_df_costs_all_patients_all_encounters_raw <- final_matrix_costs_raw %>
     names_to = "month",
     values_to = "total_patient_cost"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
 
 # Summarise monthly visit statistics
 
@@ -753,7 +759,8 @@ final_long_df_costs_users_all_encounters_raw <- final_matrix_costs_raw %>%
     names_to = "month",
     values_to = "total_patient_cost"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month))) |> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
 
 # Summarise monthly cost statistics
 
@@ -852,7 +859,8 @@ final_long_df_costs_all_patients_all_encounters_raw <- final_matrix_costs_raw %>
     names_to = "month",
     values_to = "total_patient_cost"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
 
 observed_cost_summary_all_patients_all_encounters_all_months_raw <- final_long_df_costs_all_patients_all_encounters_raw %>%
   group_by(month_after_index) %>%
@@ -962,7 +970,8 @@ final_matrix_costs_raw <- merged_matrix_costs_raw %>%
 
 final_long_df_costs_users_all_encounters_raw <- final_matrix_costs_raw %>%
   pivot_longer(cols = starts_with("month_"), names_to = "month", values_to = "total_patient_cost") %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month))) |> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
 
 # Monthly summary
 observed_cost_summary_users_all_encounters_all_months_raw <- final_long_df_costs_users_all_encounters_raw %>%
