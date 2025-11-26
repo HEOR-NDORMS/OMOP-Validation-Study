@@ -110,7 +110,8 @@ final_long_df_encounters_all_patients_all_encounters_omop <- final_matrix_encoun
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 observed_visit_summary_all_patients_all_encounters_omop <- final_long_df_encounters_all_patients_all_encounters_omop %>%
@@ -216,7 +217,8 @@ final_long_df_encounters_users_all_encounters_omop <- final_matrix_encounters_om
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 
@@ -326,7 +328,8 @@ final_long_df_encounters_all_patients_all_encounters_omop <- final_matrix_encoun
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 
@@ -443,7 +446,8 @@ final_long_df_encounters_users_all_encounters_omop <- final_matrix_encounters_om
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 
@@ -639,7 +643,9 @@ final_long_df_costs_all_patients_all_encounters_omop <- final_matrix_costs_omop 
     names_to = "month",
     values_to = "total_patient_cost"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
+
 
 # Summarise monthly visit statistics
 observed_cost_summary_all_patients_all_encounters_omop <- final_long_df_costs_all_patients_all_encounters_omop %>%
@@ -746,7 +752,9 @@ final_long_df_costs_users_all_encounters_omop <- final_matrix_costs_omop %>%
     names_to = "month",
     values_to = "total_patient_cost"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
+
 
 # Summarise monthly cost statistics
 observed_cost_summary_users_all_encounters_omop <- final_long_df_costs_users_all_encounters_omop %>%
@@ -776,7 +784,7 @@ observed_cost_summary_users_all_encounters_omop <- final_long_df_costs_users_all
 n_all_pts_omop <- n_distinct(cohort_table_omop$subject_id)
 
 # Create 24-month exposure matrix 
-cohort_grid_omop_all_months_omop <- cohort_table_omop %>%
+cohort_grid_omop_all_months <- cohort_table_omop %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -843,7 +851,9 @@ final_long_df_costs_all_patients_all_encounters_omop <- final_matrix_costs_omop 
     names_to = "month",
     values_to = "total_patient_cost"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
+
 
 observed_cost_summary_all_patients_all_encounters_all_months_omop <- final_long_df_costs_all_patients_all_encounters_omop %>%
   group_by(month_after_index) %>%
@@ -878,7 +888,7 @@ cohort_table_users_omop <- appt_data_omop %>% filter(user_status== "User") %>%
 n_users_omop <- n_distinct(cohort_table_users_omop$subject_id)
 
 # Create 24-month exposure matrix
-cohort_grid_omop_all_months_omop <- cohort_table_users_omop %>%
+cohort_grid_omop_all_months <- cohort_table_users_omop %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -931,7 +941,7 @@ observed_cost_matrix_omop <- monthly_cost_summary_omop %>%
 # Merge with exposure grid
 month_cols_omop <- grep("^month_", names(cohort_grid_omop_all_months), value = TRUE)
 
-merged_matrix_costs_omop <- cohort_grid_omop_all_months_omop %>%
+merged_matrix_costs_omop <- cohort_grid_omop_all_months %>%
   left_join(observed_cost_matrix_omop, by = "subject_id", suffix = c("_exp", "_cost"))
 
 # Fill costs into exposure grid
@@ -952,7 +962,9 @@ final_matrix_costs_omop <- merged_matrix_costs_omop %>%
 
 final_long_df_costs_users_all_encounters_omop <- final_matrix_costs_omop %>%
   pivot_longer(cols = starts_with("month_"), names_to = "month", values_to = "total_patient_cost") %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
+
 
 # Monthly summary
 observed_cost_summary_users_all_encounters_all_months_omop <- final_long_df_costs_users_all_encounters_omop %>%
