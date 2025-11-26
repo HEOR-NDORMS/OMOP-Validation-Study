@@ -18,7 +18,7 @@
 library(tidyverse)
 
 # Loading appointments data ----
-appt_data <- table_one_op_omop_appt
+appt_data <- table_one_op_omop_appt_recoded
 
 # Minimise data ----
 names(appt_data)
@@ -332,6 +332,7 @@ costs_data_hrg_op <- appt_data %>%
 # 9 = Not known (prior to 2008/09)
 
 # Assumption made: random allocation or least resource use choice
+# add seed!!
 costs_data_hrg_op <- costs_data_hrg_op %>%
   mutate(
     firstatt = sample(c(1, 2, 3, 4), size = n(), replace = TRUE),
@@ -622,3 +623,7 @@ op_users_ids_data <- rule2_3_applied %>%
 rio::export(op_users_ids_data, here::here("OMOP Analysis", "Results",
                                           "SecondaryCareAnalysis", "OP", 
                                           "op_costs_data_ids.csv"))
+
+rio::export(appt_data, here::here("OMOP Analysis", "Results",
+                                          "SecondaryCareAnalysis", "OP", 
+                                          "appt_data.csv"))
