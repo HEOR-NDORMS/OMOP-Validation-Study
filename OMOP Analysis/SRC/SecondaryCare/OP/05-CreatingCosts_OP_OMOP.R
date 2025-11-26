@@ -37,46 +37,60 @@ costs_hrg_df <- import(
 
 # Create Costs ----
 ## Select variables of interest ----
-# Step 1: Clean and flag rows with '*'
-costs_hrg_clean <- costs_hrg_df |>
-  # Select relevant columns
-  select(department_description, tretspef, service_description, nac_hrg,
-         number_of_attendances, national_average_unit_cost, cost) |>
-  
-  # Clean and transform columns
+# # Step 1: Clean and flag rows with '*'
+# costs_hrg_clean <- costs_hrg_df |>
+#   # Select relevant columns
+#   select(department_description, tretspef, service_description, nac_hrg,
+#          number_of_attendances, national_average_unit_cost, cost) |>
+#   
+#   # Clean and transform columns
+#   mutate(
+#     # Flag rows where the cost field contains '*'
+#     has_star_cost = grepl("\\*", as.character(number_of_attendances)),
+#     ) |> 
+#   mutate(
+#     # Replace * (indicating <5) with 3
+#     number_of_attendances = ifelse(has_star_cost, 3,
+#              number_of_attendances),
+#     number_of_attendances = as.numeric(number_of_attendances)
+#   )
+# 
+# ## Impute unit cost based on attendance and cost ----
+# # Step 2: Impute cost based on logic
+# costs_hrg_imputed <- costs_hrg_clean |>
+#   # Group by treatment specialty and HRG code
+#   group_by(tretspef, nac_hrg) |>
+#   summarise(
+#     total_costs = sum(cost),
+#     total_attendances = sum(number_of_attendances),
+#     unit_cost = total_costs/total_attendances
+#     ) |>
+#   ungroup()
+# 
+# 1) Clean & parse numeric fields
+costs_hrg_clean <- costs_hrg_df %>%
   mutate(
-    # Flag rows where the cost field contains '*'
-    has_star_cost = grepl("\\*", as.character(national_average_unit_cost)),
-    # Remove non-numeric characters and convert to numeric
-    national_average_unit_cost = as.numeric(gsub("[^0-9\\.]", "", as.character(national_average_unit_cost))),
-    number_of_attendances = as.numeric(gsub("[^0-9\\.]", "", as.character(number_of_attendances)))
-  ) |> 
-  mutate(
-    # Replace * (indicating <5) with 3
-    number_of_attendances =
-      ifelse(has_star_cost & is.na(number_of_attendances), 3,
-             number_of_attendances)
+    # replace '*' with '3' before removing commas (robust to character/numeric inputs)
+    n_attendances = as.character(number_of_attendances) %>%
+      str_replace_all("\\*", "3") %>%
+      str_remove_all("[,]") %>%
+      as.numeric(),
+    cost = as.character(cost) %>%
+      str_remove_all("[£,]") %>%
+      as.numeric()
   )
 
-## Impute unit cost based on attendance and cost ----
-# Step 2: Impute cost based on logic
-costs_hrg_imputed <- costs_hrg_clean |>
-  # Group by treatment specialty and HRG code
-  group_by(tretspef, nac_hrg) |>
- 
-  mutate(
-    total_costs = sum(cost),
-    total_attendances = sum(number_of_attendances),
-    unit_cost = total_costs/total_attendances
-    ) |>
-  
-  ungroup() |>
+# 2) HRG-level aggregation: totals + HRG unit cost
+costs_hrg_imputed <- costs_hrg_clean %>%
+  group_by(tretspef, nac_hrg) %>%
+  summarise(
+    total_costs = sum(cost, na.rm = TRUE),
+    total_attendances = sum(n_attendances, na.rm = TRUE),
+    unit_cost = ifelse(total_attendances > 0, total_costs / total_attendances, NA_real_),
+    .groups = "drop"
+  )
 
-  # Keep distinct rows with imputed unit cost and attendance for next step
-  distinct(tretspef, nac_hrg, unit_cost, .keep_all = TRUE)
-
-## Cluster HRGs and apply second weighting ----
-# Step 3: Cluster HRGs so WF01A–D, WF02A–D share same unit cost etc
+# 3) Cluster HRGs so WF01A–D, WF02A–D share same unit cost etc
 costs_hrg_clustered <- costs_hrg_imputed |>
   # Create HRG cluster by extracting first 4 characters (e.g., WF01A–D → WF01)
   mutate(hrg_cluster = substr(nac_hrg, 1, 4)) |>
@@ -84,13 +98,13 @@ costs_hrg_clustered <- costs_hrg_imputed |>
   group_by(tretspef, hrg_cluster) |>
   mutate(
     # Apply second weighting:
-    # If any HRG in the cluster has missing attendance (due to having * before), 
+    # If any HRG in the cluster has missing attendance (due to having * before),
     # use simple mean of unit cost
     # Otherwise, use weighted mean based on number of attendances
-    cluster_unit_cost = if (any(is.na(number_of_attendances))) {
+    cluster_unit_cost = if (any(is.na(total_attendances))) {
       mean(unit_cost, na.rm = TRUE)
     } else {
-      weighted.mean(unit_cost, number_of_attendances, na.rm = TRUE)
+      weighted.mean(unit_cost, total_attendances, na.rm = TRUE)
     }
   ) |>
   ungroup() |>
@@ -99,13 +113,16 @@ costs_hrg_clustered <- costs_hrg_imputed |>
   # Rename final unit cost column
   rename(unit_cost = cluster_unit_cost)
 
+
 ## Merge on both hrg_code and tretspef ----
 op_hrg_df_merged <- left_join(
   op_hrg_costs_df |> mutate(tretspef = as.character(tretspef)),
   costs_hrg_clustered,
   by = c("nac_hrg", "tretspef")
 ) |> 
-  mutate(user_status = "User")
+  mutate(user_status = "User") |> 
+  select(subject_id, startage, sex, mainspef, 
+         tretspef, firstatt, nac_hrg, unit_cost, user_status)
 
 ## Bring back the non-users ----
 op_costs_non_users_df <- read_csv(
