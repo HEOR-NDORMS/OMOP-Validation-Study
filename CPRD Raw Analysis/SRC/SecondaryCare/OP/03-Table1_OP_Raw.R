@@ -64,14 +64,17 @@ validation_appointment <- my_dm$validation_hesop_appointment %>% collect() %>%
   filter(apptdate >= study_start_date & apptdate <= study_end_date)
 
 # Merge with cohort data ----
-table_one_op_raw_appt <- left_join(table_one_op_raw, validation_appointment, by = "patid") %>% 
+table_one_op_raw_appt <- left_join(table_one_op_raw, 
+                                   validation_appointment, 
+                                   by = "patid") %>% 
   # in order to count all the visits  from index date until follow-up end date.
   filter(apptdate >= index_date & apptdate <= follow_up_end)
 
 # Merge with clinical table ----
 validation_clinical <- my_dm$validation_hesop_clinical %>% collect()
 
-table_one_op_raw_appt <- left_join(table_one_op_raw_appt, validation_clinical,
+table_one_op_raw_appt <- left_join(table_one_op_raw_appt, 
+                                   validation_clinical,
                                      by = c("patid", "attendkey"))
 
 # Remove unattended appointments ----
@@ -106,36 +109,14 @@ table_one_op_raw_appt <- table_one_op_raw_appt %>%
 # merge back to cohort data, inorder to have patients have been filtered out 
 # in the previous step
 table_one_op_raw_appt <- left_join(
-  cohort_table, table_one_op_raw_appt,
+  cohort_table %>% select(patid, index_date, follow_up_end), table_one_op_raw_appt,
   by = c(
-    "patid", "death", "death_date",
-    "aurum_min_accept_date", "aurum_max_accept_date", "site",
-    "index_date","cancer_fa_index_dt", "paget_fa_index_dt", 
-    "two_yrs_after_index","fracture_after_index", "study_end",
-    "follow_up_end", "follow_up_reason", "follow_up_time"
+    "patid", "index_date","follow_up_end"
   )
 )
 
 # Recode variables ----
 table_one_op_raw_appt_recoded <- table_one_op_raw_appt %>% 
-  mutate(site = recode(site, hip = "Hip", vert = "Vertebra", nhnv = "NHNV")) %>% 
-  mutate(follow_up_reason = case_when(
-    follow_up_reason %in% c(
-      "death_date", "observation_period_end_date, cancer_date, death_date", 
-      "observation_period_end_date, death_date", "two_yrs_after_index, observation_period_end_date, death_date",
-      "observation_period_end_date, death_date, study_end") ~ "Death",
-    follow_up_reason == "cancer_date" ~ "Cancer",
-    follow_up_reason == "cancer_date, fracture_after_index" ~ "Cancer, Fracture ensuing incident (index) fracture",
-    follow_up_reason == "fracture_after_index" ~ "Fracture ensuing incident (index) fracture",
-    follow_up_reason == "fracture_after_index, study_end" ~ "Fracture ensuing incident (index) fracture, End of Study",
-    follow_up_reason == "mbd_date" ~ "Paget’s disease of the bone, or other metabolic bone diseases",
-    follow_up_reason == "observation_period_end_date" ~ "End of data collection period",
-    follow_up_reason == "observation_period_end_date, fracture_after_index" ~ "End of data collection period, Fracture ensuing incident (index) fracture",
-    follow_up_reason == "study_end" ~ "End of Study",
-    follow_up_reason == "two_yrs_after_index" ~ "Max of 730 days from index date",
-    follow_up_reason == "two_yrs_after_index, fracture_after_index" ~ "Max of 730 days from index date, Fracture ensuing incident (index) fracture",
-    follow_up_reason == "two_yrs_after_index, study_end" ~ "Max of 730 days from index date, End of Study"
-  )) %>% 
   mutate(mainspef = factor(trimws(as.character(mainspef)))) %>% 
   mutate_at(c("attended", "atentype", "firstatt", "mainspef", "tretspef"), as.factor) %>%
   mutate(
