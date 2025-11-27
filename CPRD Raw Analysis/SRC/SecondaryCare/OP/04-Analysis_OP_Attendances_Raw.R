@@ -354,24 +354,27 @@ export(combined_bootstrap_summary_encounters,
 validation_old <- my_dm$`_validation_old` %>% collect()
 
 # Merge with the above to get the sex and age which are required in the grouper
-costs_data_hrg <- left_join(appt_data, validation_old %>% select(patid, gender, yob), 
+costs_data_hrg_op <- left_join(appt_data, validation_old %>% select(patid, gender, yob), 
                             by = "patid") %>% 
   select(patid, yob, gender, apptdate,attended ,gender, mainspef, tretspef, firstatt) 
 
+costs_data_hrg_op <- costs_data_hrg_op %>% 
+  mutate(startage = as.numeric(format(apptdate, "%Y")) - yob) %>% 
+  rename(sex = gender) %>% 
+  mutate(sex = if_else(sex == "F", 2, 1))  
+
 # Let's filter out the op non_users, as in primary analysis they'll 
 # have cost = 0, so we will bring them back 
-op_costs_non_users <- costs_data_hrg %>% 
-  filter(is.na(apptdate))
+op_costs_non_users_data <- costs_data_hrg_op %>% 
+  filter(is.na(apptdate)) %>% 
+  arrange(patid)  %>% 
+  select(!c(yob, attended, apptdate))
 
-rio::export(op_costs_non_users, 
+rio::export(op_costs_non_users_data, 
             here::here("CPRD Raw Analysis", "Results",
-                       "SecondaryCareAnalysis", "OP","op_costs_non_users_data.csv"))
+                       "SecondaryCareAnalysis", "OP", "op_costs_non_users_data.csv"))
 
-costs_data_hrg <- costs_data_hrg %>% 
-  mutate(startage = as.numeric(format(apptdate, "%Y")) - yob) %>% 
-  mutate(gender = if_else(gender == "F", 2, 1)) 
-
-costs_data_hrg <- costs_data_hrg %>%
+costs_data_hrg_op <- costs_data_hrg_op %>%
   
   mutate(
     mainspef = as.character(mainspef),
@@ -393,6 +396,32 @@ costs_data_hrg <- costs_data_hrg %>%
     mainspef = as.numeric(mainspef),
     tretspef = as.numeric(tretspef)
   )
+
+# Filter for users only
+op_costs_users_data <- costs_data_hrg_op %>% 
+  filter(!is.na(apptdate)) %>% 
+  mutate(startage = as.numeric(format(apptdate, "%Y")) - yob) %>% 
+  rename(sex = gender) %>% 
+  mutate(sex = if_else(sex == "F", 2, 1)) 
+
+# Assessing missing mainspef and tretspef ----
+(missing_summary <- op_costs_users_data |>
+   summarise(
+     total_records = n(),
+     missing_mainspef = sum(is.na(mainspef)),
+     missing_tretspef = sum(is.na(tretspef)),
+     missing_both = sum(is.na(mainspef) & is.na(tretspef))
+   ))
+
+# missing mainspef
+missing_mainspef <- op_costs_users_data  %>% 
+  filter(is.na(mainspef_code))  %>% 
+  dplyr::count(mainspef_code, sort = TRUE)
+
+# missing tretspef
+missing_tretspef <- op_costs_users_data |>
+  filter(is.na(tretspef_code)) |>
+  dplyr::count(tretspef_code, sort = TRUE)
 
 ### Define valid specialty codes ----
 valid_mainspef_codes <- c(
