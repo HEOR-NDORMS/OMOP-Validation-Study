@@ -51,7 +51,7 @@ appt_data <- cbind(appt_data, op_costs_final_data_recoded_min)
 n_all_pts <- n_distinct(cohort_table$subject_id)
 
 # Create exposure matrix for years (partial years are included) ---
-cohort_grid_omop_all_years <- cohort_table %>%
+cohort_grid_omop_all_years <- cohort_table_omop %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -342,16 +342,16 @@ cohort_table <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
 
 appt_data <- import("H:/Projects/Validation/Data/appt_data_omop.csv") |> 
   arrange(subject_id)
-op_costs_final_data_recoded <- op_costs_final_data_recoded |> 
+op_costs_final_data_recoded_omop <- op_costs_final_data_recoded_omop |> 
   arrange(subject_id)
-op_costs_final_data_recoded_min <- op_costs_final_data_recoded |> 
+op_costs_final_data_recoded_omop <- op_costs_final_data_recoded_omop |> 
   select(unit_cost)
 
-appt_data <- cbind(appt_data, op_costs_final_data_recoded_min)
+appt_data <- cbind(appt_data, op_costs_final_data_recoded_omop)
 
 
 # Compute max exposed year per patient ---
-cohort_years_all_years <- cohort_table %>%
+cohort_years_all_years <- cohort_table_omop %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -407,7 +407,8 @@ final_long_df_costs_all_patients_all_encounters_all_years <- final_matrix_encoun
     names_to = "year",
     values_to = "total_costs"
   ) %>%
-  mutate(year_after_index = as.integer(gsub("year_", "", year)))
+  mutate(year_after_index = as.integer(gsub("year_", "", year))) |> 
+  mutate(total_costs = if_else(is.na(total_costs), 0, total_costs))
 
 # --- Step 5: Summarise by year ---
 observed_cost_summary_all_patients_all_encounters_all_years <- final_long_df_costs_all_patients_all_encounters_all_years %>%
@@ -422,7 +423,7 @@ observed_cost_summary_all_patients_all_encounters_all_years <- final_long_df_cos
     q3                 = quantile(total_costs, 0.75, na.rm = TRUE),
     n_exposed          = sum(!is.na(total_costs)),
     total_costs        = sum(total_costs, na.rm = TRUE),
-    mean_all_patients  = total_costs / n_all_pts,
+    mean_all_patients  = total_costs / n_all_pts_omop,
     .groups = "drop"
   ) %>%
   mutate(
@@ -510,7 +511,8 @@ final_long_df_costs_users_all_encounters_all_years <- final_matrix_encounters_ye
     names_to = "year",
     values_to = "total_costs"
   ) %>%
-  mutate(year_after_index = as.integer(gsub("year_", "", year)))
+  mutate(year_after_index = as.integer(gsub("year_", "", year))) |> 
+  mutate(total_costs = if_else(is.na(total_costs), 0, total_costs))
 
 # --- Step 5: Summarise by year ---
 observed_cost_summary_users_all_encounters_all_years <- final_long_df_costs_users_all_encounters_all_years %>%
