@@ -253,6 +253,7 @@ costs_data_hrg_ae_users_min <- costs_data_hrg_ae_users %>%
          treat_06, treat_07, treat_07, treat_08, treat_09, treat_10,
          treat_11, treat_12) %>% 
   rename_with(toupper)
+
 export(costs_data_hrg_ae_users_min, 
        here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE",
             "AE_costs_data_HRG.csv"))
