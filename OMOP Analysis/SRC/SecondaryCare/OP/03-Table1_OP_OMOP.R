@@ -184,7 +184,7 @@ summaries_op <- list(
               percent_appt = round(sum(percent_appt), 2),
               .groups = "drop"),
   
-  tretspef_summary = table_one_op_omop_appt_recodedtable_one_op_omop_appt_recoded %>% 
+  tretspef_summary = table_one_op_omop_appt_recoded %>% 
     select(subject_id, visit_detail_id, tretspef) %>% distinct() %>%
     group_by(tretspef) %>%
     summarise(count_of_appt = n(),
