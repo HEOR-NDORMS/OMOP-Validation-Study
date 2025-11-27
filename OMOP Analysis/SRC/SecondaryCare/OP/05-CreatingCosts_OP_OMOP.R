@@ -24,7 +24,8 @@ op_study_ids_df <- read_csv(
 
 # Merge the two together 
 op_hrg_costs_df <- cbind(op_study_ids_df, op_hrg_df_min) |> 
-  mutate(subject_id = as.integer64(subject_id))
+  mutate(subject_id = as.integer64(subject_id)) |> 
+  mutate(hrg_cluster = substr(nac_hrg, 1, 4))
 
 # Import the NHS cost collection 23/24 data
 costs_hrg_df <- import(
@@ -82,7 +83,8 @@ costs_hrg_clean <- costs_hrg_df %>%
 
 # 2) HRG-level aggregation: totals + HRG unit cost
 costs_hrg_imputed <- costs_hrg_clean %>%
-  group_by(tretspef, nac_hrg) %>%
+  mutate(hrg_cluster = substr(nac_hrg, 1, 4)) |>
+  group_by(tretspef, hrg_cluster) %>%
   summarise(
     total_costs = sum(cost, na.rm = TRUE),
     total_attendances = sum(n_attendances, na.rm = TRUE),
@@ -91,38 +93,38 @@ costs_hrg_imputed <- costs_hrg_clean %>%
   )
 
 # 3) Cluster HRGs so WF01A–D, WF02A–D share same unit cost etc
-costs_hrg_clustered <- costs_hrg_imputed |>
-  # Create HRG cluster by extracting first 4 characters (e.g., WF01A–D → WF01)
-  mutate(hrg_cluster = substr(nac_hrg, 1, 4)) |>
-  # Group by treatment specialty and HRG cluster
-  group_by(tretspef, hrg_cluster) |>
-  mutate(
-    # Apply second weighting:
-    # If any HRG in the cluster has missing attendance (due to having * before),
-    # use simple mean of unit cost
-    # Otherwise, use weighted mean based on number of attendances
-    cluster_unit_cost = if (any(is.na(total_attendances))) {
-      mean(unit_cost, na.rm = TRUE)
-    } else {
-      weighted.mean(unit_cost, total_attendances, na.rm = TRUE)
-    }
-  ) |>
-  ungroup() |>
-  # Keep distinct rows with final clustered unit cost
-  distinct(tretspef, nac_hrg, cluster_unit_cost) |>
-  # Rename final unit cost column
-  rename(unit_cost = cluster_unit_cost)
+# costs_hrg_clustered <- costs_hrg_imputed |>
+#   # Create HRG cluster by extracting first 4 characters (e.g., WF01A–D → WF01)
+#   mutate(hrg_cluster = substr(nac_hrg, 1, 4)) |>
+#   # Group by treatment specialty and HRG cluster
+#   group_by(tretspef, hrg_cluster) |>
+#   mutate(
+#     # Apply second weighting:
+#     # If any HRG in the cluster has missing attendance (due to having * before),
+#     # use simple mean of unit cost
+#     # Otherwise, use weighted mean based on number of attendances
+#     cluster_unit_cost = if (any(is.na(total_attendances))) {
+#       mean(unit_cost, na.rm = TRUE)
+#     } else {
+#       weighted.mean(unit_cost, total_attendances, na.rm = TRUE)
+#     }
+#   ) |>
+#   ungroup() |>
+#   # Keep distinct rows with final clustered unit cost
+#   distinct(tretspef, nac_hrg, cluster_unit_cost) |>
+#   # Rename final unit cost column
+#   rename(unit_cost = cluster_unit_cost)
 
 
 ## Merge on both hrg_code and tretspef ----
 op_hrg_df_merged <- left_join(
   op_hrg_costs_df |> mutate(tretspef = as.character(tretspef)),
-  costs_hrg_clustered,
-  by = c("nac_hrg", "tretspef")
+  costs_hrg_imputed,
+  by = c("hrg_cluster", "tretspef")
 ) |> 
   mutate(user_status = "User") |> 
   select(subject_id, startage, sex, mainspef, 
-         tretspef, firstatt, nac_hrg, unit_cost, user_status)
+         tretspef, firstatt, hrg_cluster, unit_cost, user_status)
 
 ## Bring back the non-users ----
 op_costs_non_users_df <- read_csv(
@@ -131,7 +133,7 @@ op_costs_non_users_df <- read_csv(
   mutate(subject_id = as.integer64(subject_id)) |> 
   select(subject_id, startage, sex, mainspef, tretspef,
          firstatt) |> 
-  mutate(nac_hrg = NA,
+  mutate(hrg_cluster = NA,
          unit_cost = 0) |> 
   mutate(user_status = "Non-User")
 
@@ -466,3 +468,78 @@ write_xlsx(costs_list, here::here("OMOP Analysis", "Results",
                                   "SecondaryCareAnalysis", "OP",  "Overall", 
                                   "Output_Costs_OMOP.xlsx"))
 
+
+# Bootstrap visit costs -----
+
+# --- Function to compute bootstrap summary for a given dataset
+
+bootstrap_summary_c <- function(data, varname = "total_patient_cost", R = 1000, seed = 626) {
+  
+  stat_fn <- function(d, i) {
+    d_sample <- d[i, ]
+    mean(d_sample[[varname]], na.rm = TRUE)
+  }
+  
+  set.seed(seed)
+  boot_result <- boot(data = data, statistic = stat_fn, R = R)
+  boot_ci <- boot.ci(boot_result, type = c("norm", "basic", "perc"))
+  
+  boot_mean_costs     <- mean(boot_result$t)
+  boot_values_costs   <- boot_result$t
+  boot_variance_costs <- var(as.numeric(boot_values_costs))
+  boot_sd_costs       <- sd(boot_values_costs)
+  boot_se_costs       <- boot_sd_costs / sqrt(length(boot_values_costs))
+  
+  ci_norm  <- boot_ci$normal[2:3]
+  ci_basic <- boot_ci$basic[4:5]
+  ci_perc  <- boot_ci$perc[4:5]
+  
+  # Return in wide format
+  tibble(
+    mean     = boot_mean_costs,
+    variance = boot_variance_costs,
+    sd       = boot_sd_costs,
+    se       = boot_se_costs,
+    ci_norm_lower = ci_norm[1],
+    ci_norm_upper = ci_norm[2],
+    ci_basic_lower = ci_basic[1],
+    ci_basic_upper = ci_basic[2],
+    ci_perc_lower = ci_perc[1],
+    ci_perc_upper = ci_perc[2]
+  ) %>%
+    mutate(across(everything(), ~round(.x, 3)))
+}
+
+# --- Bootstrap: All Patients & All Encounters
+boot_summary_all_patients_all_costs_encounters <- bootstrap_summary_c(overall_all_costs_df, varname = "total_patient_cost")
+
+# --- Bootstrap: All Patients & Relevant Encounters
+# boot_summary_all_patients_relevant_encounters <- bootstrap_summary(all_patients_relevant_encounters_counts, varname = "total_patient_encounters")
+
+# --- Bootstrap: Users Only & All Encounters
+boot_summary_users_all_costs_encounters <- bootstrap_summary_c(overall_users_costs_df, varname = "total_patient_cost")
+
+# --- Bootstrap: Users Only & Relevant Encounters
+# boot_summary_users_relevant_encounters <- bootstrap_summary(users_relevant_encounters_counts, varname = "total_patient_encounters")
+
+
+(combined_bootstrap_summary_encounters_costs <- bind_rows(
+  boot_summary_all_patients_all_costs_encounters %>%
+    mutate(group = "All Patients & all encounters"),
+  
+  # boot_summary_all_patients_relevant_encounters %>%
+  #   mutate(group = "All Patients & relevant encounters"),
+  
+  boot_summary_users_all_costs_encounters %>%
+    mutate(group = "Users & all encounters"),
+  
+  # boot_summary_users_relevant_encounters %>%
+  #   mutate(group = "Users & relevant encounters")
+) %>%
+  select(group, everything()))
+
+
+# Export
+export(combined_bootstrap_summary_encounters_costs, 
+       here("OMOP Analysis", "Results", "SecondaryCareAnalysis" , "OP",
+            "Overall", "overall_bootstrap_summary_costs_encounters_SOURCE.xlsx"))
