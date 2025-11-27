@@ -107,7 +107,8 @@ final_long_df_encounters_all_patients_all_encounters_all_years <- final_matrix_e
     names_to = "year",
     values_to = "tot_encounters"
   ) %>%
-  mutate(year_after_index = as.integer(gsub("year_", "", year)))
+  mutate(year_after_index = as.integer(gsub("year_", "", year))) %>% 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # --- Step 5: Summarise by year ---
 observed_visit_summary_all_patients_all_encounters_all_years <- final_long_df_encounters_all_patients_all_encounters_all_years %>%
@@ -212,7 +213,8 @@ final_long_df_encounters_users_all_encounters_all_years <- final_matrix_encounte
     names_to = "year",
     values_to = "tot_encounters"
   ) %>%
-  mutate(year_after_index = as.integer(gsub("year_", "", year)))
+  mutate(year_after_index = as.integer(gsub("year_", "", year))) %>% 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Step 5: Summarise
 observed_visit_summary_users_all_encounters_all_years <- final_long_df_encounters_users_all_encounters_all_years %>%
@@ -606,7 +608,7 @@ combined_costs_bootstrap_summary_yearly <- bind_rows(
 ) %>%
   select(group, everything())
 
-# Export 
+# Export----
 
 write_xlsx(combined_summary_encounters_yearly, 
            here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", 
