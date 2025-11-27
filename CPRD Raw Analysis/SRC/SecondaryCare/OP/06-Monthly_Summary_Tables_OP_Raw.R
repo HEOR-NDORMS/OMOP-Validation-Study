@@ -30,15 +30,22 @@ library(tidyverse)
 library(rio)
 library(boot)
 
+# Ran from the local machine
+# Start by running 05-CreatingCosts_OP_Raw.R
+# Then from the server, save cohort_table dataset and table_one_op_raw_appt_recoded
+
+cohort_table_raw <- import("H:/Projects/Validation/Data/cohort_data_raw.csv")
+
+appt_data_raw <- import("H:/Projects/Validation/Data/appt_data_raw.csv") |> 
+  arrange(patid)
 
 ### HCRU -----
-
 ## All patients & full months ----
 # Preparation 
-n_all_pts <- n_distinct(cohort_table$patid)
+n_all_pts_raw <- n_distinct(cohort_table_raw$patid)
 
 # Create 24-month exposure matrix
-cohort_grid_raw <- cohort_table %>%
+cohort_grid_raw <- cohort_table_raw %>%
   mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
   rowwise() %>%
   mutate(month_vector = list(0:23)) %>%
@@ -51,7 +58,7 @@ cohort_grid_raw <- cohort_table %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 # Compute calendar months with full exposure (i.e., dropping the final month if the patient was not exposed in full)
-cohort_months <- cohort_table %>%
+cohort_months_raw <- cohort_table_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -62,13 +69,13 @@ cohort_months <- cohort_table %>%
 # --- a) All patients & all encounters -----
 
 # Filter encounters to full months only
-monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
+monthly_encounters_summary_raw <- appt_data_raw %>%
   mutate(
     index_date = ymd(index_date),
     apptdate = ymd(apptdate),
     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months, by = "patid") %>%
+  left_join(cohort_months_raw, by = "patid") %>%
   filter(month_after_index <= max_month_exposed) %>%  # only full months
   group_by(patid, month_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
@@ -76,40 +83,41 @@ monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
   select(patid, month_col, total_encounters)
 
 # Reshape to wide format: encounters per patient-month
-observed_visit_matrix <- monthly_encounters_summary %>%
+observed_visit_matrix_raw <- monthly_encounters_summary_raw %>%
   pivot_wider(names_from = month_col, values_from = total_encounters)
 
 # Merge visit counts with exposure base
-month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
+month_cols_raw <- grep("^month_", names(cohort_grid_raw), value = TRUE)
 
-merged_matrix_encounters <- cohort_grid_raw %>%
-  left_join(observed_visit_matrix, by = "patid", suffix = c("_exp", "_visit"))
+merged_matrix_encounters_raw <- cohort_grid_raw %>%
+  left_join(observed_visit_matrix_raw, by = "patid", suffix = c("_exp", "_visit"))
 
 # Overwrite exposed months with visit counts
-for (col in month_cols) {
+for (col in month_cols_raw) {
   exp_col <- paste0(col, "_exp")
   visit_col <- paste0(col, "_visit")
   
-  merged_matrix_encounters[[col]] <- dplyr::case_when(
-    is.na(merged_matrix_encounters[[exp_col]]) ~ NA_real_,  # not exposed
-    !is.na(merged_matrix_encounters[[visit_col]]) ~ merged_matrix_encounters[[visit_col]],
+  merged_matrix_encounters_raw[[col]] <- dplyr::case_when(
+    is.na(merged_matrix_encounters_raw[[exp_col]]) ~ NA_real_,  # not exposed
+    !is.na(merged_matrix_encounters_raw[[visit_col]]) ~ merged_matrix_encounters_raw[[visit_col]],
     TRUE ~ 0  # exposed but no encounters
   )
 }
 
-final_matrix_encounters <- merged_matrix_encounters %>%
-  select(patid, all_of(month_cols))
+final_matrix_encounters_raw <- merged_matrix_encounters_raw %>%
+  select(patid, all_of(month_cols_raw))
 
-final_long_df_encounters_all_patients_all_encounters <- final_matrix_encounters %>%
+final_long_df_encounters_all_patients_all_encounters_raw <- final_matrix_encounters_raw %>%
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
-observed_visit_summary_all_patients_all_encounters <- final_long_df_encounters_all_patients_all_encounters %>%
+observed_visit_summary_all_patients_all_encounters_raw <- final_long_df_encounters_all_patients_all_encounters_raw %>%
   group_by(month_after_index) %>%
   summarise(
     mean_encounters_exposed = mean(tot_encounters, na.rm = TRUE), # mean for patients exposed in each month (i.e. NAs for non-exposed months)
@@ -121,7 +129,7 @@ observed_visit_summary_all_patients_all_encounters <- final_long_df_encounters_a
     q3_encounters           = quantile(tot_encounters, 0.75, na.rm = TRUE),
     n_exposed               = sum(!is.na(tot_encounters)),
     tot_encounters          = sum(tot_encounters, na.rm = TRUE),
-    mean_encounters_all_patients = tot_encounters / n_all_pts,  # mean for all patients, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
+    mean_encounters_all_patients = tot_encounters / n_all_pts_raw,  # mean for all patients, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
     .groups = "drop"
   ) %>%
   mutate(
@@ -132,94 +140,16 @@ observed_visit_summary_all_patients_all_encounters <- final_long_df_encounters_a
   mutate(across(where(is.numeric), round, 2))
 
 
-# # --- b) All patients & relevant encounters -----
-# 
-# # Filter encounters to full months only
-# 
-# monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
-#   filter(is_clinically_relevant == 1) %>% # only relevant encounters
-#   mutate(
-#     index_date = ymd(index_date),
-#     apptdate = ymd(apptdate),
-#     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
-#   ) %>%
-#   left_join(cohort_months, by = "patid") %>%
-#   filter(month_after_index <= max_month_exposed) %>%  # only full months
-#   group_by(patid, month_after_index) %>%
-#   summarise(total_encounters = n(), .groups = "drop") %>%
-#   mutate(month_col = paste0("month_", month_after_index)) %>%
-#   select(patid, month_col, total_encounters)
-# 
-# # Reshape to wide format: encounters per patient-month
-# 
-# observed_visit_matrix <- monthly_encounters_summary %>%
-#   pivot_wider(names_from = month_col, values_from = total_encounters)
-# 
-# # Merge visit counts with exposure base
-# 
-# month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
-# 
-# merged_matrix_encounters <- cohort_grid_raw %>%
-#   left_join(observed_visit_matrix, by = "patid", suffix = c("_exp", "_visit"))
-# 
-# # Overwrite exposed months with visit counts
-# for (col in month_cols) {
-#   exp_col <- paste0(col, "_exp")
-#   visit_col <- paste0(col, "_visit")
-#   
-#   merged_matrix_encounters[[col]] <- dplyr::case_when(
-#     is.na(merged_matrix_encounters[[exp_col]]) ~ NA_real_,  # not exposed
-#     !is.na(merged_matrix_encounters[[visit_col]]) ~ merged_matrix_encounters[[visit_col]],
-#     TRUE ~ 0  # exposed but no encounters
-#   )
-# }
-# 
-# final_matrix_encounters <- merged_matrix_encounters %>%
-#   select(patid, all_of(month_cols))
-# 
-# final_long_df_encounters_all_patients_relev_encounters <- final_matrix_encounters %>%
-#   pivot_longer(
-#     cols = starts_with("month_"),
-#     names_to = "month",
-#     values_to = "tot_encounters"
-#   ) %>%
-#   mutate(month_after_index = as.integer(gsub("month_", "", month)))
-# 
-# # Summarise monthly visit statistics
-# 
-# observed_visit_summary_all_patients_relev_encounters <- final_long_df_encounters_all_patients_relev_encounters %>%
-#   group_by(month_after_index) %>%
-#   summarise(
-#     mean_encounters_exposed = mean(tot_encounters, na.rm = TRUE), # mean for patients exposed in each month (i.e. NAs for non-exposed months)
-#     min_encounters          = min(tot_encounters, na.rm = TRUE),
-#     max_encounters          = max(tot_encounters, na.rm = TRUE),
-#     sd_encounters           = sd(tot_encounters, na.rm = TRUE),
-#     q1_encounters           = quantile(tot_encounters, 0.25, na.rm = TRUE),
-#     median_encounters       = median(tot_encounters, na.rm = TRUE),
-#     q3_encounters           = quantile(tot_encounters, 0.75, na.rm = TRUE),
-#     n_exposed           = sum(!is.na(tot_encounters)),
-#     tot_encounters          = sum(tot_encounters, na.rm = TRUE),
-#     mean_encounters_all_patients = tot_encounters / n_all_pts,  # mean for all patients, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     se    = sd_encounters / sqrt(n_exposed),
-#     lower = mean_encounters_exposed - qt(0.975, df = n_exposed - 1) * se,
-#     upper = mean_encounters_exposed + qt(0.975, df = n_exposed - 1) * se
-#   ) %>%
-#   mutate(across(where(is.numeric), round, 2))
-# 
 ## User-only & full months ----
 
 # Preparation
-
-cohort_table_users <- table_one_op_raw_appt_recoded %>% filter(user_status== "User") %>% 
+cohort_table_users_raw <- appt_data_raw %>% filter(user_status== "User") %>% 
   distinct(patid, index_date, site, follow_up_end, follow_up_reason, follow_up_time)
 
-(n_users <- n_distinct(cohort_table_users$patid))
+(n_users_raw <- n_distinct(cohort_table_users_raw$patid))
 
 # Create 24-month exposure matrix
-cohort_grid_raw <- cohort_table_users %>%
+cohort_grid_raw <- cohort_table_users_raw %>%
   mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
   rowwise() %>%
   mutate(month_vector = list(0:23)) %>%
@@ -232,7 +162,7 @@ cohort_grid_raw <- cohort_table_users %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 # Compute calendar months with full exposure (i.e., dropping the final month if the patient was not exposed in full)
-cohort_months <- cohort_table_users %>%
+cohort_months_raw <- cohort_table_users_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -244,13 +174,13 @@ cohort_months <- cohort_table_users %>%
 # --- a) All users & all encounters ----
 
 # Filter encounters to full months only
-monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
+monthly_encounters_summary_raw <- appt_data_raw %>%
   mutate(
     index_date = ymd(index_date),
     apptdate = ymd(apptdate),
     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months, by = "patid") %>%
+  left_join(cohort_months_raw, by = "patid") %>%
   filter(month_after_index <= max_month_exposed) %>%  # only full months
   group_by(patid, month_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
@@ -258,41 +188,42 @@ monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
   select(patid, month_col, total_encounters)
 
 # Reshape to wide format: encounters per patient-month
-observed_visit_matrix <- monthly_encounters_summary %>%
+observed_visit_matrix_raw <- monthly_encounters_summary_raw %>%
   pivot_wider(names_from = month_col, values_from = total_encounters)
 
 # Merge visit counts with exposure base
-month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
+month_cols_raw <- grep("^month_", names(cohort_grid_raw), value = TRUE)
 
-merged_matrix_encounters <- cohort_grid_raw %>%
-  left_join(observed_visit_matrix, by = "patid", suffix = c("_exp", "_visit"))
+merged_matrix_encounters_raw <- cohort_grid_raw %>%
+  left_join(observed_visit_matrix_raw, by = "patid", suffix = c("_exp", "_visit"))
 
 # Overwrite exposed months with visit counts
-for (col in month_cols) {
+for (col in month_cols_raw) {
   exp_col <- paste0(col, "_exp")
   visit_col <- paste0(col, "_visit")
   
-  merged_matrix_encounters[[col]] <- dplyr::case_when(
-    is.na(merged_matrix_encounters[[exp_col]]) ~ NA_real_,  # not exposed
-    !is.na(merged_matrix_encounters[[visit_col]]) ~ merged_matrix_encounters[[visit_col]],
+  merged_matrix_encounters_raw[[col]] <- dplyr::case_when(
+    is.na(merged_matrix_encounters_raw[[exp_col]]) ~ NA_real_,  # not exposed
+    !is.na(merged_matrix_encounters_raw[[visit_col]]) ~ merged_matrix_encounters_raw[[visit_col]],
     TRUE ~ 0  # exposed but no encounters
   )
 }
 
-final_matrix_encounters <- merged_matrix_encounters %>%
-  select(patid, all_of(month_cols))
+final_matrix_encounters_raw <- merged_matrix_encounters_raw %>%
+  select(patid, all_of(month_cols_raw))
 
-final_long_df_encounters_users_all_encounters <- final_matrix_encounters %>%
+final_long_df_encounters_users_all_encounters_raw <- final_matrix_encounters_raw %>%
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month))) |> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 
-observed_visit_summary_users_all_encounters <- final_long_df_encounters_users_all_encounters %>%
+observed_visit_summary_users_all_encounters_raw <- final_long_df_encounters_users_all_encounters_raw %>%
   group_by(month_after_index) %>%
   summarise(
     mean_encounters_exposed = mean(tot_encounters, na.rm = TRUE), # mean for users exposed in each month (i.e. NAs for non-exposed months)
@@ -304,7 +235,7 @@ observed_visit_summary_users_all_encounters <- final_long_df_encounters_users_al
     q3_encounters           = quantile(tot_encounters, 0.75, na.rm = TRUE),
     n_exposed           = sum(!is.na(tot_encounters)),
     tot_encounters          = sum(tot_encounters, na.rm = TRUE),
-    mean_encounters_all_patients = tot_encounters / n_users,  # mean for all users, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
+    mean_encounters_all_patients = tot_encounters / n_users_raw,  # mean for all users, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
     .groups = "drop"
   ) %>%
   mutate(
@@ -314,89 +245,12 @@ observed_visit_summary_users_all_encounters <- final_long_df_encounters_users_al
   ) %>%
   mutate(across(where(is.numeric), round, 2))
 
-# # --- b) All users & relevant encounters -----
-# 
-# # Filter encounters to full months only
-# 
-# monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
-#   filter(is_clinically_relevant == 1) %>% # only relevant encounters
-#   mutate(
-#     index_date = ymd(index_date),
-#     apptdate = ymd(apptdate),
-#     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
-#   ) %>%
-#   left_join(cohort_months, by = "patid") %>%
-#   filter(month_after_index <= max_month_exposed) %>%  # only full months
-#   group_by(patid, month_after_index) %>%
-#   summarise(total_encounters = n(), .groups = "drop") %>%
-#   mutate(month_col = paste0("month_", month_after_index)) %>%
-#   select(patid, month_col, total_encounters)
-# 
-# # Reshape to wide format: encounters per patient-month
-# 
-# observed_visit_matrix <- monthly_encounters_summary %>%
-#   pivot_wider(names_from = month_col, values_from = total_encounters)
-# 
-# # Merge visit counts with exposure base
-# 
-# month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
-# 
-# merged_matrix_encounters <- cohort_grid_raw %>%
-#   left_join(observed_visit_matrix, by = "patid", suffix = c("_exp", "_visit"))
-# 
-# # Overwrite exposed months with visit counts
-# for (col in month_cols) {
-#   exp_col <- paste0(col, "_exp")
-#   visit_col <- paste0(col, "_visit")
-#   
-#   merged_matrix_encounters[[col]] <- dplyr::case_when(
-#     is.na(merged_matrix_encounters[[exp_col]]) ~ NA_real_,  # not exposed
-#     !is.na(merged_matrix_encounters[[visit_col]]) ~ merged_matrix_encounters[[visit_col]],
-#     TRUE ~ 0  # exposed but no encounters
-#   )
-# }
-# 
-# final_matrix_encounters <- merged_matrix_encounters %>%
-#   select(patid, all_of(month_cols))
-# 
-# final_long_df_encounters_users_relev_encounters <- final_matrix_encounters %>%
-#   pivot_longer(
-#     cols = starts_with("month_"),
-#     names_to = "month",
-#     values_to = "tot_encounters"
-#   ) %>%
-#   mutate(month_after_index = as.integer(gsub("month_", "", month)))
-# 
-# # Summarise monthly visit statistics
-# 
-# observed_visit_summary_users_relev_encounters <- final_long_df_encounters_users_relev_encounters %>%
-#   group_by(month_after_index) %>%
-#   summarise(
-#     mean_encounters_exposed = mean(tot_encounters, na.rm = TRUE), # mean for users exposed in each month (i.e. NAs for non-exposed months)
-#     min_encounters          = min(tot_encounters, na.rm = TRUE),
-#     max_encounters          = max(tot_encounters, na.rm = TRUE),
-#     sd_encounters           = sd(tot_encounters, na.rm = TRUE),
-#     q1_encounters           = quantile(tot_encounters, 0.25, na.rm = TRUE),
-#     median_encounters       = median(tot_encounters, na.rm = TRUE),
-#     q3_encounters           = quantile(tot_encounters, 0.75, na.rm = TRUE),
-#     n_exposed           = sum(!is.na(tot_encounters)),
-#     tot_encounters          = sum(tot_encounters, na.rm = TRUE),
-#     mean_encounters_all_patients = tot_encounters / n_users,  # mean for all users, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     se    = sd_encounters / sqrt(n_exposed),
-#     lower = mean_encounters_exposed - qt(0.975, df = n_exposed - 1) * se,
-#     upper = mean_encounters_exposed + qt(0.975, df = n_exposed - 1) * se
-#   ) %>%
-#   mutate(across(where(is.numeric), round, 2))
-# 
 ## All patients & all months (i.e., including partial months) ----
 # Preparation 
-n_all_pts <- n_distinct(cohort_table$patid)
+n_all_pts_raw <- n_distinct(cohort_table_raw$patid)
 
 # Create 24-month exposure matrix 
-cohort_grid_raw_all_months <- cohort_table %>%
+cohort_grid_raw_all_months <- cohort_table_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -415,7 +269,7 @@ cohort_grid_raw_all_months <- cohort_table %>%
 
 
 # Compute calendar months including partial ones
-cohort_months_all_months <- cohort_table %>%
+cohort_months_all_months_raw <- cohort_table_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -428,13 +282,13 @@ cohort_months_all_months <- cohort_table %>%
 
 # Filter encounters
 
-monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
+monthly_encounters_summary_raw <- appt_data_raw %>%
   mutate(
     index_date = ymd(index_date),
     apptdate = ymd(apptdate),
     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_all_months, by = "patid") %>%
+  left_join(cohort_months_all_months_raw, by = "patid") %>%
   filter(month_after_index <= max_month_exposed) %>% 
   group_by(patid, month_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
@@ -443,42 +297,43 @@ monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
 
 # Reshape to wide format: encounters per patient-month
 
-observed_visit_matrix <- monthly_encounters_summary %>%
+observed_visit_matrix_raw <- monthly_encounters_summary_raw %>%
   pivot_wider(names_from = month_col, values_from = total_encounters)
 
 # Merge visit counts with exposure base
 
-month_cols <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
+month_cols_raw <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
 
-merged_matrix_encounters <- cohort_grid_raw_all_months %>%
-  left_join(observed_visit_matrix, by = "patid", suffix = c("_exp", "_visit"))
+merged_matrix_encounters_raw <- cohort_grid_raw_all_months %>%
+  left_join(observed_visit_matrix_raw, by = "patid", suffix = c("_exp", "_visit"))
 
 # Overwrite exposed months with visit counts
-for (col in month_cols) {
+for (col in month_cols_raw) {
   exp_col <- paste0(col, "_exp")
   visit_col <- paste0(col, "_visit")
   
-  merged_matrix_encounters[[col]] <- dplyr::case_when(
-    is.na(merged_matrix_encounters[[exp_col]]) ~ NA_real_,  # not exposed
-    !is.na(merged_matrix_encounters[[visit_col]]) ~ merged_matrix_encounters[[visit_col]],
+  merged_matrix_encounters_raw[[col]] <- dplyr::case_when(
+    is.na(merged_matrix_encounters_raw[[exp_col]]) ~ NA_real_,  # not exposed
+    !is.na(merged_matrix_encounters_raw[[visit_col]]) ~ merged_matrix_encounters_raw[[visit_col]],
     TRUE ~ 0  # exposed but no encounters
   )
 }
 
-final_matrix_encounters <- merged_matrix_encounters %>%
-  select(patid, all_of(month_cols))
+final_matrix_encounters_raw <- merged_matrix_encounters_raw %>%
+  select(patid, all_of(month_cols_raw))
 
-final_long_df_encounters_all_patients_all_encounters <- final_matrix_encounters %>%
+final_long_df_encounters_all_patients_all_encounters_raw <- final_matrix_encounters_raw %>%
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 
-observed_visit_summary_all_patients_all_encounters_all_months <- final_long_df_encounters_all_patients_all_encounters %>%
+observed_visit_summary_all_patients_all_encounters_all_months_raw <- final_long_df_encounters_all_patients_all_encounters_raw %>%
   group_by(month_after_index) %>%
   summarise(
     mean_encounters_exposed = mean(tot_encounters, na.rm = TRUE), # mean for patients exposed in each month (i.e. NAs for non-exposed months)
@@ -490,7 +345,7 @@ observed_visit_summary_all_patients_all_encounters_all_months <- final_long_df_e
     q3_encounters           = quantile(tot_encounters, 0.75, na.rm = TRUE),
     n_exposed           = sum(!is.na(tot_encounters)),
     tot_encounters          = sum(tot_encounters, na.rm = TRUE),
-    mean_encounters_all_patients = tot_encounters / n_all_pts,  # mean for all patients, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
+    mean_encounters_all_patients = tot_encounters / n_all_pts_raw,  # mean for all patients, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
     .groups = "drop"
   ) %>%
   mutate(
@@ -501,94 +356,17 @@ observed_visit_summary_all_patients_all_encounters_all_months <- final_long_df_e
   mutate(across(where(is.numeric), round, 2))
 
 
-# # --- b) All patients & relevant encounters -----
-# 
-# # Filter encounters
-# 
-# monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
-#   filter(is_clinically_relevant == 1) %>% # only relevant encounters
-#   mutate(
-#     index_date = ymd(index_date),
-#     apptdate = ymd(apptdate),
-#     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
-#   ) %>%
-#   left_join(cohort_months_all_months, by = "patid") %>%
-#   filter(month_after_index <= max_month_exposed) %>% 
-#   group_by(patid, month_after_index) %>%
-#   summarise(total_encounters = n(), .groups = "drop") %>%
-#   mutate(month_col = paste0("month_", month_after_index)) %>%
-#   select(patid, month_col, total_encounters)
-# 
-# # Reshape to wide format: encounters per patient-month
-# 
-# observed_visit_matrix <- monthly_encounters_summary %>%
-#   pivot_wider(names_from = month_col, values_from = total_encounters)
-# 
-# # Merge visit counts with exposure base
-# 
-# month_cols <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
-# 
-# merged_matrix_encounters <- cohort_grid_raw_all_months %>%
-#   left_join(observed_visit_matrix, by = "patid", suffix = c("_exp", "_visit"))
-# 
-# # Overwrite exposed months with visit counts
-# for (col in month_cols) {
-#   exp_col <- paste0(col, "_exp")
-#   visit_col <- paste0(col, "_visit")
-#   
-#   merged_matrix_encounters[[col]] <- dplyr::case_when(
-#     is.na(merged_matrix_encounters[[exp_col]]) ~ NA_real_,  # not exposed
-#     !is.na(merged_matrix_encounters[[visit_col]]) ~ merged_matrix_encounters[[visit_col]],
-#     TRUE ~ 0  # exposed but no encounters
-#   )
-# }
-# 
-# final_matrix_encounters <- merged_matrix_encounters %>%
-#   select(patid, all_of(month_cols))
-# 
-# final_long_df_encounters_all_patients_relev_encounters <- final_matrix_encounters %>%
-#   pivot_longer(
-#     cols = starts_with("month_"),
-#     names_to = "month",
-#     values_to = "tot_encounters"
-#   ) %>%
-#   mutate(month_after_index = as.integer(gsub("month_", "", month)))
-# 
-# # Summarise monthly visit statistics
-# 
-# observed_visit_summary_all_patients_relev_encounters_all_months <- final_long_df_encounters_all_patients_relev_encounters %>%
-#   group_by(month_after_index) %>%
-#   summarise(
-#     mean_encounters_exposed = mean(tot_encounters, na.rm = TRUE), # mean for patients exposed in each month (i.e. NAs for non-exposed months)
-#     min_encounters          = min(tot_encounters, na.rm = TRUE),
-#     max_encounters          = max(tot_encounters, na.rm = TRUE),
-#     sd_encounters           = sd(tot_encounters, na.rm = TRUE),
-#     q1_encounters           = quantile(tot_encounters, 0.25, na.rm = TRUE),
-#     median_encounters       = median(tot_encounters, na.rm = TRUE),
-#     q3_encounters           = quantile(tot_encounters, 0.75, na.rm = TRUE),
-#     n_exposed           = sum(!is.na(tot_encounters)),
-#     tot_encounters          = sum(tot_encounters, na.rm = TRUE),
-#     mean_encounters_all_patients = tot_encounters / n_all_pts,  # mean for all patients, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     se    = sd_encounters / sqrt(n_exposed),
-#     lower = mean_encounters_exposed - qt(0.975, df = n_exposed - 1) * se,
-#     upper = mean_encounters_exposed + qt(0.975, df = n_exposed - 1) * se
-#   ) %>%
-#   mutate(across(where(is.numeric), round, 2))
-# 
 ## User-only & all months ----
 
 # Preparation
 
-cohort_table_users <- table_one_op_raw_appt_recoded %>% filter(user_status== "User") %>% 
+cohort_table_users_raw <- appt_data_raw %>% filter(user_status== "User") %>% 
   distinct(patid, index_date, site, follow_up_end, follow_up_reason, follow_up_time)
 
-n_users <- n_distinct(cohort_table_users$patid)
+n_users_raw <- n_distinct(cohort_table_users_raw$patid)
 
 # Create 24-month exposure matrix
-cohort_grid_raw_all_months <- cohort_table_users %>%
+cohort_grid_raw_all_months_raw <- cohort_table_users_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -607,7 +385,7 @@ cohort_grid_raw_all_months <- cohort_table_users %>%
 
 
 # Compute calendar months including partial ones
-cohort_months_all_months <- cohort_table_users %>%
+cohort_months_all_months_raw <- cohort_table_users_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -620,13 +398,13 @@ cohort_months_all_months <- cohort_table_users %>%
 
 # Filter encounters 
 
-monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
+monthly_encounters_summary_raw <- appt_data_raw %>%
   mutate(
     index_date = ymd(index_date),
     apptdate = ymd(apptdate),
     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_all_months, by = "patid") %>%
+  left_join(cohort_months_all_months_raw, by = "patid") %>%
   filter(month_after_index <= max_month_exposed) %>%  
   group_by(patid, month_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
@@ -635,42 +413,43 @@ monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
 
 # Reshape to wide format: encounters per patient-month
 
-observed_visit_matrix <- monthly_encounters_summary %>%
+observed_visit_matrix_raw <- monthly_encounters_summary_raw %>%
   pivot_wider(names_from = month_col, values_from = total_encounters)
 
 # Merge visit counts with exposure base
 
-month_cols <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
+month_cols_raw <- grep("^month_", names(cohort_grid_raw_all_months_raw), value = TRUE)
 
-merged_matrix_encounters <- cohort_grid_raw_all_months %>%
-  left_join(observed_visit_matrix, by = "patid", suffix = c("_exp", "_visit"))
+merged_matrix_encounters_raw <- cohort_grid_raw_all_months_raw %>%
+  left_join(observed_visit_matrix_raw, by = "patid", suffix = c("_exp", "_visit"))
 
 # Overwrite exposed months with visit counts
-for (col in month_cols) {
+for (col in month_cols_raw) {
   exp_col <- paste0(col, "_exp")
   visit_col <- paste0(col, "_visit")
   
-  merged_matrix_encounters[[col]] <- dplyr::case_when(
-    is.na(merged_matrix_encounters[[exp_col]]) ~ NA_real_,  # not exposed
-    !is.na(merged_matrix_encounters[[visit_col]]) ~ merged_matrix_encounters[[visit_col]],
+  merged_matrix_encounters_raw[[col]] <- dplyr::case_when(
+    is.na(merged_matrix_encounters_raw[[exp_col]]) ~ NA_real_,  # not exposed
+    !is.na(merged_matrix_encounters_raw[[visit_col]]) ~ merged_matrix_encounters_raw[[visit_col]],
     TRUE ~ 0  # exposed but no encounters
   )
 }
 
-final_matrix_encounters <- merged_matrix_encounters %>%
-  select(patid, all_of(month_cols))
+final_matrix_encounters_raw <- merged_matrix_encounters_raw %>%
+  select(patid, all_of(month_cols_raw))
 
-final_long_df_encounters_users_all_encounters <- final_matrix_encounters %>%
+final_long_df_encounters_users_all_encounters_raw <- final_matrix_encounters_raw %>%
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
     values_to = "tot_encounters"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(tot_encounters = if_else(is.na(tot_encounters), 0, tot_encounters))
 
 # Summarise monthly visit statistics
 
-observed_visit_summary_users_all_encounters_all_months <- final_long_df_encounters_users_all_encounters %>%
+observed_visit_summary_users_all_encounters_all_months_raw <- final_long_df_encounters_users_all_encounters_raw %>%
   group_by(month_after_index) %>%
   summarise(
     mean_encounters_exposed = mean(tot_encounters, na.rm = TRUE), # mean for users exposed in each month (i.e. NAs for non-exposed months)
@@ -682,7 +461,7 @@ observed_visit_summary_users_all_encounters_all_months <- final_long_df_encounte
     q3_encounters           = quantile(tot_encounters, 0.75, na.rm = TRUE),
     n_exposed           = sum(!is.na(tot_encounters)),
     tot_encounters          = sum(tot_encounters, na.rm = TRUE),
-    mean_encounters_all_patients = tot_encounters / n_users,  # mean for all users, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
+    mean_encounters_all_patients = tot_encounters / n_users_raw,  # mean for all users, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
     .groups = "drop"
   ) %>%
   mutate(
@@ -692,83 +471,6 @@ observed_visit_summary_users_all_encounters_all_months <- final_long_df_encounte
   ) %>%
   mutate(across(where(is.numeric), round, 2))
 
-# # --- b) All users & relevant encounters -----
-# 
-# # Filter encounters 
-# 
-# monthly_encounters_summary <- table_one_op_raw_appt_recoded %>%
-#   filter(is_clinically_relevant == 1) %>% # only relevant encounters
-#   mutate(
-#     index_date = ymd(index_date),
-#     apptdate = ymd(apptdate),
-#     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
-#   ) %>%
-#   left_join(cohort_months_all_months, by = "patid") %>%
-#   filter(month_after_index <= max_month_exposed) %>% 
-#   group_by(patid, month_after_index) %>%
-#   summarise(total_encounters = n(), .groups = "drop") %>%
-#   mutate(month_col = paste0("month_", month_after_index)) %>%
-#   select(patid, month_col, total_encounters)
-# 
-# # Reshape to wide format: encounters per patient-month
-# 
-# observed_visit_matrix <- monthly_encounters_summary %>%
-#   pivot_wider(names_from = month_col, values_from = total_encounters)
-# 
-# # Merge visit counts with exposure base
-# 
-# month_cols <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
-# 
-# merged_matrix_encounters <- cohort_grid_raw_all_months %>%
-#   left_join(observed_visit_matrix, by = "patid", suffix = c("_exp", "_visit"))
-# 
-# # Overwrite exposed months with visit counts
-# for (col in month_cols) {
-#   exp_col <- paste0(col, "_exp")
-#   visit_col <- paste0(col, "_visit")
-#   
-#   merged_matrix_encounters[[col]] <- dplyr::case_when(
-#     is.na(merged_matrix_encounters[[exp_col]]) ~ NA_real_,  # not exposed
-#     !is.na(merged_matrix_encounters[[visit_col]]) ~ merged_matrix_encounters[[visit_col]],
-#     TRUE ~ 0  # exposed but no encounters
-#   )
-# }
-# 
-# final_matrix_encounters <- merged_matrix_encounters %>%
-#   select(patid, all_of(month_cols))
-# 
-# final_long_df_encounters_users_relev_encounters <- final_matrix_encounters %>%
-#   pivot_longer(
-#     cols = starts_with("month_"),
-#     names_to = "month",
-#     values_to = "tot_encounters"
-#   ) %>%
-#   mutate(month_after_index = as.integer(gsub("month_", "", month)))
-# 
-# # Summarise monthly visit statistics
-# 
-# observed_visit_summary_users_relev_encounters_all_months <- final_long_df_encounters_users_relev_encounters %>%
-#   group_by(month_after_index) %>%
-#   summarise(
-#     mean_encounters_exposed = mean(tot_encounters, na.rm = TRUE), # mean for users exposed in each month (i.e. NAs for non-exposed months)
-#     min_encounters          = min(tot_encounters, na.rm = TRUE),
-#     max_encounters          = max(tot_encounters, na.rm = TRUE),
-#     sd_encounters           = sd(tot_encounters, na.rm = TRUE),
-#     q1_encounters           = quantile(tot_encounters, 0.25, na.rm = TRUE),
-#     median_encounters       = median(tot_encounters, na.rm = TRUE),
-#     q3_encounters           = quantile(tot_encounters, 0.75, na.rm = TRUE),
-#     n_exposed           = sum(!is.na(tot_encounters)),
-#     tot_encounters          = sum(tot_encounters, na.rm = TRUE),
-#     mean_encounters_all_patients = tot_encounters / n_users,  # mean for all users, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     se    = sd_encounters / sqrt(n_exposed),
-#     lower = mean_encounters_exposed - qt(0.975, df = n_exposed - 1) * se,
-#     upper = mean_encounters_exposed + qt(0.975, df = n_exposed - 1) * se
-#   ) %>%
-#   mutate(across(where(is.numeric), round, 2))
-# 
 ## Bootstrap -----
 
 bootstrap_monthly_summary <- function(data, month_var = "month_after_index", value_var = "tot_encounters", R = 1000, seed = 626) {
@@ -818,21 +520,21 @@ library(boot)
 
 ## Bootstrap on all months (including partial)
 
-monthly_bootstrap_all_patients_all_encounters_all_months <- bootstrap_monthly_summary(final_long_df_encounters_all_patients_all_encounters)
+monthly_bootstrap_all_patients_all_encounters_all_months_raw <- bootstrap_monthly_summary(final_long_df_encounters_all_patients_all_encounters_raw)
 # monthly_bootstrap_all_patients_relev_encounters_all_months <- bootstrap_monthly_summary(final_long_df_encounters_all_patients_relev_encounters)
-monthly_bootstrap_users_all_encounters_all_months <- bootstrap_monthly_summary(final_long_df_encounters_users_all_encounters)
+monthly_bootstrap_users_all_encounters_all_months_raw <- bootstrap_monthly_summary(final_long_df_encounters_users_all_encounters_raw)
 # monthly_bootstrap_users_relev_encounters_all_months <- bootstrap_monthly_summary(final_long_df_encounters_users_relev_encounters)
 
 
 # Combine bootstrap summaries
-combined_encounters_bootstrap_summary_monthly <- bind_rows(
-  monthly_bootstrap_all_patients_all_encounters_all_months %>%
+combined_encounters_bootstrap_summary_monthly_raw <- bind_rows(
+  monthly_bootstrap_all_patients_all_encounters_all_months_raw %>%
     mutate(group = "All Patients & all encounters"),
   
   # monthly_bootstrap_all_patients_relev_encounters_all_months %>%
   #   mutate(group = "All Patients & relevant encounters"),
   
-  monthly_bootstrap_users_all_encounters_all_months %>%
+  monthly_bootstrap_users_all_encounters_all_months_raw %>%
     mutate(group = "Users & all encounters"),
   
   # monthly_bootstrap_users_relev_encounters_all_months %>%
@@ -841,24 +543,19 @@ combined_encounters_bootstrap_summary_monthly <- bind_rows(
   select(group, everything())
 
 # Export
-write_xlsx(combined_encounters_bootstrap_summary_monthly, 
+library(writexl)
+write_xlsx(combined_encounters_bootstrap_summary_monthly_raw, 
            here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Monthly",
                       "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
 
 ### COSTS -----
 
-# Ran from the local machine
-# Start by running 05-CreatingCosts_OP_Raw.R
-# Then from the server, save cohort_table dataset and table_one_op_raw_appt_recoded
-
-cohort_table <- import("H:/Projects/Validation/Data/cohort_data_raw.csv")
-
 ## All patients & full months ----
 # Preparation 
-n_all_pts <- n_distinct(cohort_table$patid)
+n_all_pts_raw <- n_distinct(cohort_table_raw$patid)
 
 # Create 24-month exposure matrix
-cohort_grid_raw <- cohort_table %>%
+cohort_grid_raw <- cohort_table_raw %>%
   mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
   rowwise() %>%
   mutate(month_vector = list(0:23)) %>%
@@ -872,7 +569,7 @@ cohort_grid_raw <- cohort_table %>%
 
 # Compute calendar months with full exposure (i.e., dropping the final month if the patient was not exposed in full)
 
-cohort_months <- cohort_table %>%
+cohort_months_raw <- cohort_table_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -883,23 +580,28 @@ cohort_months <- cohort_table %>%
 # --- a) All patients & all encounters -----
 
 # Filter encounters to full months only
-table_one_op_raw_appt_recoded <- import("H:/Projects/Validation/Data/table_one_op_raw_appt_recoded.csv") |> 
+op_costs_final_data_recoded_raw <- op_costs_final_data_recoded_raw |> 
   arrange(patid)
-op_costs_final_data_recoded <- op_costs_final_data_recoded |> 
-  arrange(patid)
-op_costs_final_data_recoded_min <- op_costs_final_data_recoded |> 
-  select(unit_cost)
+# op_costs_final_data_recoded_min_raw <- op_costs_final_data_recoded_raw |> 
+#   select(unit_cost) 
+#   
 
-table_one_op_raw_appt_recoded <- cbind(table_one_op_raw_appt_recoded, 
-                                       op_costs_final_data_recoded_min)
+# appt_data_raw <- cbind(appt_data_raw, op_costs_final_data_recoded_min_raw)
 
-merged_matrix_costs <- table_one_op_raw_appt_recoded %>%
+appt_data_raw <- full_join(appt_data_raw |> group_by(patid) |> 
+                             mutate(row_id = row_number()) |> ungroup(), 
+                           op_costs_final_data_recoded_raw <- op_costs_final_data_recoded_raw |> 
+                               select(patid, unit_cost) |> 
+                               group_by(patid) |> mutate(row_id = row_number()) |> ungroup(),
+                             by = c("patid", "row_id")) 
+
+merged_matrix_costs_raw <- appt_data_raw %>%
   mutate(
     index_date = ymd(index_date),
     apptdate = ymd(apptdate),
     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months, by = "patid") %>%
+  left_join(cohort_months_raw, by = "patid") %>%
   filter(month_after_index <= max_month_exposed) %>%
   group_by(patid, month_after_index) %>%
   summarise(
@@ -912,42 +614,43 @@ merged_matrix_costs <- table_one_op_raw_appt_recoded %>%
 
 # Reshape to wide format: encounters per patient-month
 
-merged_matrix_costs <- merged_matrix_costs %>%
+merged_matrix_costs_raw <- merged_matrix_costs_raw %>%
   pivot_wider(names_from = month_col, values_from = total_patient_cost)
 
 # Merge visit counts with exposure base
 
-month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
+month_cols_raw <- grep("^month_", names(cohort_grid_raw), value = TRUE)
 
-merged_matrix_costs <- cohort_grid_raw %>%
-  left_join(merged_matrix_costs, by = "patid", suffix = c("_exp", "_cost"))
+merged_matrix_costs_raw <- cohort_grid_raw %>%
+  left_join(merged_matrix_costs_raw, by = "patid", suffix = c("_exp", "_cost"))
 
 # Overwrite exposed months with visit counts
-for (col in month_cols) {
+for (col in month_cols_raw) {
   exp_col <- paste0(col, "_exp")
   cost_col <- paste0(col, "_cost")
   
-  merged_matrix_costs[[col]] <- dplyr::case_when(
-    is.na(merged_matrix_costs[[exp_col]]) ~ NA_real_,  # not exposed
-    !is.na(merged_matrix_costs[[cost_col]]) ~ merged_matrix_costs[[cost_col]],
+  merged_matrix_costs_raw[[col]] <- dplyr::case_when(
+    is.na(merged_matrix_costs_raw[[exp_col]]) ~ NA_real_,  # not exposed
+    !is.na(merged_matrix_costs_raw[[cost_col]]) ~ merged_matrix_costs_raw[[cost_col]],
     TRUE ~ 0  # exposed but no encounters
   )
 }
 
-final_matrix_costs <- merged_matrix_costs %>%
-  select(patid, all_of(month_cols))
+final_matrix_costs_raw <- merged_matrix_costs_raw %>%
+  select(patid, all_of(month_cols_raw))
 
-final_long_df_costs_all_patients_all_encounters <- final_matrix_costs %>%
+final_long_df_costs_all_patients_all_encounters_raw <- final_matrix_costs_raw %>%
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
     values_to = "total_patient_cost"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
 
 # Summarise monthly visit statistics
 
-observed_cost_summary_all_patients_all_encounters <- final_long_df_costs_all_patients_all_encounters %>%
+observed_cost_summary_all_patients_all_encounters_raw <- final_long_df_costs_all_patients_all_encounters_raw %>%
   group_by(month_after_index) %>%
   summarise(
     mean_costs_exposed = mean(total_patient_cost, na.rm = TRUE), # mean for patients exposed in each month (i.e. NAs for non-exposed months)
@@ -959,7 +662,7 @@ observed_cost_summary_all_patients_all_encounters <- final_long_df_costs_all_pat
     q3_costs           = quantile(total_patient_cost, 0.75, na.rm = TRUE),
     n_exposed          = sum(!is.na(total_patient_cost)),
     total_patient_cost = sum(total_patient_cost, na.rm = TRUE),
-    mean_costs_all_patients = total_patient_cost / n_all_pts,  # mean for all patients, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
+    mean_costs_all_patients = total_patient_cost / n_all_pts_raw,  # mean for all patients, regardless of exposure (i.e. zeros for non-exposed months) - sum monthly mean = overall mean
     .groups = "drop"
   ) %>%
   mutate(
@@ -969,92 +672,18 @@ observed_cost_summary_all_patients_all_encounters <- final_long_df_costs_all_pat
   ) %>%
   mutate(across(where(is.numeric), round, 2))
 
-# # --- b) All patients & relevant encounters -----
-# 
-# # Filter relevant encounters and compute monthly cost per patient
-# monthly_costs_summary <- table_one_op_raw_appt_recoded %>%
-#   filter(is_clinically_relevant == 1) %>%  # only relevant encounters
-#   mutate(
-#     index_date = ymd(index_date),
-#     apptdate = ymd(apptdate),
-#     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
-#   ) %>%
-#   left_join(cohort_months, by = "patid") %>%
-#   filter(month_after_index <= max_month_exposed) %>%  # only full months
-#   group_by(patid, month_after_index) %>%
-#   summarise(total_cost = sum(unit_cost, na.rm = TRUE), .groups = "drop") %>%
-#   mutate(month_col = paste0("month_", month_after_index)) %>%
-#   select(patid, month_col, total_cost)
-# 
-# # Reshape to wide format
-# observed_cost_matrix <- monthly_costs_summary %>%
-#   pivot_wider(names_from = month_col, values_from = total_cost)
-# 
-# # Merge with exposure matrix
-# month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
-# 
-# merged_matrix_costs <- cohort_grid_raw %>%
-#   left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
-# 
-# # Fill in monthly cost matrix for exposed months
-# for (col in month_cols) {
-#   exp_col <- paste0(col, "_exp")
-#   cost_col <- paste0(col, "_cost")
-#   
-#   merged_matrix_costs[[col]] <- dplyr::case_when(
-#     is.na(merged_matrix_costs[[exp_col]]) ~ NA_real_,  # not exposed
-#     !is.na(merged_matrix_costs[[cost_col]]) ~ merged_matrix_costs[[cost_col]],
-#     TRUE ~ 0  # exposed but no cost
-#   )
-# }
-# 
-# # Convert to long format
-# final_matrix_costs <- merged_matrix_costs %>%
-#   select(patid, all_of(month_cols))
-# 
-# final_long_df_costs_all_patients_relev_encounters <- final_matrix_costs %>%
-#   pivot_longer(
-#     cols = starts_with("month_"),
-#     names_to = "month",
-#     values_to = "total_patient_cost"
-#   ) %>%
-#   mutate(month_after_index = as.integer(gsub("month_", "", month)))
-# 
-# # Summarise monthly cost statistics
-# observed_cost_summary_all_patients_relev_encounters <- final_long_df_costs_all_patients_relev_encounters %>%
-#   group_by(month_after_index) %>%
-#   summarise(
-#     mean_costs_exposed       = mean(total_patient_cost, na.rm = TRUE),
-#     min_costs                = min(total_patient_cost, na.rm = TRUE),
-#     max_costs                = max(total_patient_cost, na.rm = TRUE),
-#     sd_costs                 = sd(total_patient_cost, na.rm = TRUE),
-#     q1_costs                 = quantile(total_patient_cost, 0.25, na.rm = TRUE),
-#     median_costs             = median(total_patient_cost, na.rm = TRUE),
-#     q3_costs                 = quantile(total_patient_cost, 0.75, na.rm = TRUE),
-#     n_exposed                = sum(!is.na(total_patient_cost)),
-#     total_patient_cost       = sum(total_patient_cost, na.rm = TRUE),
-#     mean_costs_all_patients  = total_patient_cost / n_all_pts,
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     se    = sd_costs / sqrt(n_exposed),
-#     lower = mean_costs_exposed - qt(0.975, df = n_exposed - 1) * se,
-#     upper = mean_costs_exposed + qt(0.975, df = n_exposed - 1) * se
-#   ) %>%
-#   mutate(across(where(is.numeric), round, 2))
-# 
 ## User-only & full months ----
 
 # Preparation
 
-cohort_table_users <- table_one_op_raw_appt_recoded %>% 
+cohort_table_users_raw <- appt_data_raw %>% 
   filter(user_status== "User") %>% 
   distinct(patid, index_date, site, follow_up_end, follow_up_reason, follow_up_time)
 
-n_users <- n_distinct(cohort_table_users$patid)
+n_users_raw <- n_distinct(cohort_table_users_raw$patid)
 
 # Create 24-month exposure matrix
-cohort_grid_raw <- cohort_table_users %>%
+cohort_grid_raw <- cohort_table_users_raw %>%
   mutate(months_exposed = interval(index_date, follow_up_end) %/% months(1)) %>%
   rowwise() %>%
   mutate(month_vector = list(0:23)) %>%
@@ -1068,7 +697,7 @@ cohort_grid_raw <- cohort_table_users %>%
 
 # Compute calendar months with full exposure (i.e., dropping the final month if the patient was not exposed in full)
 
-cohort_months <- cohort_table_users %>%
+cohort_months_raw <- cohort_table_users_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -1080,14 +709,14 @@ cohort_months <- cohort_table_users %>%
 
 # Filter encounters to full months only
 
-monthly_cost_summary <- table_one_op_raw_appt_recoded %>%
+monthly_cost_summary_raw <- appt_data_raw %>%
   filter(user_status == "User") %>%
   mutate(
     index_date = ymd(index_date),
     apptdate = ymd(apptdate),
     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months, by = "patid") %>%
+  left_join(cohort_months_raw, by = "patid") %>%
   filter(month_after_index <= max_month_exposed) %>%
   group_by(patid, month_after_index) %>%
   summarise(
@@ -1099,42 +728,43 @@ monthly_cost_summary <- table_one_op_raw_appt_recoded %>%
 
 # Reshape to wide format
 
-observed_cost_matrix <- monthly_cost_summary %>%
+observed_cost_matrix_raw <- monthly_cost_summary_raw %>%
   pivot_wider(names_from = month_col, values_from = total_patient_cost)
 
 # Merge with exposure grid
 
-month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
+month_cols_raw <- grep("^month_", names(cohort_grid_raw), value = TRUE)
 
-merged_matrix_costs <- cohort_grid_raw %>%
-  left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
+merged_matrix_costs_raw <- cohort_grid_raw %>%
+  left_join(observed_cost_matrix_raw, by = "patid", suffix = c("_exp", "_cost"))
 
 # Overwrite exposed months with cost values
-for (col in month_cols) {
+for (col in month_cols_raw) {
   exp_col <- paste0(col, "_exp")
   cost_col <- paste0(col, "_cost")
   
-  merged_matrix_costs[[col]] <- dplyr::case_when(
-    is.na(merged_matrix_costs[[exp_col]]) ~ NA_real_,
-    !is.na(merged_matrix_costs[[cost_col]]) ~ merged_matrix_costs[[cost_col]],
+  merged_matrix_costs_raw[[col]] <- dplyr::case_when(
+    is.na(merged_matrix_costs_raw[[exp_col]]) ~ NA_real_,
+    !is.na(merged_matrix_costs_raw[[cost_col]]) ~ merged_matrix_costs_raw[[cost_col]],
     TRUE ~ 0
   )
 }
 
-final_matrix_costs <- merged_matrix_costs %>%
-  select(patid, all_of(month_cols))
+final_matrix_costs_raw <- merged_matrix_costs_raw %>%
+  select(patid, all_of(month_cols_raw))
 
-final_long_df_costs_users_all_encounters <- final_matrix_costs %>%
+final_long_df_costs_users_all_encounters_raw <- final_matrix_costs_raw %>%
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
     values_to = "total_patient_cost"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month))) |> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
 
 # Summarise monthly cost statistics
 
-observed_cost_summary_users_all_encounters <- final_long_df_costs_users_all_encounters %>%
+observed_cost_summary_users_all_encounters_raw <- final_long_df_costs_users_all_encounters_raw %>%
   group_by(month_after_index) %>%
   summarise(
     mean_costs_exposed = mean(total_patient_cost, na.rm = TRUE),
@@ -1146,7 +776,7 @@ observed_cost_summary_users_all_encounters <- final_long_df_costs_users_all_enco
     q3_costs           = quantile(total_patient_cost, 0.75, na.rm = TRUE),
     n_exposed          = sum(!is.na(total_patient_cost)),
     total_patient_cost = sum(total_patient_cost, na.rm = TRUE),
-    mean_costs_all_patients = total_patient_cost / n_users,
+    mean_costs_all_patients = total_patient_cost / n_users_raw,
     .groups = "drop"
   ) %>%
   mutate(
@@ -1156,87 +786,12 @@ observed_cost_summary_users_all_encounters <- final_long_df_costs_users_all_enco
   ) %>%
   mutate(across(where(is.numeric), round, 2))
 
-# # --- b) All users & relevant encounters -----
-# 
-# # Filter relevant encounters and calculate costs per patient-month
-# monthly_costs_summary <- table_one_op_raw_appt_recoded %>%
-#   filter(user_status == "User", is_clinically_relevant == 1) %>%  # users & relevant encounters
-#   mutate(
-#     index_date = ymd(index_date),
-#     apptdate = ymd(apptdate),
-#     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
-#   ) %>%
-#   left_join(cohort_months, by = "patid") %>%
-#   filter(month_after_index <= max_month_exposed) %>%  # full months only
-#   group_by(patid, month_after_index) %>%
-#   summarise(total_patient_cost = sum(unit_cost, na.rm = TRUE), .groups = "drop") %>%
-#   mutate(month_col = paste0("month_", month_after_index)) %>%
-#   select(patid, month_col, total_patient_cost)
-# 
-# # Reshape to wide format
-# observed_cost_matrix <- monthly_costs_summary %>%
-#   pivot_wider(names_from = month_col, values_from = total_patient_cost)
-# 
-# # Merge with exposure matrix
-# month_cols <- grep("^month_", names(cohort_grid_raw), value = TRUE)
-# 
-# merged_matrix_costs <- cohort_grid_raw %>%
-#   left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
-# 
-# # Overwrite exposed months with cost values
-# for (col in month_cols) {
-#   exp_col <- paste0(col, "_exp")
-#   cost_col <- paste0(col, "_cost")
-#   
-#   merged_matrix_costs[[col]] <- dplyr::case_when(
-#     is.na(merged_matrix_costs[[exp_col]]) ~ NA_real_,
-#     !is.na(merged_matrix_costs[[cost_col]]) ~ merged_matrix_costs[[cost_col]],
-#     TRUE ~ 0
-#   )
-# }
-# 
-# # Reshape back to long format
-# final_matrix_costs <- merged_matrix_costs %>%
-#   select(patid, all_of(month_cols))
-# 
-# final_long_df_costs_users_relev_encounters <- final_matrix_costs %>%
-#   pivot_longer(
-#     cols = starts_with("month_"),
-#     names_to = "month",
-#     values_to = "total_patient_cost"
-#   ) %>%
-#   mutate(month_after_index = as.integer(gsub("month_", "", month)))
-# 
-# # Summarise monthly cost statistics
-# observed_cost_summary_users_relev_encounters <- final_long_df_costs_users_relev_encounters %>%
-#   group_by(month_after_index) %>%
-#   summarise(
-#     mean_costs_exposed = mean(total_patient_cost, na.rm = TRUE),
-#     min_costs          = min(total_patient_cost, na.rm = TRUE),
-#     max_costs          = max(total_patient_cost, na.rm = TRUE),
-#     sd_costs           = sd(total_patient_cost, na.rm = TRUE),
-#     q1_costs           = quantile(total_patient_cost, 0.25, na.rm = TRUE),
-#     median_costs       = median(total_patient_cost, na.rm = TRUE),
-#     q3_costs           = quantile(total_patient_cost, 0.75, na.rm = TRUE),
-#     n_exposed          = sum(!is.na(total_patient_cost)),
-#     total_patient_cost = sum(total_patient_cost, na.rm = TRUE),
-#     mean_costs_all_users = total_patient_cost / n_users,
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     se    = sd_costs / sqrt(n_exposed),
-#     lower = mean_costs_exposed - qt(0.975, df = n_exposed - 1) * se,
-#     upper = mean_costs_exposed + qt(0.975, df = n_exposed - 1) * se
-#   ) %>%
-#   mutate(across(where(is.numeric), round, 2))
-# 
-# 
 # --- All patients & all months (including partial months) ----
 # Preparation 
-n_all_pts <- n_distinct(cohort_table$patid)
+n_all_pts_raw <- n_distinct(cohort_table_raw$patid)
 
 # Create 24-month exposure matrix 
-cohort_grid_raw_all_months <- cohort_table %>%
+cohort_grid_raw_all_months_raw <- cohort_table_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -1253,7 +808,7 @@ cohort_grid_raw_all_months <- cohort_table %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 # Compute calendar months including partial ones
-cohort_months_all_months <- cohort_table %>%
+cohort_months_all_months_raw <- cohort_table_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -1263,50 +818,51 @@ cohort_months_all_months <- cohort_table %>%
 
 # --- a) All patients & all encounters ----
 
-monthly_costs_summary <- table_one_op_raw_appt_recoded %>%
+monthly_costs_summary_raw <- appt_data_raw %>%
   mutate(
     index_date = ymd(index_date),
     apptdate = ymd(apptdate),
     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_all_months, by = "patid") %>%
+  left_join(cohort_months_all_months_raw, by = "patid") %>%
   filter(month_after_index <= max_month_exposed) %>%
   group_by(patid, month_after_index) %>%
   summarise(total_patient_cost = sum(unit_cost, na.rm = TRUE), .groups = "drop") %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
   select(patid, month_col, total_patient_cost)
 
-observed_cost_matrix <- monthly_costs_summary %>%
+observed_cost_matrix_raw <- monthly_costs_summary_raw %>%
   pivot_wider(names_from = month_col, values_from = total_patient_cost)
 
-month_cols <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
+month_cols_raw <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
 
-merged_matrix_costs <- cohort_grid_raw_all_months %>%
-  left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
+merged_matrix_costs_raw <- cohort_grid_raw_all_months %>%
+  left_join(observed_cost_matrix_raw, by = "patid", suffix = c("_exp", "_cost"))
 
-for (col in month_cols) {
+for (col in month_cols_raw) {
   exp_col <- paste0(col, "_exp")
   cost_col <- paste0(col, "_cost")
   
-  merged_matrix_costs[[col]] <- dplyr::case_when(
-    is.na(merged_matrix_costs[[exp_col]]) ~ NA_real_,
-    !is.na(merged_matrix_costs[[cost_col]]) ~ merged_matrix_costs[[cost_col]],
+  merged_matrix_costs_raw[[col]] <- dplyr::case_when(
+    is.na(merged_matrix_costs_raw[[exp_col]]) ~ NA_real_,
+    !is.na(merged_matrix_costs_raw[[cost_col]]) ~ merged_matrix_costs_raw[[cost_col]],
     TRUE ~ 0
   )
 }
 
-final_matrix_costs <- merged_matrix_costs %>%
-  select(patid, all_of(month_cols))
+final_matrix_costs_raw <- merged_matrix_costs_raw %>%
+  select(patid, all_of(month_cols_raw))
 
-final_long_df_costs_all_patients_all_encounters <- final_matrix_costs %>%
+final_long_df_costs_all_patients_all_encounters_raw <- final_matrix_costs_raw %>%
   pivot_longer(
     cols = starts_with("month_"),
     names_to = "month",
     values_to = "total_patient_cost"
   ) %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month)))|> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
 
-observed_cost_summary_all_patients_all_encounters_all_months <- final_long_df_costs_all_patients_all_encounters %>%
+observed_cost_summary_all_patients_all_encounters_all_months_raw <- final_long_df_costs_all_patients_all_encounters_raw %>%
   group_by(month_after_index) %>%
   summarise(
     mean_costs_exposed = mean(total_patient_cost, na.rm = TRUE),
@@ -1318,7 +874,7 @@ observed_cost_summary_all_patients_all_encounters_all_months <- final_long_df_co
     q3_costs  = quantile(total_patient_cost, 0.75, na.rm = TRUE),
     n_exposed = sum(!is.na(total_patient_cost)),
     tot_costs = sum(total_patient_cost, na.rm = TRUE),
-    mean_costs_all_patients = tot_costs / n_all_pts,
+    mean_costs_all_patients = tot_costs / n_all_pts_raw,
     .groups = "drop"
   ) %>%
   mutate(
@@ -1329,91 +885,18 @@ observed_cost_summary_all_patients_all_encounters_all_months <- final_long_df_co
   mutate(across(where(is.numeric), round, 2))
 
 
-# # --- b) All patients & relevant encounters -----
-# 
-# # Step 1: Filter relevant encounters and compute monthly cost per patient
-# monthly_costs_summary <- table_one_op_raw_appt_recoded %>%
-#   filter(is_clinically_relevant == 1) %>%  # Only relevant encounters
-#   mutate(
-#     index_date = ymd(index_date),
-#     apptdate = ymd(apptdate),
-#     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
-#   ) %>%
-#   left_join(cohort_months_all_months, by = "patid") %>%
-#   filter(month_after_index <= max_month_exposed) %>%  # Only exposed months
-#   group_by(patid, month_after_index) %>%
-#   summarise(total_cost = sum(unit_cost, na.rm = TRUE), .groups = "drop") %>%
-#   mutate(month_col = paste0("month_", month_after_index)) %>%
-#   select(patid, month_col, total_cost)
-# 
-# # Step 2: Reshape to wide format
-# observed_cost_matrix <- monthly_costs_summary %>%
-#   pivot_wider(names_from = month_col, values_from = total_cost)
-# 
-# # Step 3: Merge with exposure matrix
-# month_cols <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
-# 
-# merged_matrix_costs <- cohort_grid_raw_all_months %>%
-#   left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
-# 
-# # Step 4: Overwrite exposed months with cost values
-# for (col in month_cols) {
-#   exp_col <- paste0(col, "_exp")
-#   cost_col <- paste0(col, "_cost")
-#   
-#   merged_matrix_costs[[col]] <- dplyr::case_when(
-#     is.na(merged_matrix_costs[[exp_col]]) ~ NA_real_,  # Not exposed
-#     !is.na(merged_matrix_costs[[cost_col]]) ~ merged_matrix_costs[[cost_col]],
-#     TRUE ~ 0  # Exposed but no cost
-#   )
-# }
-# 
-# # Step 5: Convert to long format
-# final_matrix_costs <- merged_matrix_costs %>%
-#   select(patid, all_of(month_cols))
-# 
-# final_long_df_costs_all_patients_relev_encounters <- final_matrix_costs %>%
-#   pivot_longer(
-#     cols = starts_with("month_"),
-#     names_to = "month",
-#     values_to = "total_patient_cost"
-#   ) %>%
-#   mutate(month_after_index = as.integer(gsub("month_", "", month)))
-# 
-# # Step 6: Summarise monthly cost statistics
-# observed_cost_summary_all_patients_relev_encounters_all_months <- final_long_df_costs_all_patients_relev_encounters %>%
-#   group_by(month_after_index) %>%
-#   summarise(
-#     mean_costs_exposed       = mean(total_patient_cost, na.rm = TRUE),
-#     min_costs                = min(total_patient_cost, na.rm = TRUE),
-#     max_costs                = max(total_patient_cost, na.rm = TRUE),
-#     sd_costs                 = sd(total_patient_cost, na.rm = TRUE),
-#     q1_costs                 = quantile(total_patient_cost, 0.25, na.rm = TRUE),
-#     median_costs             = median(total_patient_cost, na.rm = TRUE),
-#     q3_costs                 = quantile(total_patient_cost, 0.75, na.rm = TRUE),
-#     n_exposed                = sum(!is.na(total_patient_cost)),
-#     total_patient_cost       = sum(total_patient_cost, na.rm = TRUE),
-#     mean_costs_all_patients  = total_patient_cost / n_all_pts,
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     se    = sd_costs / sqrt(n_exposed),
-#     lower = mean_costs_exposed - qt(0.975, df = n_exposed - 1) * se,
-#     upper = mean_costs_exposed + qt(0.975, df = n_exposed - 1) * se
-#   ) %>%
-#   mutate(across(where(is.numeric), round, 2))
-# 
+
 ## User-only & all months ----
 # Preparation
 
-cohort_table_users <- table_one_op_raw_appt_recoded %>% filter(user_status== "User") %>% 
+cohort_table_users_raw <- appt_data_raw %>% filter(user_status== "User") %>% 
   distinct(patid, index_date, site, follow_up_end, follow_up_reason, follow_up_time)
 
-n_users <- n_distinct(cohort_table_users$patid)
+n_users_raw <- n_distinct(cohort_table_users_raw$patid)
 
 # Create 24-month exposure matrix
 
-cohort_grid_raw_all_months <- cohort_table_users %>%
+cohort_grid_raw_all_months <- cohort_table_users_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -1432,7 +915,7 @@ cohort_grid_raw_all_months <- cohort_table_users %>%
 
 
 # Compute calendar months including partial ones
-cohort_months_all_months <- cohort_table_users %>%
+cohort_months_all_months_raw <- cohort_table_users_raw %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -1445,14 +928,14 @@ cohort_months_all_months <- cohort_table_users %>%
 # --- a) All users & all encounters ----
 
 # Filter all encounters for users and compute monthly cost
-monthly_cost_summary <- table_one_op_raw_appt_recoded %>%
+monthly_cost_summary_raw <- appt_data_raw %>%
   filter(user_status == "User") %>%
   mutate(
     index_date = ymd(index_date),
     apptdate = ymd(apptdate),
     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_all_months, by = "patid") %>%
+  left_join(cohort_months_all_months_raw, by = "patid") %>%
   filter(month_after_index <= max_month_exposed) %>%
   group_by(patid, month_after_index) %>%
   summarise(total_patient_cost = sum(unit_cost, na.rm = TRUE), .groups = "drop") %>%
@@ -1460,37 +943,38 @@ monthly_cost_summary <- table_one_op_raw_appt_recoded %>%
   select(patid, month_col, total_patient_cost)
 
 # Wide format matrix
-observed_cost_matrix <- monthly_cost_summary %>%
+observed_cost_matrix_raw <- monthly_cost_summary_raw %>%
   pivot_wider(names_from = month_col, values_from = total_patient_cost)
 
 # Merge with exposure grid
-month_cols <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
+month_cols_raw <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
 
-merged_matrix_costs <- cohort_grid_raw_all_months %>%
-  left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
+merged_matrix_costs_raw <- cohort_grid_raw_all_months %>%
+  left_join(observed_cost_matrix_raw, by = "patid", suffix = c("_exp", "_cost"))
 
 # Fill costs into exposure grid
-for (col in month_cols) {
+for (col in month_cols_raw) {
   exp_col <- paste0(col, "_exp")
   cost_col <- paste0(col, "_cost")
   
-  merged_matrix_costs[[col]] <- case_when(
-    is.na(merged_matrix_costs[[exp_col]]) ~ NA_real_,
-    !is.na(merged_matrix_costs[[cost_col]]) ~ merged_matrix_costs[[cost_col]],
+  merged_matrix_costs_raw[[col]] <- case_when(
+    is.na(merged_matrix_costs_raw[[exp_col]]) ~ NA_real_,
+    !is.na(merged_matrix_costs_raw[[cost_col]]) ~ merged_matrix_costs_raw[[cost_col]],
     TRUE ~ 0
   )
 }
 
 # Reshape long
-final_matrix_costs <- merged_matrix_costs %>%
-  select(patid, all_of(month_cols))
+final_matrix_costs_raw <- merged_matrix_costs_raw %>%
+  select(patid, all_of(month_cols_raw))
 
-final_long_df_costs_users_all_encounters <- final_matrix_costs %>%
+final_long_df_costs_users_all_encounters_raw <- final_matrix_costs_raw %>%
   pivot_longer(cols = starts_with("month_"), names_to = "month", values_to = "total_patient_cost") %>%
-  mutate(month_after_index = as.integer(gsub("month_", "", month)))
+  mutate(month_after_index = as.integer(gsub("month_", "", month))) |> 
+  mutate(total_patient_cost = if_else(is.na(total_patient_cost), 0, total_patient_cost))
 
 # Monthly summary
-observed_cost_summary_users_all_encounters_all_months <- final_long_df_costs_users_all_encounters %>%
+observed_cost_summary_users_all_encounters_all_months_raw <- final_long_df_costs_users_all_encounters_raw %>%
   group_by(month_after_index) %>%
   summarise(
     mean_costs_exposed      = mean(total_patient_cost, na.rm = TRUE),
@@ -1502,7 +986,7 @@ observed_cost_summary_users_all_encounters_all_months <- final_long_df_costs_use
     q3_costs                = quantile(total_patient_cost, 0.75, na.rm = TRUE),
     n_exposed               = sum(!is.na(total_patient_cost)),
     total_patient_cost      = sum(total_patient_cost, na.rm = TRUE),
-    mean_costs_all_users    = total_patient_cost / n_users,
+    mean_costs_all_users    = total_patient_cost / n_users_raw,
     .groups = "drop"
   ) %>%
   mutate(
@@ -1512,74 +996,6 @@ observed_cost_summary_users_all_encounters_all_months <- final_long_df_costs_use
   ) %>%
   mutate(across(where(is.numeric), round, 2))
 
-# # --- b) All users & relevant encounters -----
-# 
-# # Filter relevant encounters for users and compute monthly cost
-# monthly_cost_summary <- table_one_op_raw_appt_recoded %>%
-#   filter(user_status == "User", is_clinically_relevant == 1) %>%
-#   mutate(
-#     index_date = ymd(index_date),
-#     apptdate = ymd(apptdate),
-#     month_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 30.44) + 1
-#   ) %>%
-#   left_join(cohort_months_all_months, by = "patid") %>%
-#   filter(month_after_index <= max_month_exposed) %>%
-#   group_by(patid, month_after_index) %>%
-#   summarise(total_patient_cost = sum(unit_cost, na.rm = TRUE), .groups = "drop") %>%
-#   mutate(month_col = paste0("month_", month_after_index)) %>%
-#   select(patid, month_col, total_patient_cost)
-# 
-# # Wide format matrix
-# observed_cost_matrix <- monthly_cost_summary %>%
-#   pivot_wider(names_from = month_col, values_from = total_patient_cost)
-# 
-# # Merge with exposure grid
-# month_cols <- grep("^month_", names(cohort_grid_raw_all_months), value = TRUE)
-# 
-# merged_matrix_costs <- cohort_grid_raw_all_months %>%
-#   left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
-# 
-# for (col in month_cols) {
-#   exp_col <- paste0(col, "_exp")
-#   cost_col <- paste0(col, "_cost")
-#   
-#   merged_matrix_costs[[col]] <- case_when(
-#     is.na(merged_matrix_costs[[exp_col]]) ~ NA_real_,
-#     !is.na(merged_matrix_costs[[cost_col]]) ~ merged_matrix_costs[[cost_col]],
-#     TRUE ~ 0
-#   )
-# }
-# 
-# final_matrix_costs <- merged_matrix_costs %>%
-#   select(patid, all_of(month_cols))
-# 
-# final_long_df_costs_users_relev_encounters <- final_matrix_costs %>%
-#   pivot_longer(cols = starts_with("month_"), names_to = "month", values_to = "total_patient_cost") %>%
-#   mutate(month_after_index = as.integer(gsub("month_", "", month)))
-# 
-# # Monthly summary
-# observed_cost_summary_users_relev_encounters_all_months <- final_long_df_costs_users_relev_encounters %>%
-#   group_by(month_after_index) %>%
-#   summarise(
-#     mean_costs_exposed     = mean(total_patient_cost, na.rm = TRUE),
-#     min_costs              = min(total_patient_cost, na.rm = TRUE),
-#     max_costs              = max(total_patient_cost, na.rm = TRUE),
-#     sd_costs               = sd(total_patient_cost, na.rm = TRUE),
-#     q1_costs               = quantile(total_patient_cost, 0.25, na.rm = TRUE),
-#     median_costs           = median(total_patient_cost, na.rm = TRUE),
-#     q3_costs               = quantile(total_patient_cost, 0.75, na.rm = TRUE),
-#     n_exposed              = sum(!is.na(total_patient_cost)),
-#     total_patient_cost     = sum(total_patient_cost, na.rm = TRUE),
-#     mean_costs_all_users   = total_patient_cost / n_users,
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     se    = sd_costs / sqrt(n_exposed),
-#     lower = mean_costs_exposed - qt(0.975, df = n_exposed - 1) * se,
-#     upper = mean_costs_exposed + qt(0.975, df = n_exposed - 1) * se
-#   ) %>%
-#   mutate(across(where(is.numeric), round, 2))
-# 
 ## Bootstrap -----
 
 bootstrap_monthly_summary_costs <- function(data, month_var = "month_after_index", value_var = "total_patient_cost", R = 1000, seed = 626) {
@@ -1627,21 +1043,21 @@ bootstrap_monthly_summary_costs <- function(data, month_var = "month_after_index
 
 ## Bootstrap on all months (including partial)
 
-monthly_bootstrap_cost_all_patients_all_encounters_all_months <- bootstrap_monthly_summary_costs(final_long_df_costs_all_patients_all_encounters)
+monthly_bootstrap_cost_all_patients_all_encounters_all_months_raw <- bootstrap_monthly_summary_costs(final_long_df_costs_all_patients_all_encounters_raw)
 # monthly_bootstrap_cost_all_patients_relev_encounters_all_months <- bootstrap_monthly_summary_costs(final_long_df_costs_all_patients_relev_encounters)
-monthly_bootstrap_cost_users_all_encounters_all_months <- bootstrap_monthly_summary_costs(final_long_df_costs_users_all_encounters)
+monthly_bootstrap_cost_users_all_encounters_all_months_raw <- bootstrap_monthly_summary_costs(final_long_df_costs_users_all_encounters_raw)
 # monthly_bootstrap_cost_users_relev_encounters_all_months <- bootstrap_monthly_summary_costs(final_long_df_costs_users_relev_encounters)
 
 
 # Combine bootstrap summaries
-combined_costs_bootstrap_summary_monthly <- bind_rows(
-  monthly_bootstrap_cost_all_patients_all_encounters_all_months %>%
+combined_costs_bootstrap_summary_monthly_raw <- bind_rows(
+  monthly_bootstrap_cost_all_patients_all_encounters_all_months_raw %>%
     mutate(group = "All Patients & all encounters"),
   
   # monthly_bootstrap_cost_all_patients_relev_encounters_all_months %>%
   #   mutate(group = "All Patients & relevant encounters"),
   
-  monthly_bootstrap_cost_users_all_encounters_all_months %>%
+  monthly_bootstrap_cost_users_all_encounters_all_months_raw %>%
     mutate(group = "Users & all encounters"),
   
   # monthly_bootstrap_cost_users_relev_encounters_all_months %>%
@@ -1651,7 +1067,7 @@ combined_costs_bootstrap_summary_monthly <- bind_rows(
 
 # Export
 library(writexl)
-write_xlsx(combined_costs_bootstrap_summary_monthly, 
+write_xlsx(combined_costs_bootstrap_summary_monthly_raw, 
            here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", 
                       "OP", "Monthly", 
                       "monthly_combined_bootstrap_summary_costs_SOURCE.xlsx"))
@@ -1664,14 +1080,14 @@ library(ggplot2)
 
 ### OP visits plots ----
 # Add group identifiers and combine into one dataframe
-df_boot_means <- bind_rows(
-  monthly_bootstrap_all_patients_all_encounters_all_months %>%
+df_boot_means_raw <- bind_rows(
+  monthly_bootstrap_all_patients_all_encounters_all_months_raw %>%
     mutate(group = "All Patients - All Encounters"),
   
   # monthly_bootstrap_all_patients_relev_encounters_all_months %>%
   #   mutate(group = "All Patients - Relevant Encounters"),
   
-  monthly_bootstrap_users_all_encounters_all_months %>%
+  monthly_bootstrap_users_all_encounters_all_months_raw %>%
     mutate(group = "Users - All Encounters"),
   
   # monthly_bootstrap_users_relev_encounters_all_months %>%
@@ -1679,12 +1095,12 @@ df_boot_means <- bind_rows(
 )
 
 # Convert `month` to numeric if necessary
-df_boot_means <- df_boot_means %>%
+df_boot_means_raw <- df_boot_means_raw %>%
   mutate(month = as.numeric(month),
          mean = as.numeric(mean))  # Ensure mean is numeric
 
 # Plot
-(boot_mean_visits_plot <- ggplot(df_boot_means, aes(x = month, y = mean, color = group)) +
+(boot_mean_visits_plot_raw <- ggplot(df_boot_means_raw, aes(x = month, y = mean, color = group)) +
     geom_line(size = 1) +
     geom_point() +
     labs(
@@ -1708,7 +1124,7 @@ df_boot_means <- df_boot_means %>%
 ggsave(here::here(
   "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Plots",
   "Boot_mean_visits_plot-Raw.PNG"),
-  plot = boot_mean_visits_plot,
+  plot = boot_mean_visits_plot_raw,
   width = 10,
   height = 7,
   bg = "white"
@@ -1717,14 +1133,14 @@ ggsave(here::here(
 ### Costs plot ----
 
 # Combine cost bootstrap summaries
-df_boot_costs <- bind_rows(
-  monthly_bootstrap_cost_all_patients_all_encounters_all_months %>%
+df_boot_costs_raw <- bind_rows(
+  monthly_bootstrap_cost_all_patients_all_encounters_all_months_raw %>%
     mutate(group = "All Patients - All Encounters"),
   
   # monthly_bootstrap_cost_all_patients_relev_encounters_all_months %>%
   #   mutate(group = "All Patients - Relevant Encounters"),
   
-  monthly_bootstrap_cost_users_all_encounters_all_months %>%
+  monthly_bootstrap_cost_users_all_encounters_all_months_raw %>%
     mutate(group = "Users - All Encounters"),
   
   # monthly_bootstrap_cost_users_relev_encounters_all_months %>%
@@ -1732,12 +1148,12 @@ df_boot_costs <- bind_rows(
 )
 
 # Convert variables to numeric if needed
-df_boot_costs <- df_boot_costs %>%
+df_boot_costs_raw <- df_boot_costs_raw %>%
   mutate(month = as.numeric(month),
          mean = as.numeric(mean))  # Ensure mean is numeric
 
 # Plot
-(boot_mean_costs_plot <- ggplot(df_boot_costs, aes(x = month, y = mean, color = group)) +
+(boot_mean_costs_plot_raw <- ggplot(df_boot_costs_raw, aes(x = month, y = mean, color = group)) +
   geom_line(linewidth = 1) +
   geom_point() +
   labs(
@@ -1761,7 +1177,7 @@ df_boot_costs <- df_boot_costs %>%
 ggsave(here::here(
   "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Plots",
   "Boot_mean_costs_plot-Raw.PNG"),
-  plot = boot_mean_costs_plot,
+  plot = boot_mean_costs_plot_raw,
   width = 10,
   height = 7,
   bg = "white"

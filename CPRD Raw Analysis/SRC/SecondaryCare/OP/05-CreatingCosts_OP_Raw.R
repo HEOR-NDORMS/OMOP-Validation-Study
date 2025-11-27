@@ -36,35 +36,21 @@ costs_hrg_df<- import(
 
 ## Select variables of interest ----
 # Step 1: Clean and flag rows with '*'
-costs_hrg_clean_op <- costs_hrg_df |>
-  select(department_description, tretspef, service_description, nac_hrg,
-         number_of_attendances, national_average_unit_cost, cost) |>
-  mutate(
-    # Flag rows where the cost field contains '*'
-    has_star_cost = grepl("\\*", as.character(national_average_unit_cost)),
-    # Remove non-numeric characters and convert to numeric
-    national_average_unit_cost = as.numeric(gsub("[^0-9\\.]", "", as.character(national_average_unit_cost))),
-    number_of_attendances = as.numeric(gsub("[^0-9\\.]", "", as.character(number_of_attendances)))
-  )
 costs_hrg_clean_op <- costs_hrg_clean_op |> 
   mutate(
     # Replace * (indicating <5) with 3
-    number_of_attendances =
-      ifelse(has_star_cost & is.na(number_of_attendances), 3,
+    number_of_attendances = ifelse(has_star_cost, 3,
              number_of_attendances),
-    # Replace missing unit costs with cost value where appropriate
-    national_average_unit_cost = ifelse(
-      is.na(national_average_unit_cost) & has_star_cost,
-      cost,
-      national_average_unit_cost
-    )
+    number_of_attendances = as.numeric(number_of_attendances)
   )
+
 # Step 2: Impute cost based on your logic
 op_costs_hrg_imputed <- costs_hrg_clean_op |>
   group_by(tretspef, nac_hrg) |>
   summarise(
-    unit_cost = weighted.mean(national_average_unit_cost, 
-                              number_of_attendances, na.rm = TRUE)
+    total_costs = sum(cost),
+    total_attendances = sum(number_of_attendances),
+    unit_cost = total_costs/total_attendances
     ) |>
   ungroup() |> 
   distinct(tretspef, nac_hrg, unit_cost)
@@ -72,14 +58,14 @@ op_costs_hrg_imputed <- costs_hrg_clean_op |>
 ## Merge on both hrg_code and tretspef ----
 op_hrg_df_merged <- left_join(
   op_hrg_costs_df |> mutate(tretspef = as.character(tretspef)),
-  costs_hrg_imputed,
+  op_costs_hrg_imputed |> select(tretspef, nac_hrg, unit_cost) |> distinct(),
   by = c("nac_hrg", "tretspef")
 ) |> 
   mutate(user_status = "User")
 
 ## Bring back the non-users ----
 op_costs_non_users_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/OP/op_costs_non_users_data.csv"
+  "H:/Projects/Validation/HES HRG/Source/OP/op_costs_non_users_data.csv"
 ) |> 
   mutate(patid = as.integer64(patid)) |> 
   rename(sex = gender) |> 
@@ -89,10 +75,11 @@ op_costs_non_users_df <- read_csv(
          unit_cost = 0) |> 
   mutate(user_status = "Non-User")
 
-op_costs_final_data <- rbind(op_hrg_df_merged, op_costs_non_users_df) 
+op_costs_final_data <- rbind(op_hrg_df_merged, 
+                             op_costs_non_users_df) 
 
 ### Recode specialty variables
-op_costs_final_data_recoded <- op_costs_final_data |> 
+op_costs_final_data_recoded_raw <- op_costs_final_data |> 
   mutate_at(c("mainspef", "tretspef"), as.factor) |> 
   mutate(
     mainspef_recoded = fct_recode(
@@ -281,7 +268,7 @@ op_costs_final_data_recoded <- op_costs_final_data |>
 # Summary Stats ----
 
 ## Users ----
-users_op_costs_df <- op_costs_final_data_recoded |> 
+users_op_costs_df <- op_costs_final_data_recoded_raw |> 
   filter(user_status == "User")
 
 overall_users_costs_df <- users_op_costs_df |> 
@@ -292,7 +279,7 @@ overall_users_costs_df <- users_op_costs_df |>
 # Summary statistics
 summary_users_appts_costs <- overall_users_costs_df %>%
   summarise(
-    n            = n(),
+    n_exposed    = sum(total_patient_cost),
     mean         = mean(total_patient_cost, na.rm = T),
     min          = min(total_patient_cost, na.rm = T),
     max          = max(total_patient_cost, na.rm = T),
@@ -300,13 +287,13 @@ summary_users_appts_costs <- overall_users_costs_df %>%
     median       = quantile(total_patient_cost, 0.5, na.rm = T),
     lower_q      = quantile(total_patient_cost, 0.25, na.rm = T),
     upper_q      = quantile(total_patient_cost, 0.75, na.rm = T),
-    se                 = sd / sqrt(n),
-    ci_lower           = mean - qt(0.975, df = n - 1) * se,
-    ci_upper           = mean + qt(0.975, df = n - 1) * se
+    se                 = sd / sqrt(n_exposed),
+    ci_lower           = mean - qt(0.975, df = n_exposed - 1) * se,
+    ci_upper           = mean + qt(0.975, df = n_exposed - 1) * se
   ) %>%
   mutate(across(everything(), round, 2))
 
-users_overall_by_tretspef_c <- op_costs_final_data_recoded |> 
+users_overall_by_tretspef_c <- op_costs_final_data_recoded_raw |> 
   filter(user_status == "User") |> 
   group_by(patid, tretspef_recoded) %>%                     # group data per patient
   summarise(n_costs = sum(unit_cost), .groups = "drop") %>% 
@@ -319,10 +306,10 @@ users_overall_by_tretspef_c <- op_costs_final_data_recoded |>
             num_subjects_visited = n_distinct(patid),
             .groups = "drop")
 
-# rio::export(users_overall_by_tretspef_c, 
-#             here::here("CPRD Raw Analysis", "Results",
-#                        "SecondaryCareAnalysis", "Output_costs_by_tretspef-Users_Raw.xlsx"))
-users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
+rio::export(users_overall_by_tretspef_c,
+            here::here("CPRD Raw Analysis", "Results",
+                       "SecondaryCareAnalysis","OP", "Output_costs_by_tretspef-Users_Raw.xlsx"))
+users_overall_by_tretspef_v <- op_costs_final_data_recoded_raw %>%
   filter(user_status == "User") %>% 
   group_by(patid, tretspef_recoded) %>%                     # group data per patient
   summarise(n_appts = n(), .groups = "drop") %>% 
@@ -334,14 +321,14 @@ users_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
             max_visits = round(max(n_appts, na.rm = TRUE), 2),
             num_subjects_visited = n_distinct(patid),
             .groups = "drop")
-# rio::export(users_overall_by_tretspef_v, 
-#             here::here("CPRD Raw Analysis", "Results",
-#                        "SecondaryCareAnalysis", "Output_appointments_by_tretspef-Users_Raw.xlsx"))
+rio::export(users_overall_by_tretspef_v,
+            here::here("CPRD Raw Analysis", "Results",
+                       "SecondaryCareAnalysis","OP", "Output_appointments_by_tretspef-Users_Raw.xlsx"))
 
 
 
 ## All ----
-overall_all_costs_df <- op_costs_final_data_recoded |> 
+overall_all_costs_df <- op_costs_final_data_recoded_raw |> 
   group_by(patid) %>%                     # group data per patient
   summarise(total_patient_cost = sum(unit_cost)) %>%   # derive total number of appointments by picking max value of apptorder
   ungroup()
@@ -349,7 +336,7 @@ overall_all_costs_df <- op_costs_final_data_recoded |>
 # Summary statistics
 summary_all_appts_costs <- overall_all_costs_df %>%
   summarise(
-    n            = n(),
+    n_exposed    = sum(total_patient_cost),
     mean         = mean(total_patient_cost, na.rm = T),
     min          = min(total_patient_cost, na.rm = T),
     max          = max(total_patient_cost, na.rm = T),
@@ -357,14 +344,14 @@ summary_all_appts_costs <- overall_all_costs_df %>%
     median       = quantile(total_patient_cost, 0.5, na.rm = T),
     lower_q      = quantile(total_patient_cost, 0.25, na.rm = T),
     upper_q      = quantile(total_patient_cost, 0.75, na.rm = T),
-    se                 = sd / sqrt(n),
-    ci_lower           = mean - qt(0.975, df = n - 1) * se,
-    ci_upper           = mean + qt(0.975, df = n - 1) * se
+    se                 = sd / sqrt(n_exposed),
+    ci_lower           = mean - qt(0.975, df = n_exposed - 1) * se,
+    ci_upper           = mean + qt(0.975, df = n_exposed - 1) * se
   ) %>%
   mutate(across(everything(), round, 2))
 
 
-all_overall_by_tretspef_c <- op_costs_final_data_recoded |> 
+all_overall_by_tretspef_c <- op_costs_final_data_recoded_raw |> 
   group_by(patid, tretspef_recoded) %>%                     # group data per patient
   summarise(n_costs = sum(unit_cost), .groups = "drop") %>% 
   group_by(tretspef_recoded) %>%
@@ -377,10 +364,10 @@ all_overall_by_tretspef_c <- op_costs_final_data_recoded |>
             .groups = "drop") |> 
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded))
 
-# rio::export(all_overall_by_tretspef_c, 
-#             here::here("CPRD Raw Analysis", "Results",
-#                        "SecondaryCareAnalysis", "Output_costs_by_tretspef-All_Raw.xlsx"))
-all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
+rio::export(all_overall_by_tretspef_c,
+            here::here("CPRD Raw Analysis", "Results",
+                       "SecondaryCareAnalysis", "OP","Output_costs_by_tretspef-All_Raw.xlsx"))
+all_overall_by_tretspef_v <- op_costs_final_data_recoded_raw %>%
   group_by(patid, tretspef_recoded) %>%  
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded)) |> # group data per patient
   summarise(n_appts = n(), .groups = "drop") %>%
@@ -396,9 +383,9 @@ all_overall_by_tretspef_v <- op_costs_final_data_recoded %>%
   mutate_at("tretspef_recoded", as.factor) %>%
   mutate(tretspef_recoded = forcats::fct_infreq(tretspef_recoded))
 
-# rio::export(all_overall_by_tretspef_v, 
-#             here::here("CPRD Raw Analysis", "Results",
-#                        "SecondaryCareAnalysis", "Output_appointments_by_tretspef-All_Raw.xlsx"))
+rio::export(all_overall_by_tretspef_v,
+            here::here("CPRD Raw Analysis", "Results",
+                       "SecondaryCareAnalysis","OP", "Output_appointments_by_tretspef-All_Raw.xlsx"))
 
 
 # Export the file
@@ -410,5 +397,80 @@ costs_list <- list(
 )
 
 # Write to an Excel file
-# write_xlsx(costs_list, here::here("CPRD Raw Analysis", "Results",
-#                                   "SecondaryCareAnalysis", "Output_Costs_Raw.xlsx"))
+write_xlsx(costs_list, here::here("CPRD Raw Analysis", "Results",
+                                  "SecondaryCareAnalysis", "OP","Output_Costs_Raw.xlsx"))
+
+# Bootstrap visit costs -----
+
+# --- Function to compute bootstrap summary for a given dataset
+
+bootstrap_summary_c <- function(data, varname = "total_patient_cost", R = 1000, seed = 626) {
+  
+  stat_fn <- function(d, i) {
+    d_sample <- d[i, ]
+    mean(d_sample[[varname]], na.rm = TRUE)
+  }
+  
+  set.seed(seed)
+  boot_result <- boot(data = data, statistic = stat_fn, R = R)
+  boot_ci <- boot.ci(boot_result, type = c("norm", "basic", "perc"))
+  
+  boot_mean_costs     <- mean(boot_result$t)
+  boot_values_costs   <- boot_result$t
+  boot_variance_costs <- var(as.numeric(boot_values_costs))
+  boot_sd_costs       <- sd(boot_values_costs)
+  boot_se_costs       <- boot_sd_costs / sqrt(length(boot_values_costs))
+  
+  ci_norm  <- boot_ci$normal[2:3]
+  ci_basic <- boot_ci$basic[4:5]
+  ci_perc  <- boot_ci$perc[4:5]
+  
+  # Return in wide format
+  tibble(
+    mean     = boot_mean_costs,
+    variance = boot_variance_costs,
+    sd       = boot_sd_costs,
+    se       = boot_se_costs,
+    ci_norm_lower = ci_norm[1],
+    ci_norm_upper = ci_norm[2],
+    ci_basic_lower = ci_basic[1],
+    ci_basic_upper = ci_basic[2],
+    ci_perc_lower = ci_perc[1],
+    ci_perc_upper = ci_perc[2]
+  ) %>%
+    mutate(across(everything(), ~round(.x, 3)))
+}
+
+# --- Bootstrap: All Patients & All Encounters
+boot_summary_all_patients_all_costs_encounters <- bootstrap_summary_c(overall_all_costs_df, varname = "total_patient_cost")
+
+# --- Bootstrap: All Patients & Relevant Encounters
+# boot_summary_all_patients_relevant_encounters <- bootstrap_summary(all_patients_relevant_encounters_counts, varname = "total_patient_encounters")
+
+# --- Bootstrap: Users Only & All Encounters
+boot_summary_users_all_costs_encounters <- bootstrap_summary_c(overall_users_costs_df, varname = "total_patient_cost")
+
+# --- Bootstrap: Users Only & Relevant Encounters
+# boot_summary_users_relevant_encounters <- bootstrap_summary(users_relevant_encounters_counts, varname = "total_patient_encounters")
+
+
+(combined_bootstrap_summary_encounters_costs <- bind_rows(
+  boot_summary_all_patients_all_costs_encounters %>%
+    mutate(group = "All Patients & all encounters"),
+  
+  # boot_summary_all_patients_relevant_encounters %>%
+  #   mutate(group = "All Patients & relevant encounters"),
+  
+  boot_summary_users_all_costs_encounters %>%
+    mutate(group = "Users & all encounters"),
+  
+  # boot_summary_users_relevant_encounters %>%
+  #   mutate(group = "Users & relevant encounters")
+) %>%
+    select(group, everything()))
+
+
+# Export
+export(combined_bootstrap_summary_encounters_costs, 
+       here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "OP",
+            "Overall", "overall_bootstrap_summary_costs_encounters_SOURCE.xlsx"))
