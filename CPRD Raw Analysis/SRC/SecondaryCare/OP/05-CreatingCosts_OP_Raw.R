@@ -26,10 +26,9 @@ op_study_ids_df <- read_csv(
 op_hrg_costs_df <- cbind(op_study_ids_df, op_hrg_df_min) |> 
   mutate(patid = as.integer64(patid))
 
-costs_hrg_df<- import(
-  "H:/Projects/Validation/HES HRG/NHS_Collection_Costs_2023_2024.xlsx",
-  sheet = "OP"
-  ) |> 
+costs_hrg_df <- import(here("NHS_Collection_Costs_2024_2025.xlsx"),
+                       sheet = "OP"
+) |> 
   clean_names() |> 
   rename("nac_hrg" = "currency_code",
          "tretspef" = "service_code")
