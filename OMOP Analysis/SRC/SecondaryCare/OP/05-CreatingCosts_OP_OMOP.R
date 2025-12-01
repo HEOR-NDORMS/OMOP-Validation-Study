@@ -5,6 +5,7 @@ library(janitor)
 library(tidyverse)
 library(tidylog)
 library(bit64)
+library(here)
 
 # OP ----
 
@@ -27,14 +28,15 @@ op_hrg_costs_df <- cbind(op_study_ids_df, op_hrg_df_min) |>
   mutate(subject_id = as.integer64(subject_id)) |> 
   mutate(hrg_cluster = substr(nac_hrg, 1, 4))
 
-# Import the NHS cost collection 23/24 data
-costs_hrg_df <- import(
-  "H:/Projects/Validation/HES HRG/NHS_Collection_Costs_2023_2024.xlsx",
+# Import the NHS cost collection 24/25 data
+costs_hrg_df <- import(here("NHS_Collection_Costs_2024_2025.xlsx"),
   sheet = "OP"
-) |> 
+  ) |> 
   clean_names() |> 
   rename("nac_hrg" = "currency_code",
          "tretspef" = "service_code")
+# for the tretspef 700, we have no hrg value in 2024/2025, therefore the value 
+# from 2023/2024 will be used
 
 # Create Costs ----
 ## Select variables of interest ----
