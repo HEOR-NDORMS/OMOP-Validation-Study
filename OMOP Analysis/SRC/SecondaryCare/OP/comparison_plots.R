@@ -1,7 +1,7 @@
 monthly_bootstrap_combined_data_visits_users <- rbind(
   monthly_bootstrap_users_all_encounters_all_months_omop |> 
     mutate(data_source = "OMOP"), 
-  monthly_bootstrap_cost_all_patients_all_encounters_all_months_raw |> 
+  monthly_bootstrap_users_all_encounters_all_months_raw |> 
     mutate(data_source = "Source")
 ) 
 export(monthly_bootstrap_combined_data_visits_users, here::here(
