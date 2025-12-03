@@ -28,6 +28,20 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 
+
+cohort_table <- import("H:/Projects/Validation/Data/cohort_data_raw.csv")
+
+table_one_op_raw_appt_recoded <- import("H:/Projects/Validation/Data/table_one_op_raw_appt_recoded.csv") |> 
+  arrange(patid)
+op_costs_final_data_recoded_raw <- op_costs_final_data_recoded_raw |> 
+  arrange(patid)
+op_costs_final_data_recoded_raw_min <- op_costs_final_data_recoded_raw |> 
+  select(unit_cost)
+
+table_one_op_raw_appt_recoded <- cbind(table_one_op_raw_appt_recoded, 
+                                       op_costs_final_data_recoded_raw_min)
+
+
 # --- Visits ------
 
 ## All patients ----
@@ -326,20 +340,18 @@ combined_encounters_bootstrap_summary_yearly <- bind_rows(
 # Start by running 05-CreatingCosts_OP_Raw.R
 # Then from the server, save cohort_table dataset and table_one_op_raw_appt_recoded
 
-cohort_table <- import("H:/Projects/Validation/Data/cohort_data_raw.csv")
+# cohort_table <- import("H:/Projects/Validation/Data/cohort_data_raw.csv")
+# 
+# table_one_op_raw_appt_recoded <- import("H:/Projects/Validation/Data/table_one_op_raw_appt_recoded.csv") |> 
+#   arrange(patid)
+# op_costs_final_data_recoded_raw <- op_costs_final_data_recoded_raw |> 
+#   arrange(patid)
+# op_costs_final_data_recoded_raw_min <- op_costs_final_data_recoded_raw |> 
+#   select(unit_cost)
+# 
+# table_one_op_raw_appt_recoded <- cbind(table_one_op_raw_appt_recoded, 
+#                                        op_costs_final_data_recoded_raw_min)
 
-table_one_op_raw_appt_recoded <- import("H:/Projects/Validation/Data/table_one_op_raw_appt_recoded.csv") |> 
-  arrange(patid)
-op_costs_final_data_recoded <- op_costs_final_data_recoded |> 
-  arrange(patid)
-op_costs_final_data_recoded_min <- op_costs_final_data_recoded |> 
-  select(unit_cost)
-
-table_one_op_raw_appt_recoded <- cbind(table_one_op_raw_appt_recoded, 
-                                       op_costs_final_data_recoded_min)
-
-
-                                            
 # Compute max exposed year per patient ---
 cohort_years_all_years <- cohort_table %>%
   mutate(

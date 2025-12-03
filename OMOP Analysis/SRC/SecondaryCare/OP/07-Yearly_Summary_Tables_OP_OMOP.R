@@ -38,12 +38,12 @@ cohort_table <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
 
 appt_data <- import("H:/Projects/Validation/Data/appt_data_omop.csv") |> 
   arrange(subject_id)
-op_costs_final_data_recoded <- op_costs_final_data_recoded |> 
+op_costs_final_data_recoded_omop <- op_costs_final_data_recoded_omop |> 
   arrange(subject_id)
-op_costs_final_data_recoded_min <- op_costs_final_data_recoded |> 
+op_costs_final_data_recoded_omop_min <- op_costs_final_data_recoded_omop |> 
   select(unit_cost)
 
-appt_data <- cbind(appt_data, op_costs_final_data_recoded_min)
+appt_data <- cbind(appt_data, op_costs_final_data_recoded_omop_min)
 
 ## All patients ----
 
@@ -340,16 +340,16 @@ combined_encounters_bootstrap_summary_yearly <- bind_rows(
 # Start by running 05-CreatingCosts_OP_omop.R
 # Then from the server, save cohort_table dataset and appt_data
 
-cohort_table <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
-
-appt_data <- import("H:/Projects/Validation/Data/appt_data_omop.csv") |> 
-  arrange(subject_id)
-op_costs_final_data_recoded_omop <- op_costs_final_data_recoded_omop |> 
-  arrange(subject_id)
-op_costs_final_data_recoded_omop <- op_costs_final_data_recoded_omop |> 
-  select(unit_cost)
-
-appt_data <- cbind(appt_data, op_costs_final_data_recoded_omop)
+# cohort_table <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
+# 
+# appt_data <- import("H:/Projects/Validation/Data/appt_data_omop.csv") |> 
+#   arrange(subject_id)
+# op_costs_final_data_recoded_omop <- op_costs_final_data_recoded_omop |> 
+#   arrange(subject_id)
+# op_costs_final_data_recoded_omop <- op_costs_final_data_recoded_omop |> 
+#   select(unit_cost)
+# 
+# appt_data <- cbind(appt_data, op_costs_final_data_recoded_omop)
 
 
 # Compute max exposed year per patient ---
