@@ -119,8 +119,8 @@ users_mean_atts <- mean(users_ae_attendance_per_patient$n_att, na.rm = TRUE)
 
 # Save the plot
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE", "Plots",
-  "Mean_atts_hist_users-Raw.PNG"),
+  "OMOP Analysis", "Results", "SecondaryCareAnalysis" , "AE", "Plots",
+  "Mean_atts_hist_users-OMOP.PNG"),
   plot = users_atts_plot_hist,
   width = 10,
   height = 7,
@@ -148,8 +148,8 @@ ggsave(here::here(
 
 # Save the plot
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" ,"AE", "Plots",
-  "Mean_atts_density_users-Raw.PNG"),
+  "OMOP Analysis", "Results", "SecondaryCareAnalysis" ,"AE", "Plots",
+  "Mean_atts_density_users-OMOP.PNG"),
   plot = users_atts_plot_density,
   width = 7.5,
   height = 6,
@@ -173,7 +173,7 @@ all_mean_atts <- mean(all_ae_attendance_per_patient$n_att, na.rm = TRUE)
          subtitle = "",
          x = "Number of Attendances (bin width = 2)", 
          y = "Count of Patients",
-         caption = "Each bar represents a 2-attendances range e.g., 1-2, 3-4, ...\n up to the range of the data.\nGreen line shows the average attendances both AE Healthcare Service Users & Non-Users.") +
+         caption = "Each bar represents a 2-attendances range e.g., 1-2, 3-4, ...\nup to the range of the data.\nGreen line shows the average attendances both AE Healthcare Service Users & Non-Users.") +
     theme_minimal(base_size = 14, base_family = "Times") +
     theme(
       plot.title = element_text(face = "bold", size = 16),
@@ -186,8 +186,8 @@ all_mean_atts <- mean(all_ae_attendance_per_patient$n_att, na.rm = TRUE)
 
 # Save the plot
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE", "Plots",
-  "Mean_atts_hist_all-Raw.PNG"),
+  "OMOP Analysis", "Results", "SecondaryCareAnalysis" , "AE", "Plots",
+  "Mean_atts_hist_all-OMOP.PNG"),
   plot = all_atts_plot_hist,
   width = 10,
   height = 7,
@@ -215,10 +215,35 @@ ggsave(here::here(
 
 # Save the plot
 ggsave(here::here(
-  "CPRD Raw Analysis", "Results", "SecondaryCareAnalysis" , "AE", "Plots",
-  "Mean_appts_density_all-Raw.PNG"),
+  "OMOP Analysis", "Results", "SecondaryCareAnalysis" , "AE", "Plots",
+  "Mean_appts_density_all-OMOP.PNG"),
   plot = all_atts_plot_density,
   width = 7.5,
   height = 6,
   bg = "white"
 )
+
+# Costs
+# Since in OMOP investigation and procedures are not mapped, hence they are not
+# available in the data.
+# Therefore to solve this, the cost for all patients will be weighted 
+# (weighted_unit_cost = total costs/number of attendances), this will be same for
+# all patients
+
+ncc_costs_ae <- import(here("NHS_Collection_Costs_2024_2025.xlsx"), 
+                       sheet = "EM") |> 
+  clean_names() %>% 
+  mutate(
+    n_attendances = as.character(number_of_attendances) %>%
+      str_replace_all("\\*", "3") %>%
+      str_remove_all("[,]") %>%
+      as.numeric(),
+    cost = as.character(cost) %>%
+      str_remove_all("[£,]") %>%
+      as.numeric()
+  )
+
+(em_weighted_cost = round(sum(ncc_costs_ae$cost)/sum(ncc_costs_ae$n_attendances), 2))
+
+ae_attendance_data <- ae_attendance_data %>% 
+  mutate(unit_cost = if_else(user_status == "User", em_weighted_cost, 0))
