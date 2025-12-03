@@ -5,7 +5,7 @@ date: "2025-10-07"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
 
 ```{r echo=FALSE}
@@ -34,6 +34,7 @@ For cost data, missing or suppressed values in the national average unit cost fi
 In the Admitted Patient Care (APC) data, missing Procode3 values required for grouper classification were replaced with valid codes drawn from a validated random sample. Validation was performed by checking 20 randomly selected patient records to confirm that the resulting HRG assignments were unchanged.
 For Accident & Emergency (AE) data, diagnosis codes misclassified under the treatment variable (Treatment_01)—including C109, D101, D102, D105, E101, E104, E105, E110, U212, Y981, Z411, Z413, and Z421—were identified and removed. AE attendances missing both main investigation and main treatment fields were excluded from the cost analysis.
 
+## Patients Comparison between Source and OMOP
 
 ```{r}
 contigency_table_for_pts_rp <- import(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "OP_contigency_table_for_pts.xlsx")) %>% 
@@ -74,6 +75,36 @@ contigency_table_for_pts_rp %>%
   sub_missing(columns = everything(), missing_text = "")
 ```
 
+## Healthcare Service Users Comparison between Source and OMOP
+
+```{r}
+contigency_table_for_user_status_rp <- import(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "contigency_table_for_user_status.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>%   mutate(Total = as.numeric(Total))
+
+contigency_table_for_user_status_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Contigency Table for Healthcare Service Users**"),
+    subtitle = md("*Comparison between OMOP and Source*")
+  ) %>%
+  # opt_all_caps() %>% 
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  # Add spanner headers for CPRD Raw and OMOP Analysis
+  tab_spanner(
+    label = "OMOP",
+    columns = c("Non-User", "Not in OMOP", "User")
+  ) %>%
+   opt_stylize(style = 1) %>% 
+  fmt_number(
+    columns = c("Non-User", "Not in OMOP", "User", "Total"),
+    sep_mark = ",",
+    decimals = 0
+  ) %>% 
+  sub_missing(columns = everything(), missing_text = "")
+```
 
 
 # HRCU
@@ -803,23 +834,23 @@ overall_observed_visits_costs_users %>%
 #### Observed
 
 ```{r}
-source_yearly_all_patients_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
+source_yearly_all_patients_costs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_costs_SOURCE.xlsx")) %>% 
    filter(group == "All Patients & all encounters") %>% 
   mutate(Cohort = "SOURCE")
 
-omop_yearly_all_patients_enc_obs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
+omop_yearly_all_patients_costs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_costs_SOURCE.xlsx")) %>% 
    filter(group == "All Patients & all encounters") %>% 
   mutate(Cohort = "OMOP")
 
-yearly_all_patients_enc_obs <- rbind(source_yearly_all_patients_enc_obs,
-                                     omop_yearly_all_patients_enc_obs) %>% 
+yearly_all_patients_costs <- rbind(source_yearly_all_patients_costs,
+                                     omop_yearly_all_patients_costs) %>% 
   select(Cohort, everything()) %>% 
   select(!group)
 
-yearly_all_patients_enc_obs %>% 
+yearly_all_patients_costs %>% 
   gt() %>%
   tab_header(
-    title = md("**Yearly HES Outpatient Visits**"),
+    title = md("**Yearly HES Outpatient Visit Costs**"),
     subtitle = md("**All Patients**")
   ) %>%
   opt_all_caps() %>% 
@@ -841,7 +872,7 @@ yearly_all_patients_enc_obs %>%
     median = "Median",
     q3 = "Upper Quartile",
     n_exposed = "Number of Patients Exposed",
-    tot_encounters = "Total Encounters",
+    total_costs = "Total Costs",
     mean_all_patients = "Mean Number of Patients",
     se = "Standard Error",
     lower = "95% Lower CI",
@@ -851,24 +882,24 @@ yearly_all_patients_enc_obs %>%
 ```
 
 ```{r}
-source_yearly_users_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
+source_yearly_users_costs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_costs_SOURCE.xlsx")) %>% 
    filter(group == "Users & all encounters") %>% 
   mutate(Cohort = "SOURCE")
 
-omop_yearly_users_enc_obs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
+omop_yearly_users_costs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_costs_SOURCE.xlsx")) %>% 
    filter(group == "Users & all encounters") %>% 
   mutate(Cohort = "OMOP")
 
-yearly_users_enc_obs <- rbind(
-  source_yearly_users_enc_obs,
-  omop_yearly_users_enc_obs) %>% 
+yearly_users_enc_obs_costs <- rbind(
+  source_yearly_users_costs,
+  omop_yearly_users_costs) %>% 
   select(Cohort, everything()) %>% 
   select(!group)
 
-yearly_users_enc_obs %>% 
+yearly_users_enc_obs_costs %>% 
   gt() %>%
   tab_header(
-    title = md("**Yearly HES Outpatient Visits**"),
+    title = md("**Yearly HES Outpatient Visit Costs**"),
     subtitle = md("**Healthcare HES Outpatient Users**")
   ) %>%
   opt_all_caps() %>% 
@@ -890,7 +921,7 @@ yearly_users_enc_obs %>%
     median = "Median",
     q3 = "Upper Quartile",
     n_exposed = "Number of Patients Exposed",
-    tot_encounters = "Total Encounters",
+    total_costs = "Total Costs",
     mean_all_patients = "Mean Number of Patients",
     se = "Standard Error",
     lower = "95% Lower CI",
@@ -902,7 +933,7 @@ yearly_users_enc_obs %>%
 #### Bootstrap
 
 ```{r}
-source_yearly_users_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+source_yearly_users_costs_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
   filter(group == "Users & all encounters") %>%
   select(!group) %>% 
   rename(
@@ -921,7 +952,7 @@ source_yearly_users_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", 
   mutate(Cohort = "SOURCE")
   
 
-omop_yearly_users_all_enc_boot <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+omop_yearly_users_costs_boot <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
   filter(group == "Users & all encounters") %>%
   select(!group) %>%
   rename(
@@ -939,14 +970,14 @@ omop_yearly_users_all_enc_boot <- import(here("OMOP Analysis", "Results", "Secon
     ) %>% 
   mutate(Cohort = "OMOP")
 
-yearly_users_all_enc_boot <- rbind(source_yearly_users_all_enc_boot,
-                                   omop_yearly_users_all_enc_boot) %>% 
+yearly_users_all_costs_boot <- rbind(source_yearly_users_costs_boot,
+                                   omop_yearly_users_costs_boot) %>% 
   select(Cohort, everything())
 
-yearly_users_all_enc_boot %>% 
+yearly_users_all_costs_boot %>% 
   gt() %>%
   tab_header(
-    title = md("**Bootstrap Yearly HES Outpatient Visits**"),
+    title = md("**Bootstrap Yearly HES Outpatient Visit Costs**"),
     subtitle = md("**Healthcare HES Outpatient Users**")
   ) %>%
   opt_all_caps() %>% 
@@ -963,7 +994,7 @@ yearly_users_all_enc_boot %>%
 ```
 
 ```{r}
-source_yearly_all_patients_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+source_yearly_all_patients_costs_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
   filter(group == "All Patients & all encounters") %>%
   select(-group) %>% 
   rename(
@@ -981,7 +1012,7 @@ source_yearly_all_patients_all_enc_boot <- import(here("CPRD Raw Analysis", "Res
     ) %>% 
    mutate(Cohort = "SOURCE")
  
-omop_yearly_all_patients_all_enc_boot <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+omop_yearly_all_patients_costs_boot <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
   filter(group == "All Patients & all encounters") %>%
   select(-group) %>% 
   rename(
@@ -999,16 +1030,16 @@ omop_yearly_all_patients_all_enc_boot <- import(here("OMOP Analysis", "Results",
     ) %>% 
    mutate(Cohort = "OMOP")
 
-yearly_all_patients_all_enc_boot <- rbind(
-  source_yearly_all_patients_all_enc_boot,
-  omop_yearly_all_patients_all_enc_boot
+yearly_all_patients_costs_boot <- rbind(
+  source_yearly_all_patients_costs_boot,
+  omop_yearly_all_patients_costs_boot
 ) %>% 
   select(Cohort, everything())
 
-yearly_all_patients_all_enc_boot %>% 
+yearly_all_patients_costs_boot %>% 
   gt() %>%
   tab_header(
-    title = md("**Bootstrap Yearly HES Outpatient Visits**"),
+    title = md("**Bootstrap Yearly HES Outpatient Visit Costs**"),
     subtitle = md("**All Patients**")
   ) %>%
   opt_all_caps() %>% 
@@ -1038,7 +1069,7 @@ grid.raster(Mean_monthly_visit_costs_users)
 ```
 
 ```{r fig.cap="Mean Monthly Visit Costs for All Patients"}
-Mean_monthly_visit_costs_all <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots",  "boostratp_mean_costs_plot_all.PNG"))
+Mean_monthly_visit_costs_all <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots",  "bootstrap_mean_costs_plot_all.PNG"))
 grid.raster(Mean_monthly_visit_costs_all)
 ```
 
