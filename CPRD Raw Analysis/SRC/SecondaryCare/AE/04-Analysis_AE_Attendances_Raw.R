@@ -76,7 +76,7 @@ ae_attandances_list <- list(
 
 # Write to an Excel file
 write_xlsx(ae_attandances_list, here::here("CPRD Raw Analysis", "Results",
-                                  "SecondaryCareAnalysis", "AE","Output_AE_attdances_Raw.xlsx"))
+                                  "SecondaryCareAnalysis", "AE", "Overall", "Output_AE_attdances_Raw.xlsx"))
 # Plot ----
 library(ggplot2)
 
