@@ -342,7 +342,7 @@ overall_users_costs_df <- users_op_costs_df |>
 # Summary statistics
 summary_users_appts_costs <- overall_users_costs_df %>%
   summarise(
-    n_exposed    = sum(total_patient_cost),
+    n            = n(),
     mean         = mean(total_patient_cost, na.rm = T),
     min          = min(total_patient_cost, na.rm = T),
     max          = max(total_patient_cost, na.rm = T),
@@ -350,9 +350,9 @@ summary_users_appts_costs <- overall_users_costs_df %>%
     median       = quantile(total_patient_cost, 0.5, na.rm = T),
     lower_q      = quantile(total_patient_cost, 0.25, na.rm = T),
     upper_q      = quantile(total_patient_cost, 0.75, na.rm = T),
-    se                 = sd / sqrt(n_exposed),
-    ci_lower           = mean - qt(0.975, df = n_exposed - 1) * se,
-    ci_upper           = mean + qt(0.975, df = n_exposed - 1) * se
+    se                 = sd / sqrt(n),
+    ci_lower           = mean - qt(0.975, df = n - 1) * se,
+    ci_upper           = mean + qt(0.975, df = n - 1) * se
   ) %>%
   mutate(across(everything(), round, 2))
 
@@ -402,7 +402,7 @@ overall_all_costs_df <- op_costs_final_data_recoded_omop |>
 # Summary statistics
 summary_all_appts_costs <- overall_all_costs_df %>%
   summarise(
-    n_exposed   = sum(total_patient_cost),
+    n  =         n(),
     mean         = mean(total_patient_cost, na.rm = T),
     min          = min(total_patient_cost, na.rm = T),
     max          = max(total_patient_cost, na.rm = T),
@@ -410,9 +410,9 @@ summary_all_appts_costs <- overall_all_costs_df %>%
     median       = quantile(total_patient_cost, 0.5, na.rm = T),
     lower_q      = quantile(total_patient_cost, 0.25, na.rm = T),
     upper_q      = quantile(total_patient_cost, 0.75, na.rm = T),
-    se                 = sd / sqrt(n_exposed),
-    ci_lower           = mean - qt(0.975, df = n_exposed - 1) * se,
-    ci_upper           = mean + qt(0.975, df = n_exposed - 1) * se
+    se                 = sd / sqrt(n),
+    ci_lower           = mean - qt(0.975, df = n - 1) * se,
+    ci_upper           = mean + qt(0.975, df = n - 1) * se
   ) %>%
   mutate(across(everything(), round, 2))
 
