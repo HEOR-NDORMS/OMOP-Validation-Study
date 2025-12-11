@@ -2,8 +2,8 @@
 # 	Project name: Validation Study
 # 	Author: Njoki Njuki, Gianluca Fabiano
 #   Do file name: Secondary Analysis - AE: Monthly tables
-#   Date: 31.10.2025
-#   Last date edited: 31.10.2025
+#   Date: 11.12.2025
+#   Last date edited: 11.12.2025
 # **************************************************************************** #
 
 ## This script derives monthly summary statistics for both healthcare resource use (HCRU) and costs.
