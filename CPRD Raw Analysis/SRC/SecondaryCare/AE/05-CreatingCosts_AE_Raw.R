@@ -29,67 +29,48 @@ ae_hrg_costs_df <- cbind(ae_study_ids_df, ae_hrg_df) |>
 
 # Import the NHS cost collection 23/24 data
 costs_hrg_ae_df <- import(
-  "H:/Projects/Validation/HES HRG/NHS_Collection_Costs_2023_2024.xlsx",
+  "H:/Projects/Validation/HES HRG/NHS_Collection_Costs_2024_2025.xlsx",
   sheet = "EC"
 ) |> 
   clean_names() |> 
   rename("em_hrg" = "currency_code")
 
 ## Select variables of interest ----
-# Step 1: Clean and flag rows with '*'
+## Step 1: Clean and flag rows with '*' ----
 costs_hrg_clean_ae <- costs_hrg_ae_df |> 
   select(service_description, service_code, currency_description, em_hrg, 
          number_of_attendances, 
-         national_average_unit_cost, cost) %>%
+         national_average_unit_cost, cost) |>
   
   mutate(
     # Flag rows where the cost field contains '*'
-    has_star_cost = grepl("\\*", as.character(national_average_unit_cost)),
-    # Remove non-numeric characters and convert to numeric
-    national_average_unit_cost = as.numeric(gsub("[^0-9\\.]", "", as.character(national_average_unit_cost))),
-    number_of_attendances = as.numeric(gsub("[^0-9\\.]", "", as.character(number_of_attendances)))
+    has_star_cost = grepl("\\*", as.character(number_of_attendances))
   )
 
 costs_hrg_clean_ae <- costs_hrg_clean_ae |> 
   mutate(
     # Replace * (indicating <5) with 3
-    number_of_attendances =
-      ifelse(has_star_cost & is.na(number_of_attendances), 3,
-             number_of_attendances),
-    # Replace missing unit costs with cost value where appropriate
-    national_average_unit_cost = ifelse(
-      is.na(national_average_unit_cost) & has_star_cost,
-      cost,
-      national_average_unit_cost
-    )
+    number_of_attendances = ifelse(has_star_cost, 3,
+                                   number_of_attendances),
+    number_of_attendances = as.numeric(number_of_attendances)
   )
 
-# Step 2: Impute cost based on your logic
+## Step 2: Impute cost ----
 ae_costs_hrg_imputed <- costs_hrg_clean_ae |>
-  group_by(service_code, em_hrg) |>
+  group_by(em_hrg) |>
   summarise(
-    number_of_attendances = sum(number_of_attendances, na.rm = TRUE),
-    total_cost = sum(number_of_attendances * national_average_unit_cost, na.rm = TRUE),
-    unit_cost = total_cost / number_of_attendances,
-    .groups = "drop"
-  )
-
-
-# summarise to one cost per em_hrg (weighted by attendances)
-em_hrg_cost <- ae_costs_hrg_imputed %>%
-  group_by(em_hrg) %>%
-  summarise(
-    unit_cost_em = weighted.mean(unit_cost, number_of_attendances, na.rm = TRUE),
-    total_attendances = sum(number_of_attendances, na.rm = TRUE),
-    n_cost_rows = n(),
+    total_costs = sum(cost),
+    total_attendances = sum(number_of_attendances),
+    unit_cost = total_costs/total_attendances,
     .groups = "drop"
   )
 
 # join onto AE patient table
-ae_hrg_df_merged <- ae_hrg_costs_df %>%
-  left_join(em_hrg_cost, by = "em_hrg") %>%
-  mutate(user_status = "User") |> 
-  select(!c(row_no, total_attendances, n_cost_rows))
+ae_hrg_df_merged <- ae_hrg_costs_df |>
+  left_join(ae_costs_hrg_imputed, by = "em_hrg") |>
+  mutate(user_status = "User") |>
+  select(!c(row_no, total_attendances, total_costs))
+
 
 # diagnostic
 ae_hrg_df_merged %>% 
@@ -127,7 +108,7 @@ costs_data_hrg_ae_non_users_df <- read_csv(
          treat_02, treat_03, treat_04, treat_05, treat_06, treat_07, treat_08,
          treat_09, treat_10, treat_11, treat_12, em_hrg, unit_cost_em, user_status)
 
-ae_costs_final_data <- rbind(ae_hrg_df_merged, costs_data_hrg_ae_non_users_df) 
+ae_costs_final_data_raw <- rbind(ae_hrg_df_merged, costs_data_hrg_ae_non_users_df) 
 
 
 ## Summary Stats ----
