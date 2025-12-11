@@ -132,6 +132,33 @@ grid.arrange(Mean_visits_overall_Raw_g_with_title, Mean_visits_overall_OMOP_g_wi
 
 ```
 
+```{r fig.height=6, fig.width=6}
+top_50_specialty_plot <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", "top_50_combined_specialty_plot.PNG")) 
+grid.raster(top_50_specialty_plot)
+```
+
+
+
+```{r fig.cap="Treatment Specialty Counts by Data Source"}
+# Read images 
+specialty_plot_Raw <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", "source_specialty_plot.PNG")) 
+
+specialty_plot_OMOP <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis","Comparison", "OP", "Plots", "omop_specialty_plot.PNG")) 
+
+# Wrap them in rasterGrob 
+specialty_plot_Raw_g <- rasterGrob(specialty_plot_Raw, interpolate = TRUE) 
+specialty_plot_OMOP_g <- rasterGrob(specialty_plot_OMOP, interpolate = TRUE) 
+
+# Add titles with arrangeGrob 
+
+specialty_plot_Raw_g_with_title <- arrangeGrob(specialty_plot_Raw_g, top = textGrob("Source", gp = gpar(fontsize = 14, fontface = "bold")))
+specialty_plot_OMOP_g_with_title <- arrangeGrob(specialty_plot_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 14, fontface = "bold")))
+
+grid.arrange(specialty_plot_Raw_g_with_title, specialty_plot_OMOP_g_with_title, ncol = 2)
+
+```
+
+
 
 #### Observed
 
@@ -792,8 +819,7 @@ omop_overall_costs_observed_users <- import(here("OMOP Analysis", "Results", "Se
   mutate(`Patient Category` = "Users & all encounters") %>% 
   select(!`Patient Category`) %>% 
   mutate(`Data Source` = "OMOP") %>% 
-  select(`Data Source`, everything())%>% 
-  rename(n = n_exposed)
+  select(`Data Source`, everything())
 
 
 overall_observed_visits_costs_users <- rbind(source_overall_costs_observed_users, 
@@ -1197,5 +1223,131 @@ monthly_users_all_enc_boot_costs %>%
   opt_stylize(style = 2)
 
 
+
+```
+
+## Accident & Emergency {.tabset}
+
+### Overall{.tabset}
+
+#### Plots
+
+```{r fig.cap="Distribution of the overall visits"}
+# Read images
+Mean_ae_visits_overall_Raw <- readPNG(here("CPRD Raw Analysis","Results", "SecondaryCareAnalysis", "AE", "Plots", "Mean_atts_hist_users-Raw.PNG"))
+Mean_ae_visits_overall_OMOP <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Plots",  "Mean_atts_hist_users-OMOP.PNG"))
+
+# Wrap them in rasterGrob
+Mean_ae_visits_overall_Raw_g <- rasterGrob(Mean_ae_visits_overall_Raw, interpolate = TRUE)
+Mean_ae_visits_overall_OMOP_g <- rasterGrob(Mean_ae_visits_overall_OMOP, interpolate = TRUE)
+
+# Add titles with arrangeGrob 
+Mean_ae_visits_overall_Raw_g_with_title <- arrangeGrob(Mean_ae_visits_overall_Raw_g, top = textGrob("Source", gp = gpar(fontsize = 14, fontface = "bold"))) 
+Mean_ae_visits_overall_OMOP_g_with_title <- arrangeGrob(Mean_ae_visits_overall_Raw_g, top = textGrob("OMOP", gp = gpar(fontsize = 14, fontface = "bold"))) 
+
+grid.arrange(Mean_ae_visits_overall_Raw_g_with_title, Mean_ae_visits_overall_OMOP_g_with_title, ncol = 2)
+```
+
+
+#### Observed
+
+```{r}
+source_overall_observed_users_ae <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_AE_attdances_Raw.xlsx"),
+                                  sheet = "users_overall_summary_atts") %>% 
+  mutate(`Patient Category` = "Users & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(`Data Source` = "Source") %>% 
+  select(`Data Source`, everything())
+
+omop_overall_observed_users_ae <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_AE_attendances_Raw.xlsx"),
+                                  sheet = "users_overall_summary_atts") %>% 
+  mutate(`Patient Category` = "Users & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(`Data Source` = "OMOP") %>% 
+  select(`Data Source`, everything())
+
+
+overall_observed_visits_users_ae <- rbind(
+  source_overall_observed_users_ae, 
+  omop_overall_observed_users_ae)
+
+overall_observed_visits_users_ae %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Overall HES Accident & Emergency Visits**"),
+    subtitle = md("**Healthcare HES Accident & Emergency Users**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    n = "Number of Patients",
+    mean = "Mean",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    median = "Median",
+    lower_q = "Lower Quartile",
+    upper_q = "Upper Quartile",
+    se = "Standard Error",
+    ci_lower = "95% CI Lower",
+    ci_upper = "95% CI Upper"
+  )
+```
+
+
+```{r}
+source_overall_observed_all_ae <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_AE_attdances_Raw.xlsx"),
+                                  sheet = "all_overall_summary_atts") %>% 
+  mutate(`Patient Category` = "All Patients & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(Cohort = "SOURCE") %>% 
+  select(Cohort, everything())
+
+omop_overall_observed_all_ae <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_AE_attendances_Raw.xlsx"),
+                                  sheet = "all_overall_summary_atts") %>% 
+  mutate(`Patient Category` = "All Patients & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(Cohort = "OMOP") %>% 
+  select(Cohort, everything())
+
+overall_observed_visits_all_ae <- rbind(
+  source_overall_observed_all_ae,
+  omop_overall_observed_all_ae)
+
+overall_observed_visits_all_ae %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Overall HES Accident & Emergency Visits**"),
+    subtitle = md("**All Patients**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    n = "Number of Patients",
+    mean = "Mean",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    median = "Median",
+    lower_q = "Lower Quartile",
+    upper_q = "Upper Quartile",
+    se = "Standard Error",
+    ci_lower = "95% CI Lower",
+    ci_upper = "95% CI Upper"
+  )
 
 ```
