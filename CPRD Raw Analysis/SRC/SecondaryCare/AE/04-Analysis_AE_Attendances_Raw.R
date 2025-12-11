@@ -7,7 +7,7 @@
 # ****************************************************************************** #
 
 # Starting with table_two_ae_raw from 03-Table2_AE_Raw.R ----
-ae_attendance_data <- table_two_ae_raw_recoded 
+ae_attendance_data <- table_two_ae_raw_final 
 
 # HRCU ----
 ## Users ----
@@ -108,11 +108,11 @@ users_mean_atts <- mean(users_ae_attendance_per_patient$n_att, na.rm = TRUE)
          caption = "Each bar represents a 2-attendances range e.g., 1-2, 3-4, ...\n up to the range of the data.\nRed line shows the average attendances per OP Healthcare Service User.") +
   theme_minimal(base_size = 14, base_family = "Times") +
   theme(
-    plot.title = element_text(face = "bold", size = 16),
-    plot.subtitle = element_text(size = 13),
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 16),
     axis.title = element_text(face = "bold"),
-    axis.text = element_text(size = 12),
-    plot.caption = element_text(size = 10, hjust = 0)
+    axis.text = element_text(size = 16),
+    plot.caption = element_text(size = 14, hjust = 0)
   )
 )
 
@@ -137,11 +137,11 @@ ggsave(here::here(
       y = "Density") +
     theme_minimal(base_size = 14, base_family = "Times") +
     theme(
-      plot.title = element_text(face = "bold", size = 16),
-      plot.subtitle = element_text(size = 13),
+      plot.title = element_text(face = "bold", size = 18),
+      plot.subtitle = element_text(size = 16),
       axis.title = element_text(face = "bold"),
-      axis.text = element_text(size = 12),
-      plot.caption = element_text(size = 10, hjust = 0)
+      axis.text = element_text(size = 16),
+      plot.caption = element_text(size = 14, hjust = 0)
     )
 )
 
@@ -175,11 +175,11 @@ all_mean_atts <- mean(all_ae_attendance_per_patient$n_att, na.rm = TRUE)
          caption = "Each bar represents a 2-attendances range e.g., 1-2, 3-4, ...\n up to the range of the data.\nGreen line shows the average attendances both AE Healthcare Service Users & Non-Users.") +
   theme_minimal(base_size = 14, base_family = "Times") +
   theme(
-    plot.title = element_text(face = "bold", size = 16),
-    plot.subtitle = element_text(size = 13),
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 16),
     axis.title = element_text(face = "bold"),
-    axis.text = element_text(size = 12),
-    plot.caption = element_text(size = 10, hjust = 0)
+    axis.text = element_text(size = 16),
+    plot.caption = element_text(size = 14, hjust = 0)
   )
 )
 
@@ -204,11 +204,11 @@ ggsave(here::here(
       y = "Density") +
     theme_minimal(base_size = 14, base_family = "Times") +
     theme(
-      plot.title = element_text(face = "bold", size = 16),
-      plot.subtitle = element_text(size = 13),
+      plot.title = element_text(face = "bold", size = 18),
+      plot.subtitle = element_text(size = 16),
       axis.title = element_text(face = "bold"),
-      axis.text = element_text(size = 12),
-      plot.caption = element_text(size = 10, hjust = 0)
+      axis.text = element_text(size = 16),
+      plot.caption = element_text(size = 14, hjust = 0)
     )
 )
 
@@ -231,19 +231,13 @@ costs_data_hrg_ae_users <- ae_attendance_data %>%
 
 costs_data_hrg_ae_users <- left_join(costs_data_hrg_ae_users, validation_old %>% select(patid, yob), by = "patid") %>% 
   mutate(age = as.numeric(format(arrivaldate, "%Y")) - yob) %>% 
-  mutate(aepatientgroup = NA_character_,
-         inv_02 = NA_character_, inv_03  = NA_character_, inv_04 = NA_character_,
-         inv_05 = NA_character_,inv_06 = NA_character_,inv_07 = NA_character_,
-         inv_08 = NA_character_,inv_09 = NA_character_,inv_10 = NA_character_,
-         inv_11 = NA_character_,inv_12 = NA_character_,
-         treat_02 = NA_character_, treat_03 = NA_character_, 
-         treat_04 = NA_character_, treat_05 = NA_character_,
-         treat_06 = NA_character_, treat_07 = NA_character_,
-         treat_08 = NA_character_, treat_09 = NA_character_,
-         treat_10 = NA_character_, treat_11 = NA_character_,
-         treat_12 = NA_character_) %>% 
-  rename(inv_01 = invest_clean,
-         treat_01 = treat_clean)
+  mutate(aepatientgroup = NA_character_) %>% 
+  rename(
+    inv_01 = invest_01, inv_02 = invest_02, inv_03  = invest_03, 
+    inv_04 = invest_04, inv_05 = invest_05, inv_06 = invest_06,
+    inv_07 = invest_07, inv_08 = invest_08, inv_09 = invest_09,
+    inv_10 = invest_10, inv_11 = invest_11, inv_12 = invest_12) %>% 
+  arrange(patid)
 
 # Select the variables required
 costs_data_hrg_ae_users_min <- costs_data_hrg_ae_users %>% 
