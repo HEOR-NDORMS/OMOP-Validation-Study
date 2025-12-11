@@ -30,7 +30,7 @@ ae_hrg_costs_df <- cbind(ae_study_ids_df, ae_hrg_df) |>
 # Import the NHS cost collection 23/24 data
 costs_hrg_ae_df <- import(
   "H:/Projects/Validation/HES HRG/NHS_Collection_Costs_2024_2025.xlsx",
-  sheet = "EC"
+  sheet = "EM"
 ) |> 
   clean_names() |> 
   rename("em_hrg" = "currency_code")
@@ -76,8 +76,8 @@ ae_hrg_df_merged <- ae_hrg_costs_df |>
 ae_hrg_df_merged %>% 
   summarise(
     total = n(),
-    missing_costs = sum(is.na(unit_cost_em)),
-    pct_missing = mean(is.na(unit_cost_em))*100
+    missing_costs = sum(is.na(unit_cost)),
+    pct_missing = mean(is.na(unit_cost))*100
   )
 
 
@@ -101,34 +101,74 @@ costs_data_hrg_ae_non_users_df <- read_csv(
     treat_07 = NA_character_, treat_08 = NA_character_, treat_09 = NA_character_,
     treat_10 = NA_character_, treat_11 = NA_character_, treat_12 = NA_character_,
     em_hrg = NA_character_,
-    unit_cost_em = NA_integer_
+    unit_cost = 0
     ) |> 
   select(patid, age, aepatientgroup, inv_01, inv_02, inv_03, inv_04, inv_05,
          inv_06, inv_07, inv_08, inv_09, inv_10, inv_11, inv_12, treat_01,
          treat_02, treat_03, treat_04, treat_05, treat_06, treat_07, treat_08,
-         treat_09, treat_10, treat_11, treat_12, em_hrg, unit_cost_em, user_status)
+         treat_09, treat_10, treat_11, treat_12, em_hrg, unit_cost, user_status)
 
 ae_costs_final_data_raw <- rbind(ae_hrg_df_merged, costs_data_hrg_ae_non_users_df) 
 
 
 ## Summary Stats ----
-users_summary_costs_stats_ae <- ae_costs_final_data %>% 
-  filter(user_status == "User") %>%
-  # drop_na(unit_cost_em) |> 
+users_summary_costs_ae <- ae_costs_final_data_raw %>% 
+  filter(user_status == "User")
+
+overall_users_costs_df_ae_raw <- users_summary_costs_ae |> 
+  group_by(patid) %>%                     # group data per patient
+  summarise(total_patient_cost = sum(unit_cost)) %>%   # derive total number of appointments by picking max value of apptorder
+  ungroup()
+  
+  
+users_summary_costs_stats_ae_raw <- overall_users_costs_df_ae_raw |>   
   summarise(
     n_attendances = n(),
-    n_patients = n_distinct(patid),
-    mean_attendance_costs = mean(unit_cost_em, na.rm = TRUE),
-    min_attendance_costs = min(unit_cost_em, na.rm = TRUE),
-    median_attendance_costs = median(unit_cost_em, na.rm = TRUE),
-    max_attendance_costs = max(unit_cost_em, na.rm = TRUE),
-    sd_attendance_costs = sd(unit_cost_em, na.rm = TRUE),
-    q1_attendance_costs = quantile(unit_cost_em, probs = 0.25, na.rm = TRUE),
-    q3_attendance_costs = quantile(unit_cost_em, probs = 0.75, na.rm = TRUE),
+    mean_attendance_costs = mean(total_patient_cost, na.rm = TRUE),
+    min_attendance_costs = min(total_patient_cost, na.rm = TRUE),
+    median_attendance_costs = median(total_patient_cost, na.rm = TRUE),
+    max_attendance_costs = max(total_patient_cost, na.rm = TRUE),
+    sd_attendance_costs = sd(total_patient_cost, na.rm = TRUE),
+    q1_attendance_costs = quantile(total_patient_cost, probs = 0.25, na.rm = TRUE),
+    q3_attendance_costs = quantile(total_patient_cost, probs = 0.75, na.rm = TRUE),
     se               = sd_attendance_costs / sqrt(n_attendances),
     ci_lower         = mean_attendance_costs - qt(0.975, df = n_attendances - 1) * se,
     ci_upper         = mean_attendance_costs + qt(0.975, df = n_attendances - 1) * se,
     .groups = "drop"
   ) |> 
   mutate(across(everything(), round, 2))
-rio::export(users_summary_costs_stats_ae, here("Results", "ae", "Table2","summary_attendance_costs_stats.xlsx"))
+
+overall_all_costs_df_ae_raw <- ae_costs_final_data_raw |> 
+  group_by(patid) %>%                     # group data per patient
+  summarise(total_patient_cost = sum(unit_cost)) %>%   # derive total number of appointments by picking max value of apptorder
+  ungroup()
+
+all_pts_summary_costs_stats_ae_raw <- overall_all_costs_df_ae_raw %>% 
+  summarise(
+    n_attendances = n(),
+    mean_attendance_costs = mean(total_patient_cost, na.rm = TRUE),
+    min_attendance_costs = min(total_patient_cost, na.rm = TRUE),
+    median_attendance_costs = median(total_patient_cost, na.rm = TRUE),
+    max_attendance_costs = max(total_patient_cost, na.rm = TRUE),
+    sd_attendance_costs = sd(total_patient_cost, na.rm = TRUE),
+    q1_attendance_costs = quantile(total_patient_cost, probs = 0.25, na.rm = TRUE),
+    q3_attendance_costs = quantile(total_patient_cost, probs = 0.75, na.rm = TRUE),
+    se               = sd_attendance_costs / sqrt(n_attendances),
+    ci_lower         = mean_attendance_costs - qt(0.975, df = n_attendances - 1) * se,
+    ci_upper         = mean_attendance_costs + qt(0.975, df = n_attendances - 1) * se,
+    .groups = "drop"
+  ) |> 
+  mutate(across(everything(), round, 2))
+
+# Export the file
+library(writexl)
+
+ae_costs_list <- list(
+  summary_users_atts_costs = users_summary_costs_stats_ae_raw,
+  summary_all_atts_costs = all_pts_summary_costs_stats_ae_raw
+)
+
+# Write to an Excel file
+write_xlsx(ae_costs_list, here::here("CPRD Raw Analysis", "Results",
+                                  "SecondaryCareAnalysis", "AE", "Output_Costs_Raw.xlsx"))
+
