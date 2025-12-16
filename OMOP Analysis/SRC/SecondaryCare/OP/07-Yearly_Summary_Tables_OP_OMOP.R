@@ -27,6 +27,7 @@
 library(dplyr)
 library(tidyr)
 library(lubridate)
+library(rio)
 
 # --- Visits ------
 
@@ -311,6 +312,7 @@ bootstrap_yearly_summary <- function(data, year_var = "year_after_index", value_
   bind_rows(results)
 }
 
+library(boot)
 
 ## Bootstrap on years 
 yearly_bootstrap_all_patients_all_encounters_all_years <- bootstrap_yearly_summary(final_long_df_encounters_all_patients_all_encounters_all_years)
@@ -623,6 +625,7 @@ combined_costs_bootstrap_summary_yearly <- bind_rows(
   select(group, everything())
 
 # Export ----
+library(writexl)
 
 write_xlsx(combined_summary_encounters_yearly, 
            here::here("OMOP Analysis", "Results", "SecondaryCareAnalysis", 
