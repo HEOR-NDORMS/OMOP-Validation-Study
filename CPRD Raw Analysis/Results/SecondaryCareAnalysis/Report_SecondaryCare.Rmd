@@ -1807,7 +1807,8 @@ ae_yearly_all_patients_costs <- rbind(
   ae_source_yearly_all_patients_costs,
   ae_omop_yearly_all_patients_costs) %>% 
   select(Cohort, everything()) %>% 
-  select(!group)
+  select(!group) %>% 
+  arrange(year_after_index)
 
 ae_yearly_all_patients_costs %>% 
   gt() %>%
@@ -1856,7 +1857,8 @@ ae_yearly_users_enc_obs_costs <- rbind(
   source_yearly_users_costs,
   omop_yearly_users_costs) %>% 
   select(Cohort, everything()) %>% 
-  select(!group)
+  select(!group)%>% 
+  arrange(year_after_index)
 
 ae_yearly_users_enc_obs_costs %>% 
   gt() %>%
