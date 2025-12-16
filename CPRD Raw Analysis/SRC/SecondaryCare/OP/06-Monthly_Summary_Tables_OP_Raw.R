@@ -590,7 +590,7 @@ op_costs_final_data_recoded_raw <- op_costs_final_data_recoded_raw |>
 
 appt_data_raw <- full_join(appt_data_raw |> group_by(patid) |> 
                              mutate(row_id = row_number()) |> ungroup(), 
-                           op_costs_final_data_recoded_raw <- op_costs_final_data_recoded_raw |> 
+                           op_costs_final_data_recoded_raw |> 
                                select(patid, unit_cost) |> 
                                group_by(patid) |> mutate(row_id = row_number()) |> ungroup(),
                              by = c("patid", "row_id")) 
