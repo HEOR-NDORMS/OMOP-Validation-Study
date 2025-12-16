@@ -247,3 +247,7 @@ ncc_costs_ae <- import(here("NHS_Collection_Costs_2024_2025.xlsx"),
 
 ae_attendance_data <- ae_attendance_data %>% 
   mutate(unit_cost = if_else(user_status == "User", em_weighted_cost, 0))
+
+export(ae_attendance_data, 
+       here("OMOP Analysis", "Results", "SecondaryCareAnalysis" , "AE",
+            "ae_attendance_data_omop.csv"))

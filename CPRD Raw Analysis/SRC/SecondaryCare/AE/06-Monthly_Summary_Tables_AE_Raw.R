@@ -629,7 +629,7 @@ write_xlsx(combined_encounters_bootstrap_summary_monthly_raw,
 ae_costs_final_data_raw <- ae_costs_final_data_raw |> 
   arrange(patid)
 ae_costs_final_data_raw_min <- ae_costs_final_data_raw |> 
-  select(unit_cost_em)
+  select(unit_cost)
 
 ae_attendance_data_raw <- cbind(ae_attendance_data_raw,
                                 ae_costs_final_data_raw_min)
@@ -663,16 +663,6 @@ cohort_months_raw <- cohort_table_raw %>%
 # --- a) All patients & all encounters -----
 
 # Filter encounters to full months only
-ae_attendance_data_raw <- import("H:/Projects/Validation/Data/ae_attendance_data_raw.csv") |> 
-  arrange(patid)
-op_costs_final_data_recoded <- op_costs_final_data_recoded |> 
-  arrange(patid)
-op_costs_final_data_recoded_min <- op_costs_final_data_recoded |> 
-  select(unit_cost_em)
-
-ae_attendance_data_raw <- cbind(ae_attendance_data_raw, 
-                                       op_costs_final_data_recoded_min)
-
 merged_matrix_costs_raw <- ae_attendance_data_raw %>%
   mutate(
     index_date = ymd(index_date),
@@ -797,7 +787,7 @@ monthly_cost_summary_raw <- ae_attendance_data_raw %>%
   filter(month_after_index <= max_month_exposed) %>%
   group_by(patid, month_after_index) %>%
   summarise(
-    total_patient_cost = sum(unit_cost_em, na.rm = TRUE),
+    total_patient_cost = sum(unit_cost, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
@@ -1011,7 +1001,7 @@ monthly_cost_summary_raw <- ae_attendance_data_raw %>%
   left_join(cohort_months_raw_all_months, by = "patid") %>%
   filter(month_after_index <= max_month_exposed) %>%
   group_by(patid, month_after_index) %>%
-  summarise(total_patient_cost = sum(unit_cost_em, na.rm = TRUE), .groups = "drop") %>%
+  summarise(total_patient_cost = sum(unit_cost, na.rm = TRUE), .groups = "drop") %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
   select(patid, month_col, total_patient_cost)
 
