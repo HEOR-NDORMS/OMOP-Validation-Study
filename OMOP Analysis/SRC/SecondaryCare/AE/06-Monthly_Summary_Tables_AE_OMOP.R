@@ -35,11 +35,11 @@ library(boot)
 
 cohort_table_omop <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
 ae_attendance_data_omop <- import("H:/Projects/Validation/Data/ae_attendance_data_omop.csv") |> 
-  arrange(patid)
+  arrange(subject_id)
 
 ## All patients & full months ----
 # Preparation 
-n_all_pts <- n_distinct(cohort_table_omop$patid)
+n_all_pts <- n_distinct(cohort_table_omop$subject_id)
 
 # Create 24-month exposure matrix
 cohort_grid_omop <- cohort_table_omop %>%
@@ -51,7 +51,7 @@ cohort_grid_omop <- cohort_table_omop %>%
     month_col = paste0("month_", month_vector + 1),
     value = ifelse(month_vector < months_exposed, 0, NA_real_)  # NA for unexposed months
   ) %>%
-  select(patid, month_col, value) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 # Compute calendar months with full exposure (i.e., dropping the final month if the patient was not exposed in full)
@@ -61,7 +61,7 @@ cohort_months_omop <- cohort_table_omop %>%
     follow_up_end = ymd(follow_up_end),
     max_month_exposed = interval(index_date, follow_up_end) %/% months(1)
   ) %>%
-  select(patid, max_month_exposed)
+  select(subject_id, max_month_exposed)
 
 # --- a) All patients & all encounters -----
 
@@ -69,15 +69,15 @@ cohort_months_omop <- cohort_table_omop %>%
 monthly_encounters_summary_omop <- ae_attendance_data_omop %>%
   mutate(
     index_date = ymd(index_date),
-    arrivaldate = ymd(arrivaldate),
-    month_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 30.44) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_omop, by = "patid") %>%
+  left_join(cohort_months_omop, by = "subject_id") %>%
   filter(month_after_index <= max_month_exposed) %>%  # only full months
-  group_by(patid, month_after_index) %>%
+  group_by(subject_id, month_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
-  select(patid, month_col, total_encounters)
+  select(subject_id, month_col, total_encounters)
 
 # Reshape to wide format: encounters per patient-month
 observed_visit_matrix_omop <- monthly_encounters_summary_omop %>%
@@ -87,7 +87,7 @@ observed_visit_matrix_omop <- monthly_encounters_summary_omop %>%
 month_cols <- grep("^month_", names(cohort_grid_omop), value = TRUE)
 
 merged_matrix_encounters_omop <- cohort_grid_omop %>%
-  left_join(observed_visit_matrix_omop, by = "patid", suffix = c("_exp", "_visit"))
+  left_join(observed_visit_matrix_omop, by = "subject_id", suffix = c("_exp", "_visit"))
 
 # Overwrite exposed months with visit counts
 for (col in month_cols) {
@@ -102,7 +102,7 @@ for (col in month_cols) {
 }
 
 final_matrix_encounters_omop <- merged_matrix_encounters_omop %>%
-  select(patid, all_of(month_cols))
+  select(subject_id, all_of(month_cols))
 
 final_long_df_encounters_all_patients_all_encounters_omop <- final_matrix_encounters_omop %>%
   pivot_longer(
@@ -144,15 +144,15 @@ observed_visit_summary_all_patients_all_encounters <- final_long_df_encounters_a
 #   filter(is_clinically_relevant == 1) %>% # only relevant encounters
 #   mutate(
 #     index_date = ymd(index_date),
-#     arrivaldate = ymd(arrivaldate),
-#     month_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 30.44) + 1
+#     visit_detail_start_date = ymd(visit_detail_start_date),
+#     month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
 #   ) %>%
-#   left_join(cohort_months_omop, by = "patid") %>%
+#   left_join(cohort_months_omop, by = "subject_id") %>%
 #   filter(month_after_index <= max_month_exposed) %>%  # only full months
-#   group_by(patid, month_after_index) %>%
+#   group_by(subject_id, month_after_index) %>%
 #   summarise(total_encounters = n(), .groups = "drop") %>%
 #   mutate(month_col = paste0("month_", month_after_index)) %>%
-#   select(patid, month_col, total_encounters)
+#   select(subject_id, month_col, total_encounters)
 # 
 # # Reshape to wide format: encounters per patient-month
 # 
@@ -164,7 +164,7 @@ observed_visit_summary_all_patients_all_encounters <- final_long_df_encounters_a
 # month_cols <- grep("^month_", names(cohort_grid_omop), value = TRUE)
 # 
 # merged_matrix_encounters_omop <- cohort_grid_omop %>%
-#   left_join(observed_visit_matrix_omop, by = "patid", suffix = c("_exp", "_visit"))
+#   left_join(observed_visit_matrix_omop, by = "subject_id", suffix = c("_exp", "_visit"))
 # 
 # # Overwrite exposed months with visit counts
 # for (col in month_cols) {
@@ -179,7 +179,7 @@ observed_visit_summary_all_patients_all_encounters <- final_long_df_encounters_a
 # }
 # 
 # final_matrix_encounters_omop <- merged_matrix_encounters_omop %>%
-#   select(patid, all_of(month_cols))
+#   select(subject_id, all_of(month_cols))
 # 
 # final_long_df_encounters_all_patients_relev_encounters <- final_matrix_encounters_omop %>%
 #   pivot_longer(
@@ -218,9 +218,9 @@ observed_visit_summary_all_patients_all_encounters <- final_long_df_encounters_a
 # Preparation
 
 cohort_table_omop_users <- ae_attendance_data_omop %>% filter(user_status== "User") %>% 
-  distinct(patid, index_date, follow_up_end)
+  distinct(subject_id, index_date, follow_up_end)
 
-(n_users <- n_distinct(cohort_table_omop_users$patid))
+(n_users <- n_distinct(cohort_table_omop_users$subject_id))
 
 # Create 24-month exposure matrix
 cohort_grid_omop <- cohort_table_omop_users %>%
@@ -232,7 +232,7 @@ cohort_grid_omop <- cohort_table_omop_users %>%
     month_col = paste0("month_", month_vector + 1),
     value = ifelse(month_vector < months_exposed, 0, NA_real_)  # NA for unexposed months
   ) %>%
-  select(patid, month_col, value) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 # Compute calendar months with full exposure (i.e., dropping the final month if the patient was not exposed in full)
@@ -242,7 +242,7 @@ cohort_months_omop <- cohort_table_omop_users %>%
     follow_up_end = ymd(follow_up_end),
     max_month_exposed = interval(index_date, follow_up_end) %/% months(1)
   ) %>%
-  select(patid, max_month_exposed)
+  select(subject_id, max_month_exposed)
 
 
 # --- a) All users & all encounters ----
@@ -251,15 +251,15 @@ cohort_months_omop <- cohort_table_omop_users %>%
 monthly_encounters_summary_omop <- ae_attendance_data_omop %>%
   mutate(
     index_date = ymd(index_date),
-    arrivaldate = ymd(arrivaldate),
-    month_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 30.44) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_omop, by = "patid") %>%
+  left_join(cohort_months_omop, by = "subject_id") %>%
   filter(month_after_index <= max_month_exposed) %>%  # only full months
-  group_by(patid, month_after_index) %>%
+  group_by(subject_id, month_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
-  select(patid, month_col, total_encounters)
+  select(subject_id, month_col, total_encounters)
 
 # Reshape to wide format: encounters per patient-month
 observed_visit_matrix_omop <- monthly_encounters_summary_omop %>%
@@ -269,7 +269,7 @@ observed_visit_matrix_omop <- monthly_encounters_summary_omop %>%
 month_cols <- grep("^month_", names(cohort_grid_omop), value = TRUE)
 
 merged_matrix_encounters_omop <- cohort_grid_omop %>%
-  left_join(observed_visit_matrix_omop, by = "patid", suffix = c("_exp", "_visit"))
+  left_join(observed_visit_matrix_omop, by = "subject_id", suffix = c("_exp", "_visit"))
 
 # Overwrite exposed months with visit counts
 for (col in month_cols) {
@@ -284,7 +284,7 @@ for (col in month_cols) {
 }
 
 final_matrix_encounters_omop <- merged_matrix_encounters_omop %>%
-  select(patid, all_of(month_cols))
+  select(subject_id, all_of(month_cols))
 
 final_long_df_encounters_users_all_encounters_omop <- final_matrix_encounters_omop %>%
   pivot_longer(
@@ -320,7 +320,7 @@ observed_visit_summary_users_all_encounters_omop <- final_long_df_encounters_use
 
 ## All patients & all months (i.e., including partial months) ----
 # Preparation 
-n_all_pts <- n_distinct(cohort_table_omop$patid)
+n_all_pts <- n_distinct(cohort_table_omop$subject_id)
 
 # Create 24-month exposure matrix 
 cohort_grid_omop_all_months <- cohort_table_omop %>%
@@ -337,7 +337,7 @@ cohort_grid_omop_all_months <- cohort_table_omop %>%
     month_col = paste0("month_", month_vector + 1),
     value = ifelse(month_vector < total_months, 0, NA_real_)  # Include partial months
   ) %>%
-  select(patid, month_col, value) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 
@@ -348,7 +348,7 @@ cohort_months_omop_all_months <- cohort_table_omop %>%
     follow_up_end = ymd(follow_up_end),
     max_month_exposed = ceiling(as.numeric(difftime(follow_up_end, index_date, units = "days")) / 30.44)
   ) %>%
-  select(patid, max_month_exposed)
+  select(subject_id, max_month_exposed)
 
 
 # --- a) All patients & all encounters -----
@@ -358,15 +358,15 @@ cohort_months_omop_all_months <- cohort_table_omop %>%
 monthly_encounters_summary_omop <- ae_attendance_data_omop %>%
   mutate(
     index_date = ymd(index_date),
-    arrivaldate = ymd(arrivaldate),
-    month_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 30.44) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_omop_all_months, by = "patid") %>%
+  left_join(cohort_months_omop_all_months, by = "subject_id") %>%
   filter(month_after_index <= max_month_exposed) %>% 
-  group_by(patid, month_after_index) %>%
+  group_by(subject_id, month_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
-  select(patid, month_col, total_encounters)
+  select(subject_id, month_col, total_encounters)
 
 # Reshape to wide format: encounters per patient-month
 
@@ -378,7 +378,7 @@ observed_visit_matrix_omop <- monthly_encounters_summary_omop %>%
 month_cols <- grep("^month_", names(cohort_grid_omop_all_months), value = TRUE)
 
 merged_matrix_encounters_omop <- cohort_grid_omop_all_months %>%
-  left_join(observed_visit_matrix_omop, by = "patid", suffix = c("_exp", "_visit"))
+  left_join(observed_visit_matrix_omop, by = "subject_id", suffix = c("_exp", "_visit"))
 
 # Overwrite exposed months with visit counts
 for (col in month_cols) {
@@ -393,7 +393,7 @@ for (col in month_cols) {
 }
 
 final_matrix_encounters_omop <- merged_matrix_encounters_omop %>%
-  select(patid, all_of(month_cols))
+  select(subject_id, all_of(month_cols))
 
 final_long_df_encounters_all_patients_all_encounters_omop <- final_matrix_encounters_omop %>%
   pivot_longer(
@@ -432,9 +432,9 @@ observed_visit_summary_all_patients_all_encounters_all_months <- final_long_df_e
 
 # Preparation
 cohort_table_omop_users <- ae_attendance_data_omop %>% filter(user_status== "User") %>% 
-  distinct(patid, index_date, follow_up_end)
+  distinct(subject_id, index_date, follow_up_end)
 
-n_users <- n_distinct(cohort_table_omop_users$patid)
+n_users <- n_distinct(cohort_table_omop_users$subject_id)
 
 # Create 24-month exposure matrix
 cohort_grid_omop_all_months <- cohort_table_omop_users %>%
@@ -451,7 +451,7 @@ cohort_grid_omop_all_months <- cohort_table_omop_users %>%
     month_col = paste0("month_", month_vector + 1),
     value = ifelse(month_vector < total_months, 0, NA_real_)  # Include partial months
   ) %>%
-  select(patid, month_col, value) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 
@@ -462,7 +462,7 @@ cohort_months_omop_all_months <- cohort_table_omop_users %>%
     follow_up_end = ymd(follow_up_end),
     max_month_exposed = ceiling(as.numeric(difftime(follow_up_end, index_date, units = "days")) / 30.44)
   ) %>%
-  select(patid, max_month_exposed)
+  select(subject_id, max_month_exposed)
 
 
 # --- a) All users & all encounters ----
@@ -472,15 +472,15 @@ cohort_months_omop_all_months <- cohort_table_omop_users %>%
 monthly_encounters_summary_omop <- ae_attendance_data_omop %>%
   mutate(
     index_date = ymd(index_date),
-    arrivaldate = ymd(arrivaldate),
-    month_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 30.44) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_omop_all_months, by = "patid") %>%
+  left_join(cohort_months_omop_all_months, by = "subject_id") %>%
   filter(month_after_index <= max_month_exposed) %>%  
-  group_by(patid, month_after_index) %>%
+  group_by(subject_id, month_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
-  select(patid, month_col, total_encounters)
+  select(subject_id, month_col, total_encounters)
 
 # Reshape to wide format: encounters per patient-month
 
@@ -492,7 +492,7 @@ observed_visit_matrix_omop <- monthly_encounters_summary_omop %>%
 month_cols <- grep("^month_", names(cohort_grid_omop_all_months), value = TRUE)
 
 merged_matrix_encounters_omop <- cohort_grid_omop_all_months %>%
-  left_join(observed_visit_matrix_omop, by = "patid", suffix = c("_exp", "_visit"))
+  left_join(observed_visit_matrix_omop, by = "subject_id", suffix = c("_exp", "_visit"))
 
 # Overwrite exposed months with visit counts
 for (col in month_cols) {
@@ -507,7 +507,7 @@ for (col in month_cols) {
 }
 
 final_matrix_encounters_omop <- merged_matrix_encounters_omop %>%
-  select(patid, all_of(month_cols))
+  select(subject_id, all_of(month_cols))
 
 final_long_df_encounters_users_all_encounters_omop <- final_matrix_encounters_omop %>%
   pivot_longer(
@@ -625,7 +625,7 @@ write_xlsx(combined_encounters_bootstrap_summary_monthly_omop,
 
 ## All patients & full months ----
 # Preparation 
-n_all_pts <- n_distinct(cohort_table_omop$patid)
+n_all_pts <- n_distinct(cohort_table_omop$subject_id)
 
 # Create 24-month exposure matrix
 cohort_grid_omop <- cohort_table_omop %>%
@@ -637,7 +637,7 @@ cohort_grid_omop <- cohort_table_omop %>%
     month_col = paste0("month_", month_vector + 1),
     value = ifelse(month_vector < months_exposed, 0, NA_real_)  # NA for unexposed months
   ) %>%
-  select(patid, month_col, value) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 # Compute calendar months with full exposure (i.e., dropping the final month if the patient was not exposed in full)
@@ -648,7 +648,7 @@ cohort_months_omop <- cohort_table_omop %>%
     follow_up_end = ymd(follow_up_end),
     max_month_exposed = interval(index_date, follow_up_end) %/% months(1)
   ) %>%
-  select(patid, max_month_exposed)
+  select(subject_id, max_month_exposed)
 
 # --- a) All patients & all encounters -----
 
@@ -656,18 +656,18 @@ cohort_months_omop <- cohort_table_omop %>%
 merged_matrix_costs_omop <- ae_attendance_data_omop %>%
   mutate(
     index_date = ymd(index_date),
-    arrivaldate = ymd(arrivaldate),
-    month_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 30.44) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_omop, by = "patid") %>%
+  left_join(cohort_months_omop, by = "subject_id") %>%
   filter(month_after_index <= max_month_exposed) %>%
-  group_by(patid, month_after_index) %>%
+  group_by(subject_id, month_after_index) %>%
   summarise(
     total_patient_cost = sum(unit_cost, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
-  select(patid, month_col, total_patient_cost)
+  select(subject_id, month_col, total_patient_cost)
 
 
 # Reshape to wide format: encounters per patient-month
@@ -680,7 +680,7 @@ merged_matrix_costs_omop <- merged_matrix_costs_omop %>%
 month_cols <- grep("^month_", names(cohort_grid_omop), value = TRUE)
 
 merged_matrix_costs_omop <- cohort_grid_omop %>%
-  left_join(merged_matrix_costs_omop, by = "patid", suffix = c("_exp", "_cost"))
+  left_join(merged_matrix_costs_omop, by = "subject_id", suffix = c("_exp", "_cost"))
 
 # Overwrite exposed months with visit counts
 for (col in month_cols) {
@@ -695,7 +695,7 @@ for (col in month_cols) {
 }
 
 final_matrix_costs_omop <- merged_matrix_costs_omop %>%
-  select(patid, all_of(month_cols))
+  select(subject_id, all_of(month_cols))
 
 final_long_df_costs_all_patients_all_encounters_omop <- final_matrix_costs_omop %>%
   pivot_longer(
@@ -735,9 +735,9 @@ observed_cost_summary_all_patients_all_encounters_omop <- final_long_df_costs_al
 
 cohort_table_omop_users <- ae_attendance_data_omop %>% 
   filter(user_status== "User") %>% 
-  distinct(patid, index_date, follow_up_end)
+  distinct(subject_id, index_date, follow_up_end)
 
-n_users <- n_distinct(cohort_table_omop_users$patid)
+n_users <- n_distinct(cohort_table_omop_users$subject_id)
 
 # Create 24-month exposure matrix
 cohort_grid_omop <- cohort_table_omop_users %>%
@@ -749,7 +749,7 @@ cohort_grid_omop <- cohort_table_omop_users %>%
     month_col = paste0("month_", month_vector + 1),
     value = ifelse(month_vector < months_exposed, 0, NA_real_)  # NA for unexposed months
   ) %>%
-  select(patid, month_col, value) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 # Compute calendar months with full exposure (i.e., dropping the final month if the patient was not exposed in full)
@@ -760,7 +760,7 @@ cohort_months_omop <- cohort_table_omop_users %>%
     follow_up_end = ymd(follow_up_end),
     max_month_exposed = interval(index_date, follow_up_end) %/% months(1)
   ) %>%
-  select(patid, max_month_exposed)
+  select(subject_id, max_month_exposed)
 
 # --- a) All users & all encounters ----
 
@@ -770,18 +770,18 @@ monthly_cost_summary_omop <- ae_attendance_data_omop %>%
   filter(user_status == "User") %>%
   mutate(
     index_date = ymd(index_date),
-    arrivaldate = ymd(arrivaldate),
-    month_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 30.44) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_omop, by = "patid") %>%
+  left_join(cohort_months_omop, by = "subject_id") %>%
   filter(month_after_index <= max_month_exposed) %>%
-  group_by(patid, month_after_index) %>%
+  group_by(subject_id, month_after_index) %>%
   summarise(
-    total_patient_cost = sum(unit_cost_em, na.rm = TRUE),
+    total_patient_cost = sum(unit_cost, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
-  select(patid, month_col, total_patient_cost)
+  select(subject_id, month_col, total_patient_cost)
 
 # Reshape to wide format
 
@@ -793,7 +793,7 @@ observed_cost_matrix <- monthly_cost_summary_omop %>%
 month_cols <- grep("^month_", names(cohort_grid_omop), value = TRUE)
 
 merged_matrix_costs_omop <- cohort_grid_omop %>%
-  left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
+  left_join(observed_cost_matrix, by = "subject_id", suffix = c("_exp", "_cost"))
 
 # Overwrite exposed months with cost values
 for (col in month_cols) {
@@ -808,7 +808,7 @@ for (col in month_cols) {
 }
 
 final_matrix_costs_omop <- merged_matrix_costs_omop %>%
-  select(patid, all_of(month_cols))
+  select(subject_id, all_of(month_cols))
 
 final_long_df_costs_users_all_encounters_omop <- final_matrix_costs_omop %>%
   pivot_longer(
@@ -844,7 +844,7 @@ observed_cost_summary_users_all_encounters_omop <- final_long_df_costs_users_all
 
 # --- All patients & all months (including partial months) ----
 # Preparation 
-n_all_pts <- n_distinct(cohort_table_omop$patid)
+n_all_pts <- n_distinct(cohort_table_omop$subject_id)
 
 # Create 24-month exposure matrix 
 cohort_grid_omop_all_months <- cohort_table_omop %>%
@@ -860,7 +860,7 @@ cohort_grid_omop_all_months <- cohort_table_omop %>%
     month_col = paste0("month_", month_vector + 1),
     value = ifelse(month_vector < total_months, 0, NA_real_)  # Include partial months
   ) %>%
-  select(patid, month_col, value) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 # Compute calendar months including partial ones
@@ -870,22 +870,22 @@ cohort_months_omop_all_months <- cohort_table_omop %>%
     follow_up_end = ymd(follow_up_end),
     max_month_exposed = ceiling(as.numeric(difftime(follow_up_end, index_date, units = "days")) / 30.44)
   ) %>%
-  select(patid, max_month_exposed)
+  select(subject_id, max_month_exposed)
 
 # --- a) All patients & all encounters ----
 
 monthly_costs_summary <- ae_attendance_data_omop %>%
   mutate(
     index_date = ymd(index_date),
-    arrivaldate = ymd(arrivaldate),
-    month_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 30.44) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_omop_all_months, by = "patid") %>%
+  left_join(cohort_months_omop_all_months, by = "subject_id") %>%
   filter(month_after_index <= max_month_exposed) %>%
-  group_by(patid, month_after_index) %>%
+  group_by(subject_id, month_after_index) %>%
   summarise(total_patient_cost = sum(unit_cost, na.rm = TRUE), .groups = "drop") %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
-  select(patid, month_col, total_patient_cost)
+  select(subject_id, month_col, total_patient_cost)
 
 observed_cost_matrix <- monthly_costs_summary %>%
   pivot_wider(names_from = month_col, values_from = total_patient_cost)
@@ -893,7 +893,7 @@ observed_cost_matrix <- monthly_costs_summary %>%
 month_cols <- grep("^month_", names(cohort_grid_omop_all_months), value = TRUE)
 
 merged_matrix_costs_omop <- cohort_grid_omop_all_months %>%
-  left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
+  left_join(observed_cost_matrix, by = "subject_id", suffix = c("_exp", "_cost"))
 
 for (col in month_cols) {
   exp_col <- paste0(col, "_exp")
@@ -907,7 +907,7 @@ for (col in month_cols) {
 }
 
 final_matrix_costs_omop <- merged_matrix_costs_omop %>%
-  select(patid, all_of(month_cols))
+  select(subject_id, all_of(month_cols))
 
 final_long_df_costs_all_patients_all_encounters_omop <- final_matrix_costs_omop %>%
   pivot_longer(
@@ -943,9 +943,9 @@ observed_cost_summary_all_patients_all_encounters_all_months <- final_long_df_co
 # Preparation
 
 cohort_table_omop_users <- ae_attendance_data_omop %>% filter(user_status== "User") %>% 
-  distinct(patid, index_date, follow_up_end)
+  distinct(subject_id, index_date, follow_up_end)
 
-n_users <- n_distinct(cohort_table_omop_users$patid)
+n_users <- n_distinct(cohort_table_omop_users$subject_id)
 
 # Create 24-month exposure matrix
 
@@ -963,7 +963,7 @@ cohort_grid_omop_all_months <- cohort_table_omop_users %>%
     month_col = paste0("month_", month_vector + 1),
     value = ifelse(month_vector < total_months, 0, NA_real_)  # Include partial months
   ) %>%
-  select(patid, month_col, value) %>%
+  select(subject_id, month_col, value) %>%
   pivot_wider(names_from = month_col, values_from = value)
 
 
@@ -974,7 +974,7 @@ cohort_months_omop_all_months <- cohort_table_omop_users %>%
     follow_up_end = ymd(follow_up_end),
     max_month_exposed = ceiling(as.numeric(difftime(follow_up_end, index_date, units = "days")) / 30.44)
   ) %>%
-  select(patid, max_month_exposed)
+  select(subject_id, max_month_exposed)
 
 
 
@@ -985,15 +985,15 @@ monthly_cost_summary_omop <- ae_attendance_data_omop %>%
   filter(user_status == "User") %>%
   mutate(
     index_date = ymd(index_date),
-    arrivaldate = ymd(arrivaldate),
-    month_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 30.44) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    month_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 30.44) + 1
   ) %>%
-  left_join(cohort_months_omop_all_months, by = "patid") %>%
+  left_join(cohort_months_omop_all_months, by = "subject_id") %>%
   filter(month_after_index <= max_month_exposed) %>%
-  group_by(patid, month_after_index) %>%
-  summarise(total_patient_cost = sum(unit_cost_em, na.rm = TRUE), .groups = "drop") %>%
+  group_by(subject_id, month_after_index) %>%
+  summarise(total_patient_cost = sum(unit_cost, na.rm = TRUE), .groups = "drop") %>%
   mutate(month_col = paste0("month_", month_after_index)) %>%
-  select(patid, month_col, total_patient_cost)
+  select(subject_id, month_col, total_patient_cost)
 
 # Wide format matrix
 observed_cost_matrix <- monthly_cost_summary_omop %>%
@@ -1003,7 +1003,7 @@ observed_cost_matrix <- monthly_cost_summary_omop %>%
 month_cols <- grep("^month_", names(cohort_grid_omop_all_months), value = TRUE)
 
 merged_matrix_costs_omop <- cohort_grid_omop_all_months %>%
-  left_join(observed_cost_matrix, by = "patid", suffix = c("_exp", "_cost"))
+  left_join(observed_cost_matrix, by = "subject_id", suffix = c("_exp", "_cost"))
 
 # Fill costs into exposure grid
 for (col in month_cols) {
@@ -1019,7 +1019,7 @@ for (col in month_cols) {
 
 # Reshape long
 final_matrix_costs_omop <- merged_matrix_costs_omop %>%
-  select(patid, all_of(month_cols))
+  select(subject_id, all_of(month_cols))
 
 final_long_df_costs_users_all_encounters_omop <- final_matrix_costs_omop %>%
   pivot_longer(cols = starts_with("month_"), names_to = "month", values_to = "total_patient_cost") %>%
@@ -1130,7 +1130,7 @@ write_xlsx(combined_costs_bootstrap_summary_monthly_omop,
 
 library(ggplot2)
 
-### OP visits plots ----
+### AE visits plots ----
 # Add group identifiers and combine into one dataframe
 df_boot_means_omop <- bind_rows(
   monthly_bootstrap_all_patients_all_encounters_all_months_omop %>%
