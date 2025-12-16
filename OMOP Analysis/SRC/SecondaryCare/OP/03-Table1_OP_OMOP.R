@@ -117,7 +117,7 @@ table_one_op_omop_appt <- left_join(
 # Recoding variables ----
 
 ## Specialties ----
-validated_map <- read_excel("check_mainspef_tretspef_outpatient_GF.xlsx", 
+validated_map <- read_excel("check_mainspef_tretspef_inpatient_ValidationStudy_GF.xlsx", 
                             sheet= "mapping_mainspef_tretspef") %>%
   mutate(
     specialty_source_value_modified = str_to_lower(
