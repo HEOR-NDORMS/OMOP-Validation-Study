@@ -1,4 +1,4 @@
-specialty_data_omop <- appt_data_omop |> 
+specialty_data_omop <- appt_data |> 
   filter(user_status == "User") |> 
   mutate(tretspef = case_when(
     specialty_source_value_modified == "ear nose and throat" ~ "ear nose and throat service", 
@@ -30,18 +30,22 @@ specialty_data_combined <- rbind(specialty_data_omop, specialty_data_raw)
 specialty_summary <- specialty_data_combined |> 
   group_by(tretspef, `Data Source`) |> 
   summarise(n_appts = n()) |> 
+  mutate(n_percents = round(n_appts/ sum(n_appts) * 100, 2)) |> 
+  mutate(label = paste0(scales::comma(n_appts), "(", n_percents, "%", ")"))
   ungroup()
+  
 
 
 (omop_plot <- specialty_summary |> 
     filter(`Data Source` == "OMOP") |> 
     mutate(tretspef = if_else(tretspef == "", "Missing Specialty", tretspef)) |> 
-  ggplot(aes(x = reorder(tretspef, n_appts), y = n_appts, fill = tretspef)) +
-  geom_col() +
+    ggplot(aes(x = reorder(tretspef, n_appts), y = n_appts, fill = tretspef)) +
+    geom_col() +
     viridis::scale_fill_viridis(option = "A", discrete = TRUE) +
-    labs(x = "Number of Outpatient Appointments",
-         y = "Treatment Specialty") +
-  coord_flip() +
+    coord_flip() +
+    labs(y = "Number of Outpatient Appointments",
+         x = "Treatment Specialty") +
+  
   # facet_wrap(~ `Data Source`, ncol = 1, scales = "free_x") +
   theme_bw() +
   theme(legend.position = "none"))
@@ -61,8 +65,8 @@ ggsave(here::here(
     ggplot(aes(x = reorder(tretspef, n_appts), y = n_appts, fill = tretspef)) +
     geom_col() +
     viridis::scale_fill_viridis(option = "D", discrete = TRUE) +
-    labs(x = "Number of Outpatient Appointments",
-         y = "Treatment Specialty") +
+    labs(y = "Number of Outpatient Appointments",
+         x = "Treatment Specialty") +
     coord_flip() +
     # facet_wrap(~ `Data Source`, ncol = 1, scales = "free_x") +
     theme_bw() +
@@ -77,21 +81,21 @@ ggsave(here::here(
   bg = "white"
 )
 
-(combined_plot <- specialty_summary |> 
-    top_n(20, n_appts)  |>  
-    mutate(tretspef = if_else(tretspef == "", "Missing Specialty", tretspef)) |> 
-    ggplot(aes(x = reorder(tretspef, n_appts), y = n_appts, fill = tretspef)) +
-    geom_col() +
-    # viridis::scale_fill_viridis(option = "D", discrete = TRUE) +
-    labs(x = "Number of Outpatient Appointments",
-         y = "Treatment Specialty") +
-    coord_flip() +
-    facet_wrap(~ `Data Source`, nrow = 1, scales = "free_x") +
-    theme_bw() +
-    theme(legend.position = "none"))
+# (combined_plot <- specialty_summary |> 
+#     top_n(20, n_appts)  |>  
+#     mutate(tretspef = if_else(tretspef == "", "Missing Specialty", tretspef)) |> 
+#     ggplot(aes(x = reorder(tretspef, n_appts), y = n_appts, fill = tretspef)) +
+#     geom_col() +
+#     # viridis::scale_fill_viridis(option = "D", discrete = TRUE) +
+#     labs(y = "Number of Outpatient Appointments",
+#          x = "Treatment Specialty") +
+#     coord_flip() +
+#     facet_wrap(~ `Data Source`, nrow = 1, scales = "free_x") +
+#     theme_bw() +
+#     theme(legend.position = "none"))
 
 # Find specialties appearing in the top 30 *rows* by n_appts (OMOP + SOURCE not summed)
-top30_specialties <- specialty_summary %>%
+top50_specialties <- specialty_summary %>%
   arrange(desc(n_appts)) %>%
   slice(1:50) %>% 
   pull(tretspef) %>%
@@ -99,16 +103,16 @@ top30_specialties <- specialty_summary %>%
 
 # Now filter the full dataset to include both sources for these specialties
 (top_50_combined_plot <- specialty_summary |> 
-  filter(tretspef %in% top30_specialties) |> 
+  filter(tretspef %in% top50_specialties) |> 
   mutate(tretspef = if_else(tretspef == "", "missing specialty", tretspef)) |> 
   ggplot(aes(x = reorder(tretspef, n_appts), y = n_appts, fill = tretspef)) +
   geom_col() +
-    geom_text(aes(label = scales::comma(n_appts)), 
+    geom_text(aes(label = label), 
               hjust = -0.1, color = "black", size = 2) +
   labs(
     title = "Top 50 Visited Treatment Specialties",
-    x = "Number of Outpatient Appointments",
-    y = "Treatment Specialty"
+    y = "Number of Outpatient Appointments",
+    x = "Treatment Specialty"
   ) +
   coord_flip() +
   facet_wrap(~ `Data Source`, nrow = 1, scales = "free_x") +
