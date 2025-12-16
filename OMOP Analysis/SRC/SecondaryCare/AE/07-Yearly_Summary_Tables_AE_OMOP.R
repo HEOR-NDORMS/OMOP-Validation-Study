@@ -32,14 +32,14 @@ library(lubridate)
 cohort_table_omop <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
 
 ae_attendance_data_omop <- import("H:/Projects/Validation/Data/ae_attendance_data_omop.csv") |> 
-  arrange(patid)
+  arrange(subject_id)
 
 # --- Visits ------
 
 ## All patients ----
 
 # --- Preparation ---
-n_all_pts <- n_distinct(cohort_table_omop$patid)
+n_all_pts <- n_distinct(cohort_table_omop$subject_id)
 
 # Create exposure matrix for years (partial years are included) ---
 cohort_grid_omop_all_years <- cohort_table_omop %>%
@@ -55,7 +55,7 @@ cohort_grid_omop_all_years <- cohort_table_omop %>%
     year_col = paste0("year_", year_vector + 1),
     value = ifelse(year_vector < total_years, 0, NA_real_)  # mark unexposed years as NA
   ) %>%
-  select(patid, year_col, value) %>%
+  select(subject_id, year_col, value) %>%
   pivot_wider(names_from = year_col, values_from = value)
 
 # Compute max exposed year per patient ---
@@ -65,22 +65,23 @@ cohort_years_all_years_omop <- cohort_table_omop %>%
     follow_up_end = ymd(follow_up_end),
     max_year_exposed = ceiling(as.numeric(difftime(follow_up_end, index_date, units = "days")) / 365.25)
   ) %>%
-  select(patid, max_year_exposed)
+  select(subject_id, max_year_exposed)
+
 # --- a) All patients & all encounters ------
 
 # --- Step 1: Summarise encounters per year ---
 yearly_encounters_summary_omop <- ae_attendance_data_omop %>%
   mutate(
     index_date = ymd(index_date),
-    apptdate = ymd(apptdate),
-    year_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 365.25) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25) + 1
   ) %>%
-  left_join(cohort_years_all_years_omop, by = "patid") %>%
+  left_join(cohort_years_all_years_omop, by = "subject_id") %>%
   filter(year_after_index <= max_year_exposed) %>%  # keep only exposed years
-  group_by(patid, year_after_index) %>%
+  group_by(subject_id, year_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
   mutate(year_col = paste0("year_", year_after_index)) %>%
-  select(patid, year_col, total_encounters)
+  select(subject_id, year_col, total_encounters)
 
 # --- Step 2: Reshape to wide format and merge ---
 observed_visit_matrix_year_omop <- yearly_encounters_summary_omop %>%
@@ -89,7 +90,7 @@ observed_visit_matrix_year_omop <- yearly_encounters_summary_omop %>%
 year_cols <- grep("^year_", names(cohort_grid_omop_all_years), value = TRUE)
 
 merged_matrix_encounters_year_omop <- cohort_grid_omop_all_years %>%
-  left_join(observed_visit_matrix_year_omop, by = "patid", suffix = c("_exp", "_visit"))
+  left_join(observed_visit_matrix_year_omop, by = "subject_id", suffix = c("_exp", "_visit"))
 
 # --- Step 3: Fill in values where exposed but no visits ---
 for (col in year_cols) {
@@ -105,7 +106,7 @@ for (col in year_cols) {
 
 # --- Step 4: Reshape to long format ---
 final_matrix_encounters_year_omop <- merged_matrix_encounters_year_omop %>%
-  select(patid, all_of(year_cols))
+  select(subject_id, all_of(year_cols))
 
 final_long_df_encounters_all_patients_all_encounters_all_years_omop <- final_matrix_encounters_year_omop %>%
   pivot_longer(
@@ -145,9 +146,9 @@ observed_visit_summary_all_patients_all_encounters_all_years_omop <- final_long_
 
 # Extract user cohort
 cohort_table_omop_users <- ae_attendance_data_omop %>%
-  filter(user_status == "User") %>% distinct(patid, index_date, follow_up_end)
+  filter(user_status == "User") %>% distinct(subject_id, index_date, follow_up_end)
 
-(n_users <- n_distinct(cohort_table_omop_users$patid))
+(n_users <- n_distinct(cohort_table_omop_users$subject_id))
 
 # Create exposure matrix (including partial years)
 cohort_grid_omop_all_years_users <- cohort_table_omop_users %>%
@@ -163,7 +164,7 @@ cohort_grid_omop_all_years_users <- cohort_table_omop_users %>%
     year_col = paste0("year_", year_vector + 1),
     value = ifelse(year_vector < total_years, 0, NA_real_)
   ) %>%
-  select(patid, year_col, value) %>%
+  select(subject_id, year_col, value) %>%
   pivot_wider(names_from = year_col, values_from = value)
 
 # Max year exposed
@@ -171,7 +172,7 @@ cohort_years_all_years_users_omop <- cohort_table_omop_users %>%
   mutate(
     max_year_exposed = ceiling(as.numeric(difftime(follow_up_end, index_date, units = "days")) / 365.25)
   ) %>%
-  select(patid, max_year_exposed)
+  select(subject_id, max_year_exposed)
 
 
 # --- a) All users & all encounters ----
@@ -180,14 +181,14 @@ cohort_years_all_years_users_omop <- cohort_table_omop_users %>%
 yearly_encounters_summary_users_omop <- ae_attendance_data_omop %>%
   filter(user_status == "User") %>%
   mutate(
-    year_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 365.25) + 1
+    year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25) + 1
   ) %>%
-  left_join(cohort_years_all_years_users_omop, by = "patid") %>%
+  left_join(cohort_years_all_years_users_omop, by = "subject_id") %>%
   filter(year_after_index <= max_year_exposed) %>%
-  group_by(patid, year_after_index) %>%
+  group_by(subject_id, year_after_index) %>%
   summarise(total_encounters = n(), .groups = "drop") %>%
   mutate(year_col = paste0("year_", year_after_index)) %>%
-  select(patid, year_col, total_encounters)
+  select(subject_id, year_col, total_encounters)
 
 # Step 2: Reshape and merge
 observed_visit_matrix_year_omop_users <- yearly_encounters_summary_users_omop %>%
@@ -196,7 +197,7 @@ observed_visit_matrix_year_omop_users <- yearly_encounters_summary_users_omop %>
 year_cols <- grep("^year_", names(cohort_grid_omop_all_years_users), value = TRUE)
 
 merged_matrix_encounters_year_omop_users <- cohort_grid_omop_all_years_users %>%
-  left_join(observed_visit_matrix_year_omop_users, by = "patid", suffix = c("_exp", "_visit"))
+  left_join(observed_visit_matrix_year_omop_users, by = "subject_id", suffix = c("_exp", "_visit"))
 
 # Step 3: Fill in visit counts
 for (col in year_cols) {
@@ -211,7 +212,7 @@ for (col in year_cols) {
 
 # Step 4: Reshape to long
 final_matrix_encounters_year_omop_users <- merged_matrix_encounters_year_omop_users %>%
-  select(patid, all_of(year_cols))
+  select(subject_id, all_of(year_cols))
 
 final_long_df_encounters_users_all_encounters_all_years_omop <- final_matrix_encounters_year_omop_users %>%
   pivot_longer(
@@ -335,7 +336,7 @@ cohort_years_all_years_omop <- cohort_table_omop %>%
     follow_up_end = ymd(follow_up_end),
     max_year_exposed = ceiling(as.numeric(difftime(follow_up_end, index_date, units = "days")) / 365.25)
   ) %>%
-  select(patid, max_year_exposed)
+  select(subject_id, max_year_exposed)
 
 
 # --- a) All patients & all encounters ------
@@ -344,15 +345,15 @@ cohort_years_all_years_omop <- cohort_table_omop %>%
 yearly_costs_summary_omop <- ae_attendance_data_omop %>%
   mutate(
     index_date = ymd(index_date),
-    apptdate = ymd(apptdate),
-    year_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 365.25) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25) + 1
   ) %>%
-  left_join(cohort_years_all_years_omop, by = "patid") %>%
+  left_join(cohort_years_all_years_omop, by = "subject_id") %>%
   filter(year_after_index <= max_year_exposed) %>%  # keep only exposed years
-  group_by(patid, year_after_index) %>%
+  group_by(subject_id, year_after_index) %>%
   summarise(total_costs = sum(unit_cost, na.rm = TRUE)) %>%
   mutate(year_col = paste0("year_", year_after_index)) %>%
-  select(patid, year_col, total_costs)
+  select(subject_id, year_col, total_costs)
 
 # --- Step 2: Reshape to wide format and merge ---
 observed_costs_matrix_year_omop <- yearly_costs_summary_omop %>%
@@ -361,7 +362,7 @@ observed_costs_matrix_year_omop <- yearly_costs_summary_omop %>%
 year_cols <- grep("^year_", names(cohort_grid_omop_all_years), value = TRUE)
 
 merged_matrix_costs_year_omop <- cohort_grid_omop_all_years %>%
-  left_join(observed_costs_matrix_year_omop, by = "patid", suffix = c("_exp", "_visit"))
+  left_join(observed_costs_matrix_year_omop, by = "subject_id", suffix = c("_exp", "_visit"))
 
 # --- Step 3: Fill in values where exposed but no visits ---
 for (col in year_cols) {
@@ -377,7 +378,7 @@ for (col in year_cols) {
 
 # --- Step 4: Reshape to long format ---
 final_matrix_encounters_year_omop <- merged_matrix_costs_year_omop %>%
-  select(patid, all_of(year_cols))
+  select(subject_id, all_of(year_cols))
 
 final_long_df_costs_all_patients_all_encounters_all_years_omop <- final_matrix_encounters_year_omop %>%
   pivot_longer(
@@ -412,9 +413,9 @@ observed_cost_summary_all_patients_all_encounters_all_years_omop <- final_long_d
 
 # Extract user cohort
 cohort_table_omop_users <- ae_attendance_data_omop %>%
-  filter(user_status == "User") %>% distinct(patid, index_date, follow_up_end)
+  filter(user_status == "User") %>% distinct(subject_id, index_date, follow_up_end)
 
-n_users <- n_distinct(cohort_table_omop_users$patid)
+n_users <- n_distinct(cohort_table_omop_users$subject_id)
 
 # Create exposure matrix (including partial years)
 cohort_grid_omop_all_years_users <- cohort_table_omop_users %>%
@@ -430,7 +431,7 @@ cohort_grid_omop_all_years_users <- cohort_table_omop_users %>%
     year_col = paste0("year_", year_vector + 1),
     value = ifelse(year_vector < total_years, 0, NA_real_)
   ) %>%
-  select(patid, year_col, value) %>%
+  select(subject_id, year_col, value) %>%
   pivot_wider(names_from = year_col, values_from = value)
 
 # Max year exposed
@@ -438,7 +439,7 @@ cohort_years_all_years_users_omop <- cohort_table_omop_users %>%
   mutate(
     max_year_exposed = ceiling(as.numeric(difftime(follow_up_end, index_date, units = "days")) / 365.25)
   ) %>%
-  select(patid, max_year_exposed)
+  select(subject_id, max_year_exposed)
 
 # --- a) All users & all encounters ------
 
@@ -447,15 +448,15 @@ yearly_costs_summary_omop <- ae_attendance_data_omop %>%
   filter(user_status == "User") %>%
   mutate(
     index_date = ymd(index_date),
-    apptdate = ymd(apptdate),
-    year_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 365.25) + 1
+    visit_detail_start_date = ymd(visit_detail_start_date),
+    year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25) + 1
   ) %>%
-  left_join(cohort_years_all_years_omop, by = "patid") %>%
+  left_join(cohort_years_all_years_omop, by = "subject_id") %>%
   filter(year_after_index <= max_year_exposed) %>%  # keep only exposed years
-  group_by(patid, year_after_index) %>%
+  group_by(subject_id, year_after_index) %>%
   summarise(total_costs = sum(unit_cost, na.rm = TRUE)) %>%
   mutate(year_col = paste0("year_", year_after_index)) %>%
-  select(patid, year_col, total_costs)
+  select(subject_id, year_col, total_costs)
 
 # --- Step 2: Reshape to wide format and merge ---
 observed_costs_matrix_year_omop <- yearly_costs_summary_omop %>%
@@ -464,7 +465,7 @@ observed_costs_matrix_year_omop <- yearly_costs_summary_omop %>%
 year_cols <- grep("^year_", names(cohort_grid_omop_all_years_users), value = TRUE)
 
 merged_matrix_costs_year_omop <- cohort_grid_omop_all_years_users %>%
-  left_join(observed_costs_matrix_year_omop, by = "patid", suffix = c("_exp", "_visit"))
+  left_join(observed_costs_matrix_year_omop, by = "subject_id", suffix = c("_exp", "_visit"))
 
 # --- Step 3: Fill in values where exposed but no visits ---
 for (col in year_cols) {
@@ -480,7 +481,7 @@ for (col in year_cols) {
 
 # --- Step 4: Reshape to long format ---
 final_matrix_encounters_year_omop <- merged_matrix_costs_year_omop %>%
-  select(patid, all_of(year_cols))
+  select(subject_id, all_of(year_cols))
 
 final_long_df_costs_users_all_encounters_all_years_omop <- final_matrix_encounters_year_omop %>%
   pivot_longer(
@@ -600,20 +601,20 @@ combined_costs_bootstrap_summary_yearly_omop <- bind_rows(
 
 write_xlsx(combined_summary_encounters_yearly_omop, 
            here::here("OMOP Analysis", "Results", "SecondaryCareAnalysis", 
-                      "OP", "Yearly", 
+                      "AE", "Yearly", 
                       "yearly_combined_summary_encounters_SOURCE.xlsx"))
 
 write_xlsx(combined_encounters_bootstrap_summary_yearly_omop,
            here::here("OMOP Analysis", "Results", "SecondaryCareAnalysis", 
-                      "OP", "Yearly", 
+                      "AE", "Yearly", 
                       "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
 
 write_xlsx(combined_summary_costs_yearly_omop, 
            here::here("OMOP Analysis", "Results", "SecondaryCareAnalysis",
-                      "OP", "Yearly", 
+                      "AE", "Yearly", 
                       "yearly_combined_summary_costs_SOURCE.xlsx"))
 
 write_xlsx(combined_costs_bootstrap_summary_yearly_omop, 
            here::here("OMOP Analysis", "Results", "SecondaryCareAnalysis", 
-                      "OP", "Yearly",
+                      "AE", "Yearly",
                       "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx"))
