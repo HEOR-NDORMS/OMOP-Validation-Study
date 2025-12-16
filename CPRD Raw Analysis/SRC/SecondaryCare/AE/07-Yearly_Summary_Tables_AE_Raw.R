@@ -81,8 +81,8 @@ cohort_years_all_years_raw <- cohort_table_raw %>%
 yearly_encounters_summary_raw <- ae_attendance_data_raw %>%
   mutate(
     index_date = ymd(index_date),
-    apptdate = ymd(apptdate),
-    year_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 365.25) + 1
+    arrivaldate = ymd(arrivaldate),
+    year_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 365.25) + 1
   ) %>%
   left_join(cohort_years_all_years_raw, by = "patid") %>%
   filter(year_after_index <= max_year_exposed) %>%  # keep only exposed years
@@ -189,7 +189,7 @@ cohort_years_all_years_users_raw <- cohort_table_raw_users %>%
 yearly_encounters_summary_users_raw <- ae_attendance_data_raw %>%
   filter(user_status == "User") %>%
   mutate(
-    year_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 365.25) + 1
+    year_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 365.25) + 1
   ) %>%
   left_join(cohort_years_all_years_users_raw, by = "patid") %>%
   filter(year_after_index <= max_year_exposed) %>%
@@ -353,8 +353,8 @@ cohort_years_all_years_raw <- cohort_table_raw %>%
 yearly_costs_summary_raw <- ae_attendance_data_raw %>%
   mutate(
     index_date = ymd(index_date),
-    apptdate = ymd(apptdate),
-    year_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 365.25) + 1
+    arrivaldate = ymd(arrivaldate),
+    year_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 365.25) + 1
   ) %>%
   left_join(cohort_years_all_years_raw, by = "patid") %>%
   filter(year_after_index <= max_year_exposed) %>%  # keep only exposed years
@@ -456,8 +456,8 @@ yearly_costs_summary_raw <- ae_attendance_data_raw %>%
   filter(user_status == "User") %>%
   mutate(
     index_date = ymd(index_date),
-    apptdate = ymd(apptdate),
-    year_after_index = trunc(as.numeric(difftime(apptdate, index_date, units = "days")) / 365.25) + 1
+    arrivaldate = ymd(arrivaldate),
+    year_after_index = trunc(as.numeric(difftime(arrivaldate, index_date, units = "days")) / 365.25) + 1
   ) %>%
   left_join(cohort_years_all_years_raw, by = "patid") %>%
   filter(year_after_index <= max_year_exposed) %>%  # keep only exposed years
@@ -609,20 +609,20 @@ combined_costs_bootstrap_summary_yearly_raw <- bind_rows(
 
 write_xlsx(combined_summary_encounters_yearly_raw, 
            here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", 
-                      "OP", "Yearly", 
+                      "AE", "Yearly", 
                       "yearly_combined_summary_encounters_SOURCE.xlsx"))
 
 write_xlsx(combined_encounters_bootstrap_summary_yearly_raw,
            here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", 
-                      "OP", "Yearly", 
+                      "AE", "Yearly", 
                       "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
 
 write_xlsx(combined_summary_costs_yearly_raw, 
            here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis",
-                      "OP", "Yearly", 
+                      "AE", "Yearly", 
                       "yearly_combined_summary_costs_SOURCE.xlsx"))
 
 write_xlsx(combined_costs_bootstrap_summary_yearly_raw, 
            here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", 
-                      "OP", "Yearly",
+                      "AE", "Yearly",
                       "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx"))
