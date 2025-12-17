@@ -266,8 +266,7 @@ users_summary_costs_stats_ae <- ae_attendance_data %>%
   summarise(total_cost = sum(unit_cost)) %>% 
   # drop_na(unit_cost_em) |> 
   summarise(
-    n_attendances = n(),
-    n_patients = n_distinct(subject_id),
+    n_attendances = n_distinct(subject_id),
     mean_attendance_costs = mean(total_cost, na.rm = TRUE),
     min_attendance_costs = min(total_cost, na.rm = TRUE),
     median_attendance_costs = median(total_cost, na.rm = TRUE),
@@ -275,9 +274,9 @@ users_summary_costs_stats_ae <- ae_attendance_data %>%
     sd_attendance_costs = sd(total_cost, na.rm = TRUE),
     q1_attendance_costs = quantile(total_cost, probs = 0.25, na.rm = TRUE),
     q3_attendance_costs = quantile(total_cost, probs = 0.75, na.rm = TRUE),
-    se               = sd_attendance_costs / sqrt(n_patients),
-    ci_lower         = mean_attendance_costs - qt(0.975, df = n_patients - 1) * se,
-    ci_upper         = mean_attendance_costs + qt(0.975, df = n_patients - 1) * se,
+    se               = sd_attendance_costs / sqrt(n_attendances),
+    ci_lower         = mean_attendance_costs - qt(0.975, df = n_attendances - 1) * se,
+    ci_upper         = mean_attendance_costs + qt(0.975, df = n_attendances - 1) * se,
     .groups = "drop"
   ) |> 
   mutate(across(everything(), round, 2))
@@ -287,8 +286,7 @@ all_summary_costs_stats_ae <- ae_attendance_data %>%
   summarise(total_cost = sum(unit_cost)) %>% 
   # drop_na(unit_cost_em) |> 
   summarise(
-    n_attendances = n(),
-    n_patients = n_distinct(subject_id),
+    n_attendances = n_distinct(subject_id),
     mean_attendance_costs = mean(total_cost, na.rm = TRUE),
     min_attendance_costs = min(total_cost, na.rm = TRUE),
     median_attendance_costs = median(total_cost, na.rm = TRUE),
@@ -296,9 +294,9 @@ all_summary_costs_stats_ae <- ae_attendance_data %>%
     sd_attendance_costs = sd(total_cost, na.rm = TRUE),
     q1_attendance_costs = quantile(total_cost, probs = 0.25, na.rm = TRUE),
     q3_attendance_costs = quantile(total_cost, probs = 0.75, na.rm = TRUE),
-    se               = sd_attendance_costs / sqrt(n_patients),
-    ci_lower         = mean_attendance_costs - qt(0.975, df = n_patients - 1) * se,
-    ci_upper         = mean_attendance_costs + qt(0.975, df = n_patients - 1) * se,
+    se               = sd_attendance_costs / sqrt(n_attendances),
+    ci_lower         = mean_attendance_costs - qt(0.975, df = n_attendances - 1) * se,
+    ci_upper         = mean_attendance_costs + qt(0.975, df = n_attendances - 1) * se,
     .groups = "drop"
   ) |> 
   mutate(across(everything(), round, 2))
