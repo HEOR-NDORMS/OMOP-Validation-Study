@@ -245,6 +245,14 @@ ncc_costs_ae <- import(here("NHS_Collection_Costs_2024_2025.xlsx"),
 
 (em_weighted_cost = round(sum(ncc_costs_ae$cost)/sum(ncc_costs_ae$n_attendances), 2))
 
+em_weighted_cost_df <- data.frame(
+  em_weighted_cost = em_weighted_cost
+)
+export(em_weighted_cost_df, 
+       here("OMOP Analysis", "Results", "SecondaryCareAnalysis" , "AE",
+            "OMOP_cost_value.csv"))
+
+
 ae_attendance_data <- ae_attendance_data %>% 
   mutate(unit_cost = if_else(user_status == "User", em_weighted_cost, 0))
 
