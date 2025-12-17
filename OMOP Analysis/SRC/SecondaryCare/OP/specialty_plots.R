@@ -1,19 +1,19 @@
-specialty_data_omop <- appt_data |> 
+specialty_data_omop <- appt_data_omop |> 
   filter(user_status == "User") |> 
-  mutate(tretspef = case_when(
-    specialty_source_value_modified == "ear nose and throat" ~ "ear nose and throat service", 
-    specialty_source_value_modified == "respiratory medicine" ~ "respiratory medicine service", 
-    specialty_source_value_modified == "allergy service" ~ "allergy service", 
-    specialty_source_value_modified == "burns care" ~ "burns care service", 
-    specialty_source_value_modified == "clinical neuro-physiology" ~ "clinical neurophysiology service",
-    specialty_source_value_modified == "haemophilia service" ~ "haemophilia service", 
-    specialty_source_value_modified == "maxillofacial surgery" ~ "maxillofacial surgery service", 
-    specialty_source_value_modified == "mental illness" ~ "adult mental health service",
-    specialty_source_value_modified == "obstetrics service" ~ "obstetrics service",
-    specialty_source_value_modified == "radiology" ~ "interventional radiology service",
-    specialty_source_value_modified == "specialist rehabilitation service" ~ "specialist rehabilitation service",
-    specialty_source_value_modified == "speech and language therapy" ~ "Speech and Language Therapy Service",
-    TRUE ~ tretspef)) |> 
+#   mutate(tretspef = case_when(
+#     specialty_source_value_modified == "ear nose and throat" ~ "ear nose and throat service", 
+#     specialty_source_value_modified == "respiratory medicine" ~ "respiratory medicine service", 
+#     specialty_source_value_modified == "allergy service" ~ "allergy service", 
+#     specialty_source_value_modified == "burns care" ~ "burns care service", 
+#     specialty_source_value_modified == "clinical neuro-physiology" ~ "clinical neurophysiology service",
+#     specialty_source_value_modified == "haemophilia service" ~ "haemophilia service", 
+#     specialty_source_value_modified == "maxillofacial surgery" ~ "maxillofacial surgery service", 
+#     specialty_source_value_modified == "mental illness" ~ "adult mental health service",
+#     specialty_source_value_modified == "obstetrics service" ~ "obstetrics service",
+#     specialty_source_value_modified == "radiology" ~ "interventional radiology service",
+#     specialty_source_value_modified == "specialist rehabilitation service" ~ "specialist rehabilitation service",
+#     specialty_source_value_modified == "speech and language therapy" ~ "Speech and Language Therapy Service",
+#     TRUE ~ tretspef)) |> 
   select(subject_id, tretspef) |> 
   mutate(`Data Source` = "OMOP")
   
@@ -29,9 +29,10 @@ specialty_data_combined <- rbind(specialty_data_omop, specialty_data_raw)
 
 specialty_summary <- specialty_data_combined |> 
   group_by(tretspef, `Data Source`) |> 
-  summarise(n_appts = n()) |> 
+  summarise(n_appts = n_distinct(subject_id)) |> 
   mutate(n_percents = round(n_appts/ sum(n_appts) * 100, 2)) |> 
-  mutate(label = paste0(scales::comma(n_appts), "(", n_percents, "%", ")"))
+  mutate(label = paste0(scales::comma(n_appts), "(", n_percents, "%", ")")) |> 
+  mutate(n_percents_label = paste0(n_percents, "%")) |> 
   ungroup()
   
 
@@ -43,7 +44,7 @@ specialty_summary <- specialty_data_combined |>
     geom_col() +
     viridis::scale_fill_viridis(option = "A", discrete = TRUE) +
     coord_flip() +
-    labs(y = "Number of Outpatient Appointments",
+    labs(y = "Number of Patients W/ Outpatient Appointments",
          x = "Treatment Specialty") +
   
   # facet_wrap(~ `Data Source`, ncol = 1, scales = "free_x") +
@@ -65,7 +66,7 @@ ggsave(here::here(
     ggplot(aes(x = reorder(tretspef, n_appts), y = n_appts, fill = tretspef)) +
     geom_col() +
     viridis::scale_fill_viridis(option = "D", discrete = TRUE) +
-    labs(y = "Number of Outpatient Appointments",
+    labs(y = "Number of Patients W/ Outpatient Appointments",
          x = "Treatment Specialty") +
     coord_flip() +
     # facet_wrap(~ `Data Source`, ncol = 1, scales = "free_x") +
@@ -95,23 +96,23 @@ ggsave(here::here(
 #     theme(legend.position = "none"))
 
 # Find specialties appearing in the top 30 *rows* by n_appts (OMOP + SOURCE not summed)
-top50_specialties <- specialty_summary %>%
+top30_specialties <- specialty_summary %>%
   arrange(desc(n_appts)) %>%
-  slice(1:50) %>% 
+  slice(1:20) %>% 
   pull(tretspef) %>%
   unique()
 
 # Now filter the full dataset to include both sources for these specialties
-(top_50_combined_plot <- specialty_summary |> 
-  filter(tretspef %in% top50_specialties) |> 
+(top_30_combined_plot <- specialty_summary |> 
+  filter(tretspef %in% top30_specialties) |> 
   mutate(tretspef = if_else(tretspef == "", "missing specialty", tretspef)) |> 
   ggplot(aes(x = reorder(tretspef, n_appts), y = n_appts, fill = tretspef)) +
   geom_col() +
     geom_text(aes(label = label), 
-              hjust = -0.1, color = "black", size = 2) +
+              hjust = -0.1, color = "black", size = 3.5) +
   labs(
-    title = "Top 50 Visited Treatment Specialties",
-    y = "Number of Outpatient Appointments",
+    title = "Top 30 Visited Treatment Specialties",
+    y = "Number of Patients Who Visited Outpatient Appointments",
     x = "Treatment Specialty"
   ) +
   coord_flip() +
@@ -122,10 +123,39 @@ top50_specialties <- specialty_summary %>%
 
 ggsave(here::here(
   "OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", 
-  "top_50_combined_specialty_plot.PNG"),
-  plot = top_50_combined_plot,
-  width = 15,
-  height = 7,
+  "top_30_combined_specialty_plot.PNG"),
+  plot = top_30_combined_plot,
+  width = 31,
+  height = 10,
+  bg = "white"
+)
+
+# Now filter the full dataset to include both sources for these specialties
+(top_30_combined_plot.1 <- specialty_summary |> 
+    filter(tretspef %in% top30_specialties) |> 
+    mutate(tretspef = if_else(tretspef == "", "missing specialty", tretspef)) |> 
+    ggplot(aes(x = reorder(tretspef, n_appts), y = n_percents, fill = tretspef)) +
+    geom_col() +
+    scale_y_continuous(limits = c(0, 100))+
+    geom_text(aes(label = n_percents_label), 
+              hjust = -0.1, color = "black", size = 3.5) +
+    labs(
+      title = "Top 30 Visited Treatment Specialties",
+      y = "Number of Patients Who Visited Outpatient Appointments",
+      x = "Treatment Specialty"
+    ) +
+    coord_flip() +
+    facet_wrap(~ `Data Source`, nrow = 1, scales = "free_x") +
+    theme_bw() +
+    theme(legend.position = "none"))
+
+
+ggsave(here::here(
+  "OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", 
+  "top_30_combined_specialty_plot_vb.PNG"),
+  plot = top_30_combined_plot.1,
+  width = 10,
+  height = 8,
   bg = "white"
 )
 export(specialty_summary, here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "specialty_data.xlsx"))

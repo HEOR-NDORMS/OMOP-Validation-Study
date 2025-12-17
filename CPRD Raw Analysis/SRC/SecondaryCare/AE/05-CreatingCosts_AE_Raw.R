@@ -123,7 +123,7 @@ overall_users_costs_df_ae_raw <- users_summary_costs_ae |>
   
 users_summary_costs_stats_ae_raw <- overall_users_costs_df_ae_raw |>   
   summarise(
-    n_attendances = n(),
+    n_attendances = n_distinct(patid),
     mean_attendance_costs = mean(total_patient_cost, na.rm = TRUE),
     min_attendance_costs = min(total_patient_cost, na.rm = TRUE),
     median_attendance_costs = median(total_patient_cost, na.rm = TRUE),
@@ -145,7 +145,7 @@ overall_all_costs_df_ae_raw <- ae_costs_final_data_raw |>
 
 all_pts_summary_costs_stats_ae_raw <- overall_all_costs_df_ae_raw %>% 
   summarise(
-    n_attendances = n(),
+    n_attendances = n_distinct(patid),
     mean_attendance_costs = mean(total_patient_cost, na.rm = TRUE),
     min_attendance_costs = min(total_patient_cost, na.rm = TRUE),
     median_attendance_costs = median(total_patient_cost, na.rm = TRUE),
@@ -170,5 +170,5 @@ ae_costs_list <- list(
 
 # Write to an Excel file
 write_xlsx(ae_costs_list, here::here("CPRD Raw Analysis", "Results",
-                                  "SecondaryCareAnalysis", "AE", "Output_Costs_Raw.xlsx"))
+                                  "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_Raw.xlsx"))
 
