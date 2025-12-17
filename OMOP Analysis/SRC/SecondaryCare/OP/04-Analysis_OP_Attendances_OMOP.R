@@ -18,7 +18,7 @@
 library(tidyverse)
 
 # Loading appointments data ----
-appt_data <- table_one_op_omop_appt
+appt_data <- table_one_op_omop_appt_recoded
 
 # Minimise data ----
 names(appt_data)
