@@ -142,7 +142,7 @@ tretspef_codes <- validated_map %>%
 # Clean outpatient data
 table_one_op_omop_appt_recoded <- table_one_op_omop_appt %>%
   mutate(
-    concept_name = specialty_source_value %>%
+    specialty_source_value = specialty_source_value %>%
       str_remove("\\s*\\([^\\)]+\\)") %>%
       str_replace_all("&", "and") %>%
       str_to_lower() %>%
