@@ -115,14 +115,22 @@ prefix <- stri_rand_strings(n =1, length = 6, '[a-z]')
 country_setting <- "UK"
 
 # create cdm reference ----
-cdm <- CDMConnector::cdm_from_con(
+# cdm <- CDMConnector::cdm_from_con(
+#   con = db,
+#   cdm_schema = cdm_database_schema,
+#   write_schema = c("schema" = results_database_schema, 
+#                    "prefix" = prefix) 
+#   # you can use the cohort_tables argument to read cohorts that you creted previously in the database
+#   # cohort_tables = "denominator"
+#     
+# )
+
+cdm <- CDMConnector::cdmFromCon(
   con = db,
-  cdm_schema = cdm_database_schema,
-  write_schema = c("schema" = results_database_schema, 
-                   "prefix" = prefix) 
-  # you can use the cohort_tables argument to read cohorts that you creted previously in the database
-  # cohort_tables = "denominator"
-    
+  cdmSchema = cdm_database_schema,
+  writeSchema = results_database_schema,
+  writePrefix = prefix,
+  .softValidation = TRUE
 )
 # check database connection
 # running the next line should give you a count of your person table
