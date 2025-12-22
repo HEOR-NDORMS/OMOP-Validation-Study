@@ -108,7 +108,7 @@ table_one_op_omop_appt <- cohort_appt_data %>%
 # Merge back to the cohort table
 table_one_op_omop_appt <- left_join(
   cohort_table %>% select(
-    subject_id, index_date, follow_up_end, follow_up_end, 
+    subject_id, index_date, follow_up_end, 
     follow_up_reason, follow_up_time),
   table_one_op_omop_appt,
   by = c("subject_id", "index_date", "follow_up_end", "follow_up_reason", 
@@ -117,11 +117,12 @@ table_one_op_omop_appt <- left_join(
 # Recoding variables ----
 
 ## Specialties ----
-validated_map <- read_excel("check_mainspef_tretspef_inpatient_ValidationStudy_GF.xlsx", 
-                            sheet= "mapping_mainspef_tretspef") %>%
+validated_map <- read_excel("check_mainspef_tretspef_inpatient_outpatient_ValidationStudy_GF.xlsx", 
+                            sheet= "inpatient_outpatient") %>%
   mutate(
-    specialty_source_value_modified = str_to_lower(
-      str_trim(specialty_source_value_modified)
+    # use the column with the concept_name
+    concept_name = str_to_lower(
+      str_trim(concept_name)
     ),
     mainspef = str_to_lower(str_trim(mainspef)),
     tretspef = str_to_lower(str_trim(tretspef))
@@ -141,7 +142,7 @@ tretspef_codes <- validated_map %>%
 # Clean outpatient data
 table_one_op_omop_appt_recoded <- table_one_op_omop_appt %>%
   mutate(
-    specialty_source_value_modified = specialty_source_value %>%
+    specialty_source_value = specialty_source_value %>%
       str_remove("\\s*\\([^\\)]+\\)") %>%
       str_replace_all("&", "and") %>%
       str_to_lower() %>%
@@ -153,10 +154,10 @@ table_one_op_omop_appt_recoded <- table_one_op_omop_appt_recoded %>%
   left_join(
     validated_map %>%
       dplyr::select(
-        specialty_source_value_modified, mainspef, tretspef, 
+        specialty_concept_id, concept_name, mainspef, tretspef, 
         mainspef_code, tretspef_code) %>%
       distinct(),
-    by = "specialty_source_value_modified"
+    by = "specialty_concept_id"
   )
 
 
