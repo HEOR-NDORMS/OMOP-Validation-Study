@@ -96,32 +96,9 @@ grid.arrange(Mean_visits_overall_Raw_g_with_title, Mean_visits_overall_OMOP_g_wi
 ```
 
 ```{r fig.height=6, fig.width=6}
-top_30_specialty_plot <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", "top_30_combined_specialty_plot.PNG")) 
-grid.raster(top_30_specialty_plot)
+specialty_plot <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", "combined_specialty_plot.PNG")) 
+grid.raster(specialty_plot)
 ```
-
-
-
-```{r fig.cap="Treatment Specialty Counts by Data Source"}
-# Read images 
-specialty_plot_Raw <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", "source_specialty_plot.PNG")) 
-
-specialty_plot_OMOP <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis","Comparison", "OP", "Plots", "omop_specialty_plot.PNG")) 
-
-# Wrap them in rasterGrob 
-specialty_plot_Raw_g <- rasterGrob(specialty_plot_Raw, interpolate = TRUE) 
-specialty_plot_OMOP_g <- rasterGrob(specialty_plot_OMOP, interpolate = TRUE) 
-
-# Add titles with arrangeGrob 
-
-specialty_plot_Raw_g_with_title <- arrangeGrob(specialty_plot_Raw_g, top = textGrob("Source", gp = gpar(fontsize = 14, fontface = "bold")))
-specialty_plot_OMOP_g_with_title <- arrangeGrob(specialty_plot_OMOP_g, top = textGrob("OMOP", gp = gpar(fontsize = 14, fontface = "bold")))
-
-grid.arrange(specialty_plot_Raw_g_with_title, specialty_plot_OMOP_g_with_title, ncol = 2)
-
-```
-
-
 
 ### Observed
 
@@ -390,9 +367,9 @@ overall_all_patients_all_enc_boot %>%
 ```
 
 
-### Yearly {.tabset}
+## Yearly {.tabset}
 
-#### Observed
+### Observed
 
 ```{r}
 source_yearly_all_patients_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
@@ -494,7 +471,7 @@ yearly_users_enc_obs %>%
   
 ```
 
-#### Bootstrap
+### Bootstrap
 
 ```{r}
 source_yearly_users_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
@@ -623,9 +600,9 @@ yearly_all_patients_all_enc_boot %>%
 ```
 
 
-### Monthly {.tabset}
+## Monthly {.tabset}
 
-#### Plots
+### Plots
 
 
 ```{r fig.cap="Mean Monthly Visits for Healthcare HES Outpatient Users"}
@@ -642,7 +619,7 @@ grid.raster(Mean_monthly_visits_all)
 ```
 
 
-#### Bootstrap
+### Bootstrap
 
 ```{r}
 source_monthly_all_patients_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Monthly", "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
@@ -1052,9 +1029,9 @@ yearly_all_patients_costs_boot %>%
 ```
 
 
-### Monthly {.tabset}
+## Monthly {.tabset}
 
-#### Plots
+### Plots
 
 ```{r fig.cap="Mean Monthly Visit Costs for Healthcare HES Outpatient Users"}
 # Read images
@@ -1070,7 +1047,7 @@ grid.raster(Mean_monthly_visit_costs_all)
 ```
 
 
-#### Bootstrap
+### Bootstrap
 
 ```{r}
 source_monthly_all_patients_costs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Monthly", "monthly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
@@ -1354,9 +1331,9 @@ overall_observed_visits_all_ae %>%
 
 ```
 
-### Yearly {.tabset}
+## Yearly {.tabset}
 
-#### Observed
+### Observed
 
 ```{r}
 ae_source_yearly_all_patients_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
@@ -1457,7 +1434,7 @@ ae_yearly_users_enc_obs %>%
   
 ```
 
-#### Bootstrap
+### Bootstrap
 
 ```{r}
 ae_source_yearly_users_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
@@ -1586,9 +1563,9 @@ ae_yearly_all_patients_all_enc_boot %>%
 ```
 
 
-### Monthly {.tabset}
+## Monthly {.tabset}
 
-#### Plots
+### Plots
 
 
 ```{r fig.cap="Mean Monthly Visits for Healthcare HES Outpatient Users"}
@@ -1605,7 +1582,7 @@ grid.raster(Mean_monthly_visits_all)
 ```
 
 
-#### Bootstrap
+### Bootstrap
 
 ```{r}
 ae_source_monthly_all_patients_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
@@ -2074,11 +2051,11 @@ ae_yearly_all_patients_costs_boot %>%
 ```
 
 
-### Monthly {.tabset}
+## Monthly {.tabset}
 
-#### Plots
+### Plots
 
-```{r fig.cap="Mean Monthly Visit Costs for Healthcare HES Outpatient Users"}
+```{r fig.width=5, fig.height=6}
 # Read images
 AE_Mean_monthly_visit_costs_users <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots", "bootstrap_mean_costs_plot_users.PNG"))
 
@@ -2092,7 +2069,7 @@ grid.raster(AE_Mean_monthly_visit_costs_all)
 ```
 
 
-#### Bootstrap
+### Bootstrap
 
 ```{r}
 ae_source_monthly_all_patients_costs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
