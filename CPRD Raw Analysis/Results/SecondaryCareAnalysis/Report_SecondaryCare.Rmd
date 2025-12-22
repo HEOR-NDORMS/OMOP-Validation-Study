@@ -1835,14 +1835,14 @@ ae_overall_observed_visits_costs_users %>%
 
 ```{r}
 ae_source_overall_costs_observed_all <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_Raw.xlsx"),
-                                  sheet = "summary_users_atts_costs") %>% 
+                                  sheet = "summary_all_atts_costs") %>% 
   mutate(`Patient Category` = "All Patients & all encounters") %>% 
   select(!`Patient Category`) %>% 
   mutate(`Data Source` = "Source") %>% 
   select(`Data Source`, everything()) 
 
 ae_omop_overall_costs_observed_all <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_OMOP.xlsx"),
-                                  sheet = "summary_users_atts_costs") %>% 
+                                  sheet = "summary_all_atts_costs") %>% 
   mutate(`Patient Category` = "All Patients & all encounters") %>% 
   select(!`Patient Category`) %>% 
   mutate(`Data Source` = "OMOP") %>% 
