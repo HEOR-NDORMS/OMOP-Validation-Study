@@ -1,3 +1,87 @@
+# =====================================================
+# Inpatient Episode Preparation Script for COSTS/Grouper
+# =====================================================
+
+library(dplyr)
+library(boot)
+library(purrr)
+library(stringr)
+library (lubridate)
+library(tidyr)
+library(ggplot2)
+
+# --- 1) Episodes in study period -----------------------------------------
+cdm[["episodes"]] <- cdm$visit_detail %>%
+  filter(
+    visit_detail_concept_id == 9201,              # inpatient episodes
+    visit_detail_start_date >= study_start_date,
+    visit_detail_end_date <= study_end_date
+  ) %>%
+  compute(name = "episodes", overwrite = TRUE)
+
+episodes <- cdm[["episodes"]] %>% collect()
+
+# --- 2) Restrict to episodes belonging to included spells ----------------
+valid_spell_ids <- cohort_hospital_data_user %>%
+  filter(!is.na(visit_occurrence_id)) %>%
+  pull(visit_occurrence_id) %>%
+  unique()
+
+cohort_hospital_episodes_data_user <- episodes %>%
+  filter(visit_occurrence_id %in% valid_spell_ids)
+
+# --- 3) Derive episode order within spell --------------------------------
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  group_by(visit_occurrence_id) %>%
+  arrange(visit_detail_start_date, .by_group = TRUE) %>%
+  mutate(epiorder = row_number()) %>%
+  ungroup()
+
+# --- 4) Admission / Discharge variables [ same as CO_ACTION ] ----------------------------------
+# cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+#   mutate(
+#     admisorc = str_split_fixed(admitting_source_value, "/", 2)[, 1],
+#     admimeth = str_split_fixed(admitting_source_value, "/", 2)[, 2],
+#     disdest  = str_split_fixed(discharged_to_source_value, "/", 2)[, 1],
+#     dismeth  = str_split_fixed(discharged_to_source_value, "/", 2)[, 2]
+#   )
+
+# --- 4.1 ) Admission / Discharge variables [ VALIDATION ] ----------------------------------
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(
+    admisorc = 19, # assumed 19 = Usual place of residence
+    admimeth = 21, # assumed 21 = Emergency Care Department, or acute or emergency dental service
+    disdest  = 19, # assumed 19 = Usual place of residence
+    dismeth  = 1   # assumed 1  = Patient discharged on clinical advice or with clinical consent
+  )
+
+# --- 5) Append specialty (mainspef / tretspef) ----------------------------
+provider <- cdm$provider %>% collect()
+# 1.Import cost inputs
+validated_map <- rio::import("OMOP Analysis/SRC/SecondaryCare/Inpatient/check_mainspef_tretspef_inpatient_outpatient_ValidationStudy_GF.xlsx")
+
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  left_join(
+    provider %>% dplyr:: select(provider_id, specialty_concept_id),
+    by = "provider_id"
+  ) %>%
+  left_join(
+    validated_map %>%
+      dplyr:: select(specialty_concept_id, concept_name, mainspef, tretspef,
+                     mainspef_code, tretspef_code) %>%
+      distinct(),
+    by = "specialty_concept_id"
+  ) 
+
+# how many with both mainspef and tretspef missing?
+cohort_hospital_episodes_data_user %>%
+  filter(is.na(mainspef) & is.na(tretspef)) %>%
+  tally()
+
+#drop them
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  filter(!(is.na(mainspef) & is.na(tretspef)))  # drop if both missing
+
 # --- 6) Diagnoses ---------------------------------------------------------
 cdm[["diagnoses"]] <- cdm$condition_occurrence %>%
   filter(
