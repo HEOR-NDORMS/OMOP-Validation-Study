@@ -18,7 +18,7 @@
 library(tidyverse)
 
 # Loading appointments data ----
-appt_data <- table_one_op_omop_appt
+appt_data <- table_one_op_omop_appt_recoded
 
 # Minimise data ----
 names(appt_data)
@@ -623,25 +623,6 @@ rio::export(op_users_ids_data, here::here("OMOP Analysis", "Results",
                                           "SecondaryCareAnalysis", "OP", 
                                           "op_costs_data_ids.csv"))
 
-# Overall Costs ---- 
-omop_users_costs_df <- appt_data_omop |> 
-  filter(user_status == "User") |> 
-  group_by(subject_id) |> 
-  summarise(total_costs = sum(unit_cost),
-            .groups = "drop")
-
-
-omop_costs_summary_users <- omop_users_costs_df |> 
-  summarise(
-    n        = n(),
-    mean     = mean(total_costs),
-    min      = min(total_costs),
-    max      = max(total_costs),
-    sd       = sd(total_costs),
-    median   = quantile(total_costs, 0.5),
-    lower_q  = quantile(total_costs, 0.25),
-    upper_q  = quantile(total_costs, 0.75),
-    se               = sd / sqrt(n),
-    ci_lower         = mean - qt(0.975, df = n - 1) * se,
-    ci_upper         = mean + qt(0.975, df = n - 1) * se
-  )
+rio::export(appt_data, here::here("OMOP Analysis", "Results",
+                                          "SecondaryCareAnalysis", "OP", 
+                                          "appt_data_omop.csv"))

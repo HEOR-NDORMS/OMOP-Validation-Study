@@ -34,46 +34,7 @@ For cost data, missing or suppressed values in the national average unit cost fi
 In the Admitted Patient Care (APC) data, missing Procode3 values required for grouper classification were replaced with valid codes drawn from a validated random sample. Validation was performed by checking 20 randomly selected patient records to confirm that the resulting HRG assignments were unchanged.
 For Accident & Emergency (AE) data, diagnosis codes misclassified under the treatment variable (Treatment_01)—including C109, D101, D102, D105, E101, E104, E105, E110, U212, Y981, Z411, Z413, and Z421—were identified and removed. AE attendances missing both main investigation and main treatment fields were excluded from the cost analysis.
 
-## Patients Comparison between Source and OMOP
-
-```{r}
-contigency_table_for_pts_rp <- import(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "OP_contigency_table_for_pts.xlsx")) %>% 
-  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>% 
-  mutate(Total = as.numeric(Total))
-
-contigency_table_for_pts_rp %>% 
-  gt() %>%
-  tab_header(
-    title = md("**Contigency Table for Patients**"),
-    subtitle = md("*Comparison between OMOP and Source*")
-  ) %>%
-  # opt_all_caps() %>% 
-  tab_options(
-    heading.align = "left",
-    table.font.size = px(14)
-  ) %>%
-  # Add spanner headers for CPRD Raw and OMOP Analysis
-  tab_spanner(
-    label = "OMOP",
-    columns = c("OMOP: No", "OMOP: Yes")
-  ) %>%
-   opt_stylize(style = 1) %>% 
-  cols_label(
-    `OMOP: No` = "No",
-    `OMOP: Yes` = "Yes"
-    ) %>% 
-  fmt_number(
-    columns = contains("OMOP"),
-    sep_mark = ",",
-    decimals = 0
-  ) %>% 
-  fmt_number(
-    columns = c("Total"),
-    sep_mark = ",",
-    decimals = 0
-  ) %>% 
-  sub_missing(columns = everything(), missing_text = "")
-```
+# Outpatients HRCU Analysis {.tabset}
 
 ## Healthcare Service Users Comparison between Source and OMOP
 
@@ -84,7 +45,7 @@ contigency_table_for_user_status_rp <- import(here("OMOP Analysis","Results", "S
 contigency_table_for_user_status_rp %>% 
   gt() %>%
   tab_header(
-    title = md("**Contigency Table for Healthcare Service Users**"),
+    title = md("**Contigency Table for Outpatient Service Users**"),
     subtitle = md("*Comparison between OMOP and Source*")
   ) %>%
   # opt_all_caps() %>% 
@@ -106,14 +67,9 @@ contigency_table_for_user_status_rp %>%
   sub_missing(columns = everything(), missing_text = "")
 ```
 
+## Overall{.tabset}
 
-# HRCU
-
-## Outpatients {.tabset}
-
-### Overall{.tabset}
-
-#### Plots
+### Plots
 
 ```{r fig.cap="Distribution of the overall visits"}
 # Read images
@@ -160,7 +116,7 @@ grid.arrange(specialty_plot_Raw_g_with_title, specialty_plot_OMOP_g_with_title, 
 
 
 
-#### Observed
+### Observed
 
 ```{r}
 source_overall_observed_users <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Overall","Output_appointments_Raw.xlsx"),
@@ -261,7 +217,7 @@ overall_observed_visits_all %>%
 ```
 
 
-#### Bootstrap
+### Bootstrap
 
 ```{r}
 source_overall_all_patients_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Overall", "overall_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
@@ -442,7 +398,8 @@ omop_yearly_all_patients_enc_obs <- import(here("OMOP Analysis", "Results", "Sec
 yearly_all_patients_enc_obs <- rbind(source_yearly_all_patients_enc_obs,
                                      omop_yearly_all_patients_enc_obs) %>% 
   select(Cohort, everything()) %>% 
-  select(!group)
+  select(!group) %>% 
+  arrange(year_after_index)
 
 yearly_all_patients_enc_obs %>% 
   gt() %>%
@@ -491,7 +448,8 @@ yearly_users_enc_obs <- rbind(
   source_yearly_users_enc_obs,
   omop_yearly_users_enc_obs) %>% 
   select(Cohort, everything()) %>% 
-  select(!group)
+  select(!group) %>% 
+  arrange(year_after_index)
 
 yearly_users_enc_obs %>% 
   gt() %>%
@@ -565,7 +523,8 @@ omop_yearly_users_all_enc_boot <- import(here("OMOP Analysis", "Results", "Secon
     `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
     `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
     ) %>% 
-  mutate(Cohort = "OMOP")
+  mutate(Cohort = "OMOP") %>% 
+  arrange(`Year After Index`)
 
 yearly_users_all_enc_boot <- rbind(source_yearly_users_all_enc_boot,
                                    omop_yearly_users_all_enc_boot) %>% 
@@ -631,7 +590,8 @@ yearly_all_patients_all_enc_boot <- rbind(
   source_yearly_all_patients_all_enc_boot,
   omop_yearly_all_patients_all_enc_boot
 ) %>% 
-  select(Cohort, everything())
+  select(Cohort, everything()) %>% 
+  arrange(`Year After Index`)
 
 yearly_all_patients_all_enc_boot %>% 
   gt() %>%
@@ -712,9 +672,11 @@ omop_monthly_all_patients_enc_obs <- import(here("OMOP Analysis", "Results", "Se
     ) %>% 
    mutate(Cohort = "OMOP")
 
-monthly_all_patients_all_enc_boot <- rbind(source_monthly_all_patients_enc_obs,
-                                           omop_monthly_all_patients_enc_obs) %>% 
-  select(Cohort, everything())
+monthly_all_patients_all_enc_boot <- rbind(
+  source_monthly_all_patients_enc_obs,
+  omop_monthly_all_patients_enc_obs) %>% 
+  select(Cohort, everything()) %>% 
+  arrange(`Month After Index`)
 
 monthly_all_patients_all_enc_boot %>% 
   gt() %>%
@@ -773,9 +735,11 @@ omop_monthly_users_enc_obs <- import(here("OMOP Analysis", "Results", "Secondary
     ) %>% 
    mutate(Cohort = "OMOP")
 
-monthly_users_all_enc_boot <- rbind(source_monthly_users_enc_obs,
-                                           omop_monthly_users_enc_obs) %>% 
-  select(Cohort, everything())
+monthly_users_all_enc_boot <- rbind(
+  source_monthly_users_enc_obs,
+  omop_monthly_users_enc_obs) %>% 
+  select(Cohort, everything()) %>% 
+  arrange(`Month After Index`)
 
 monthly_users_all_enc_boot %>% 
   gt() %>%
@@ -798,13 +762,9 @@ monthly_users_all_enc_boot %>%
 ```
 
 
-# Costs 
+# Outpatients Costs Analysis {.tabset}
 
-## Outpatients {.tabset}
-
-
-### Overall{.tabset}
-
+## Overall{.tabset}
 
 ```{r}
 source_overall_costs_observed_users <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Overall","Output_Costs_Raw.xlsx"),
@@ -855,9 +815,9 @@ overall_observed_visits_costs_users %>%
   )
 ```
 
-### Yearly {.tabset}
+## Yearly {.tabset}
 
-#### Observed
+### Observed
 
 ```{r}
 source_yearly_all_patients_costs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_summary_costs_SOURCE.xlsx")) %>% 
@@ -956,7 +916,7 @@ yearly_users_enc_obs_costs %>%
   
 ```
 
-#### Bootstrap
+### Bootstrap
 
 ```{r}
 source_yearly_users_costs_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Yearly", "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
@@ -1226,11 +1186,43 @@ monthly_users_all_enc_boot_costs %>%
 
 ```
 
-## Accident & Emergency {.tabset}
+# Accident & Emergency HRCU Analysis {.tabset}
 
-### Overall{.tabset}
+## Healthcare Service Users Comparison between Source and OMOP
 
-#### Plots
+```{r}
+ae_contigency_table_for_user_status_rp <- import(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "AE", "contigency_table_for_user_status.xlsx")) %>% 
+  mutate(across(everything(), ~ ifelse(is.na(.) | . == "NA", "", .))) %>%   mutate(Total = as.numeric(Total))
+
+ae_contigency_table_for_user_status_rp %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Contigency Table for A&E Service Users**"),
+    subtitle = md("*Comparison between OMOP and Source*")
+  ) %>%
+  # opt_all_caps() %>% 
+  tab_options(
+    heading.align = "left",
+    table.font.size = px(14)
+  ) %>%
+  # Add spanner headers for CPRD Raw and OMOP Analysis
+  tab_spanner(
+    label = "OMOP",
+    columns = c("Non-User", "Not in OMOP", "User")
+  ) %>%
+   opt_stylize(style = 1) %>% 
+  fmt_number(
+    columns = c("Non-User", "Not in OMOP", "User", "Total"),
+    sep_mark = ",",
+    decimals = 0
+  ) %>% 
+  sub_missing(columns = everything(), missing_text = "")
+```
+
+
+## Overall{.tabset}
+
+### Plots
 
 ```{r fig.cap="Distribution of the overall visits"}
 # Read images
@@ -1249,7 +1241,7 @@ grid.arrange(Mean_ae_visits_overall_Raw_g_with_title, Mean_ae_visits_overall_OMO
 ```
 
 
-#### Observed
+### Observed
 
 ```{r}
 source_overall_observed_users_ae <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_AE_attdances_Raw.xlsx"),
@@ -1349,5 +1341,817 @@ overall_observed_visits_all_ae %>%
     ci_lower = "95% CI Lower",
     ci_upper = "95% CI Upper"
   )
+
+```
+
+### Yearly {.tabset}
+
+#### Observed
+
+```{r}
+ae_source_yearly_all_patients_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
+   filter(group == "All Patients & all encounters") %>% 
+  mutate(Cohort = "SOURCE")
+
+ae_omop_yearly_all_patients_enc_obs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
+   filter(group == "All Patients & all encounters") %>% 
+  mutate(Cohort = "OMOP")
+
+ae_yearly_all_patients_enc_obs <- rbind(ae_source_yearly_all_patients_enc_obs,
+                                     ae_omop_yearly_all_patients_enc_obs) %>% 
+  select(Cohort, everything()) %>% 
+  select(!group) %>% 
+  arrange(year_after_index)
+
+ae_yearly_all_patients_enc_obs %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Yearly HES Accident & Emergency Visits**"),
+    subtitle = md("**All Patients**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    year_after_index = "Year After Index Date",
+    mean_exposed = "Mean Exposed",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    q1 = "Lower Quartile",
+    median = "Median",
+    q3 = "Upper Quartile",
+    n_exposed = "Number of Patients Exposed",
+    tot_encounters = "Total Encounters",
+    mean_all_patients = "Mean Number of Patients",
+    se = "Standard Error",
+    lower = "95% Lower CI",
+    upper = "95% Upper CI"
+  )
+  
+```
+
+```{r}
+ae_source_yearly_users_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
+   filter(group == "Users & all encounters") %>% 
+  mutate(Cohort = "SOURCE")
+
+ae_omop_yearly_users_enc_obs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_summary_encounters_SOURCE.xlsx")) %>% 
+   filter(group == "Users & all encounters") %>% 
+  mutate(Cohort = "OMOP")
+
+ae_yearly_users_enc_obs <- rbind(
+  ae_source_yearly_users_enc_obs,
+  ae_omop_yearly_users_enc_obs) %>% 
+  select(Cohort, everything()) %>% 
+  select(!group) %>% 
+  arrange(year_after_index)
+
+ae_yearly_users_enc_obs %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Yearly HES Accident & Emergency Visits**"),
+    subtitle = md("**Healthcare HES Accident & Emergency Users**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    year_after_index = "Year After Index Date",
+    mean_exposed = "Mean Exposed",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    q1 = "Lower Quartile",
+    median = "Median",
+    q3 = "Upper Quartile",
+    n_exposed = "Number of Patients Exposed",
+    tot_encounters = "Total Encounters",
+    mean_all_patients = "Mean Number of Patients",
+    se = "Standard Error",
+    lower = "95% Lower CI",
+    upper = "95% Upper CI"
+  )
+  
+```
+
+#### Bootstrap
+
+```{r}
+ae_source_yearly_users_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "Users & all encounters") %>%
+  select(!group) %>% 
+  rename(
+    `Year After Index` = year ,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+  mutate(Cohort = "SOURCE")
+
+ae_omop_yearly_users_all_enc_boot <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "Users & all encounters") %>%
+  select(!group) %>%
+  rename(
+    `Year After Index` = year,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+  mutate(Cohort = "OMOP")
+
+ae_yearly_users_all_enc_boot <- rbind(ae_source_yearly_users_all_enc_boot,
+                                   ae_omop_yearly_users_all_enc_boot) %>% 
+  select(Cohort, everything()) %>% 
+  arrange(`Year After Index`)
+  
+
+ae_yearly_users_all_enc_boot %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Bootstrap Yearly HES Accident & Emergency Visits**"),
+    subtitle = md("**Healthcare HES Accident & Emergency Users**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 2)
+
+ 
+```
+
+```{r}
+ae_source_yearly_all_patients_all_enc_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "All Patients & all encounters") %>%
+  select(-group) %>% 
+  rename(
+    `Year After Index` = year,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "SOURCE")
+ 
+ae_omop_yearly_all_patients_all_enc_boot <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "All Patients & all encounters") %>%
+  select(-group) %>% 
+  rename(
+    `Year After Index` = year,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "OMOP")
+
+ae_yearly_all_patients_all_enc_boot <- rbind(
+  ae_source_yearly_all_patients_all_enc_boot,
+  ae_omop_yearly_all_patients_all_enc_boot
+) %>% 
+  select(Cohort, everything()) %>% 
+  arrange(`Year After Index`)
+  
+
+ae_yearly_all_patients_all_enc_boot %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Bootstrap Yearly HES Accident & Emergency Visits**"),
+    subtitle = md("**All Patients**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 2)
+
+
+```
+
+
+### Monthly {.tabset}
+
+#### Plots
+
+
+```{r fig.cap="Mean Monthly Visits for Healthcare HES Outpatient Users"}
+# Read images
+AE_Mean_monthly_visits_users <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots", "bootstrap_mean_visits_plot_users.PNG"))
+
+grid.raster(Mean_monthly_visits_users)
+
+```
+
+```{r fig.cap="Mean Monthly Visits for All Patients"}
+AE_Mean_monthly_visits_all <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots",  "boostratp_mean_visits_plot_all.PNG"))
+grid.raster(Mean_monthly_visits_all)
+```
+
+
+#### Bootstrap
+
+```{r}
+ae_source_monthly_all_patients_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+   filter(group == "All Patients & all encounters") %>% 
+  select(-group) %>% 
+  rename(
+    `Month After Index` = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "SOURCE")
+  
+
+ae_omop_monthly_all_patients_enc_obs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "All Patients & all encounters") %>% 
+  select(-group) %>% 
+  rename(
+    `Month After Index` = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "OMOP")
+
+ae_monthly_all_patients_all_enc_boot <- rbind(
+  ae_source_monthly_all_patients_enc_obs,
+  ae_omop_monthly_all_patients_enc_obs) %>% 
+  select(Cohort, everything()) %>% 
+  arrange(`Month After Index`)
+  
+
+ae_monthly_all_patients_all_enc_boot %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Bootstrap Monthly HES Accident & Emergency Visits**"),
+    subtitle = md("**All Patients**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 2)
+
+```
+
+
+```{r}
+ae_source_monthly_users_enc_obs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+   filter(group == "Users & all encounters") %>% 
+  select(-group) %>% 
+  rename(
+    `Month After Index` = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "SOURCE")
+  
+
+ae_omop_monthly_users_enc_obs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx")) %>% 
+  filter(group == "Users & all encounters") %>% 
+  select(-group) %>% 
+  rename(
+    `Month After Index` = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "OMOP")
+
+ae_monthly_users_all_enc_boot <- rbind(
+  ae_source_monthly_users_enc_obs,
+  ae_omop_monthly_users_enc_obs) %>% 
+  select(Cohort, everything()) %>% 
+  arrange(`Month After Index`)
+
+ae_monthly_users_all_enc_boot %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Bootstrap Monthly HES Accident & Emergency Visits**"),
+    subtitle = md("**Healthcare HES Accident & Emergency Users**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 2)
+
+
+
+```
+
+
+# Accident & Emergency Costs Analysis {.tabset}
+
+## Overall{.tabset}
+
+```{r}
+ae_source_overall_costs_observed_users <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_Raw.xlsx"),
+                                  sheet = "summary_users_atts_costs") %>% 
+  mutate(`Patient Category` = "Users & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(`Data Source` = "Source") %>% 
+  select(`Data Source`, everything()) 
+
+ae_omop_overall_costs_observed_users <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_OMOP.xlsx"),
+                                  sheet = "summary_users_atts_costs") %>% 
+  mutate(`Patient Category` = "Users & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(`Data Source` = "OMOP") %>% 
+  select(`Data Source`, everything())
+
+
+ae_overall_observed_visits_costs_users <- rbind(
+  ae_source_overall_costs_observed_users,
+  omop_overall_costs_observed_users)
+
+ae_overall_observed_visits_costs_users %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Overall HES Outpatient Visit Costs**"),
+    subtitle = md("**Healthcare HES Outpatient Users**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    n = "Number of Patients",
+    mean = "Mean",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    median = "Median",
+    lower_q = "Lower Quartile",
+    upper_q = "Upper Quartile",
+    se = "Standard Error",
+    ci_lower = "95% CI Lower",
+    ci_upper = "95% CI Upper"
+  )
+```
+
+## Yearly {.tabset}
+
+### Observed
+
+```{r}
+ae_source_yearly_all_patients_costs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_summary_costs_SOURCE.xlsx")) %>% 
+   filter(group == "All Patients & all encounters") %>% 
+  mutate(Cohort = "SOURCE")
+
+ae_omop_yearly_all_patients_costs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_summary_costs_SOURCE.xlsx")) %>% 
+   filter(group == "All Patients & all encounters") %>% 
+  mutate(Cohort = "OMOP")
+
+ae_yearly_all_patients_costs <- rbind(
+  ae_source_yearly_all_patients_costs,
+  ae_omop_yearly_all_patients_costs) %>% 
+  select(Cohort, everything()) %>% 
+  select(!group) %>% 
+  arrange(year_after_index)
+
+ae_yearly_all_patients_costs %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Yearly HES Outpatient Visit Costs**"),
+    subtitle = md("**All Patients**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    year_after_index = "Year After Index Date",
+    mean_exposed = "Mean Exposed",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    q1 = "Lower Quartile",
+    median = "Median",
+    q3 = "Upper Quartile",
+    n_exposed = "Number of Patients Exposed",
+    total_costs = "Total Costs",
+    mean_all_patients = "Mean Number of Patients",
+    se = "Standard Error",
+    lower = "95% Lower CI",
+    upper = "95% Upper CI"
+  )
+  
+```
+
+```{r}
+ae_source_yearly_users_costs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_summary_costs_SOURCE.xlsx")) %>% 
+   filter(group == "Users & all encounters") %>% 
+  mutate(Cohort = "SOURCE")
+
+ae_omop_yearly_users_costs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_summary_costs_SOURCE.xlsx")) %>% 
+   filter(group == "Users & all encounters") %>% 
+  mutate(Cohort = "OMOP")
+
+ae_yearly_users_enc_obs_costs <- rbind(
+  source_yearly_users_costs,
+  omop_yearly_users_costs) %>% 
+  select(Cohort, everything()) %>% 
+  select(!group)%>% 
+  arrange(year_after_index)
+
+ae_yearly_users_enc_obs_costs %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Yearly HES Outpatient Visit Costs**"),
+    subtitle = md("**Healthcare HES Outpatient Users**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    year_after_index = "Year After Index Date",
+    mean_exposed = "Mean Exposed",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    q1 = "Lower Quartile",
+    median = "Median",
+    q3 = "Upper Quartile",
+    n_exposed = "Number of Patients Exposed",
+    total_costs = "Total Costs",
+    mean_all_patients = "Mean Number of Patients",
+    se = "Standard Error",
+    lower = "95% Lower CI",
+    upper = "95% Upper CI"
+  )
+  
+```
+
+### Bootstrap
+
+```{r}
+ae_source_yearly_users_costs_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
+  filter(group == "Users & all encounters") %>%
+  select(!group) %>% 
+  rename(
+    `Year After Index` = year ,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+  mutate(Cohort = "SOURCE")
+  
+
+ae_omop_yearly_users_costs_boot <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
+  filter(group == "Users & all encounters") %>%
+  select(!group) %>%
+  rename(
+    `Year After Index` = year,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+  mutate(Cohort = "OMOP")
+
+ae_yearly_users_all_costs_boot <- rbind(
+  ae_source_yearly_users_costs_boot,
+  ae_omop_yearly_users_costs_boot) %>% 
+  select(Cohort, everything())
+
+ae_yearly_users_all_costs_boot %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Bootstrap Yearly HES Outpatient Visit Costs**"),
+    subtitle = md("**Healthcare HES Outpatient Users**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 2)
+
+ 
+```
+
+```{r}
+ae_source_yearly_all_patients_costs_boot <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
+  filter(group == "All Patients & all encounters") %>%
+  select(-group) %>% 
+  rename(
+    `Year After Index` = year,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "SOURCE")
+ 
+ae_omop_yearly_all_patients_costs_boot <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Yearly", "yearly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
+  filter(group == "All Patients & all encounters") %>%
+  select(-group) %>% 
+  rename(
+    `Year After Index` = year,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "OMOP")
+
+ae_yearly_all_patients_costs_boot <- rbind(
+  ae_source_yearly_all_patients_costs_boot,
+  ae_omop_yearly_all_patients_costs_boot
+) %>% 
+  select(Cohort, everything())
+
+ae_yearly_all_patients_costs_boot %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Bootstrap Yearly HES Outpatient Visit Costs**"),
+    subtitle = md("**All Patients**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 2)
+
+
+```
+
+
+### Monthly {.tabset}
+
+#### Plots
+
+```{r fig.cap="Mean Monthly Visit Costs for Healthcare HES Outpatient Users"}
+# Read images
+AE_Mean_monthly_visit_costs_users <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots", "bootstrap_mean_costs_plot_users.PNG"))
+
+grid.raster(AE_Mean_monthly_visit_costs_users)
+
+```
+
+```{r fig.cap="Mean Monthly Visit Costs for All Patients"}
+AE_Mean_monthly_visit_costs_all <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots",  "bootstrap_mean_costs_plot_all.PNG"))
+grid.raster(AE_Mean_monthly_visit_costs_all)
+```
+
+
+#### Bootstrap
+
+```{r}
+ae_source_monthly_all_patients_costs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
+   filter(group == "All Patients & all encounters") %>% 
+  select(-group) %>% 
+  rename(
+    `Month After Index` = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "SOURCE")
+  
+
+ae_omop_monthly_all_patients_costs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
+  filter(group == "All Patients & all encounters") %>% 
+  select(-group) %>% 
+  rename(
+    `Month After Index` = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "OMOP")
+
+ae_monthly_all_patients_all_enc_costs_boot <- rbind(
+  ae_source_monthly_all_patients_costs,
+  ae_omop_monthly_all_patients_costs) %>% 
+  select(Cohort, everything())
+
+ae_monthly_all_patients_all_enc_costs_boot %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Bootstrap Monthly HES Outpatient Visit Costs**"),
+    subtitle = md("**All Patients**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 2)
+
+```
+
+
+```{r}
+ae_source_monthly_users_costs <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
+   filter(group == "Users & all encounters") %>% 
+  select(-group) %>% 
+  rename(
+    `Month After Index` = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "SOURCE")
+  
+
+ae_omop_monthly_users_costs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_costs_OMOP.xlsx")) %>% 
+  filter(group == "Users & all encounters") %>% 
+  select(-group) %>% 
+  rename(
+    `Month After Index` = month,
+    Mean = mean,
+    Variance = variance,
+    `Standard Deviation` = sd,
+    `Standard Error` = se,
+    `95% Lower CI-First order normal approximation` = ci_lower_norm,
+    `95% Upper CI-First order normal approximation` = ci_upper_norm,
+    `95% Lower CI-Basic bootstrap interval` = ci_lower_basic,
+    `95% Upper CI-Basic bootstrap interval` = ci_upper_basic,
+    `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
+    `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
+    ) %>% 
+   mutate(Cohort = "OMOP")
+
+ae_monthly_users_all_enc_boot_costs <- rbind(
+  ae_source_monthly_users_costs,
+  ae_omop_monthly_users_costs) %>% 
+  select(Cohort, everything())
+
+ae_monthly_users_all_enc_boot_costs %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Bootstrap Monthly HES Outpatient Visit Costs**"),
+    subtitle = md("**Healthcare HES Outpatient Users**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 2)
+
+
 
 ```

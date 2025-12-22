@@ -27,6 +27,7 @@
 library(dplyr)
 library(tidyr)
 library(lubridate)
+library(rio)
 
 # --- Visits ------
 
@@ -36,19 +37,19 @@ library(lubridate)
 
 cohort_table <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
 
-appt_data <- import("H:/Projects/Validation/Data/appt_data_omop.csv") |> 
+appt_data_omop <- import("H:/Projects/Validation/Data/appt_data_omop.csv") |> 
   arrange(subject_id)
 op_costs_final_data_recoded_omop <- op_costs_final_data_recoded_omop |> 
   arrange(subject_id)
 op_costs_final_data_recoded_omop_min <- op_costs_final_data_recoded_omop |> 
   select(unit_cost)
 
-appt_data <- cbind(appt_data, op_costs_final_data_recoded_omop_min)
+appt_data_omop <- cbind(appt_data_omop, op_costs_final_data_recoded_omop_min)
 
 ## All patients ----
 
 # --- Preparation ---
-n_all_pts <- n_distinct(cohort_table$subject_id)
+n_all_pts <- n_distinct(cohort_table_omop$subject_id)
 
 # Create exposure matrix for years (partial years are included) ---
 cohort_grid_omop_all_years <- cohort_table_omop %>%
@@ -68,7 +69,7 @@ cohort_grid_omop_all_years <- cohort_table_omop %>%
   pivot_wider(names_from = year_col, values_from = value)
 
 # Compute max exposed year per patient ---
-cohort_years_all_years <- cohort_table %>%
+cohort_years_all_years <- cohort_table_omop %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
@@ -78,7 +79,7 @@ cohort_years_all_years <- cohort_table %>%
 # --- a) All patients & all encounters ------
 
 # --- Step 1: Summarise encounters per year ---
-yearly_encounters_summary <- appt_data %>%
+yearly_encounters_summary <- appt_data_omop %>%
   mutate(
     index_date = ymd(index_date),
     visit_detail_start_date = ymd(visit_detail_start_date),
@@ -153,7 +154,7 @@ observed_visit_summary_all_patients_all_encounters_all_years <- final_long_df_en
 # Preparation
 
 # Extract user cohort
-cohort_table_users <- appt_data %>%
+cohort_table_users <- appt_data_omop %>%
   filter(user_status == "User") %>% distinct(subject_id, index_date, follow_up_end)
 
 (n_users <- n_distinct(cohort_table_users$subject_id))
@@ -186,7 +187,7 @@ cohort_years_all_years_users <- cohort_table_users %>%
 # --- a) All users & all encounters ----
 
 # Step 1: Summarise encounters per year
-yearly_encounters_summary_users <- appt_data %>%
+yearly_encounters_summary_users <- appt_data_omop %>%
   filter(user_status == "User") %>%
   mutate(
     year_after_index = trunc(as.numeric(difftime(visit_detail_start_date, index_date, units = "days")) / 365.25) + 1
@@ -311,6 +312,7 @@ bootstrap_yearly_summary <- function(data, year_var = "year_after_index", value_
   bind_rows(results)
 }
 
+library(boot)
 
 ## Bootstrap on years 
 yearly_bootstrap_all_patients_all_encounters_all_years <- bootstrap_yearly_summary(final_long_df_encounters_all_patients_all_encounters_all_years)
@@ -338,7 +340,7 @@ combined_encounters_bootstrap_summary_yearly <- bind_rows(
 # --- Costs ------
 # Ran from the local machine
 # Start by running 05-CreatingCosts_OP_omop.R
-# Then from the server, save cohort_table dataset and appt_data
+# Then from the server, save cohort_table dataset and appt_data_omop
 
 # cohort_table <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
 # 
@@ -365,7 +367,7 @@ cohort_years_all_years <- cohort_table_omop %>%
 # --- a) All patients & all encounters ------
 
 # --- Step 1: Summarise encounters per year ---
-yearly_costs_summary <- appt_data %>%
+yearly_costs_summary <- appt_data_omop %>%
   mutate(
     index_date = ymd(index_date),
     visit_detail_start_date = ymd(visit_detail_start_date),
@@ -436,7 +438,7 @@ observed_cost_summary_all_patients_all_encounters_all_years <- final_long_df_cos
   mutate(across(where(is.numeric), round, 2))
 
 # Extract user cohort
-cohort_table_users <- appt_data %>%
+cohort_table_users <- appt_data_omop %>%
   filter(user_status == "User") %>% distinct(subject_id, index_date, follow_up_end)
 
 n_users <- n_distinct(cohort_table_users$subject_id)
@@ -468,7 +470,7 @@ cohort_years_all_years_users <- cohort_table_users %>%
 # --- a) All users & all encounters ------
 
 # --- Step 1: Summarise encounters per year ---
-yearly_costs_summary <- appt_data %>%
+yearly_costs_summary <- appt_data_omop %>%
   filter(user_status == "User") %>%
   mutate(
     index_date = ymd(index_date),
@@ -623,6 +625,7 @@ combined_costs_bootstrap_summary_yearly <- bind_rows(
   select(group, everything())
 
 # Export ----
+library(writexl)
 
 write_xlsx(combined_summary_encounters_yearly, 
            here::here("OMOP Analysis", "Results", "SecondaryCareAnalysis", 

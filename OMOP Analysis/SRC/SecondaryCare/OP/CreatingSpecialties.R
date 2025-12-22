@@ -24,7 +24,7 @@ treat_specialties <- tretspef_lookup$tretspef
 
 
 ### Clean outpatient data ----
-table_one_op_omop_appt <- table_one_op_omop_appt %>%
+table_one_op_omop_appt <- appt_data %>%
   mutate(
     specialty_source_value_modified = specialty_source_value %>%
       str_remove("\\s*\\([^\\)]+\\)") %>%   # remove parentheses

@@ -245,9 +245,73 @@ ncc_costs_ae <- import(here("NHS_Collection_Costs_2024_2025.xlsx"),
 
 (em_weighted_cost = round(sum(ncc_costs_ae$cost)/sum(ncc_costs_ae$n_attendances), 2))
 
+em_weighted_cost_df <- data.frame(
+  em_weighted_cost = em_weighted_cost
+)
+export(em_weighted_cost_df, 
+       here("OMOP Analysis", "Results", "SecondaryCareAnalysis" , "AE",
+            "OMOP_cost_value.csv"))
+
 ae_attendance_data <- ae_attendance_data %>% 
   mutate(unit_cost = if_else(user_status == "User", em_weighted_cost, 0))
 
 export(ae_attendance_data, 
        here("OMOP Analysis", "Results", "SecondaryCareAnalysis" , "AE",
             "ae_attendance_data_omop.csv"))
+
+## Summary Stats ----
+users_summary_costs_stats_ae <- ae_attendance_data %>% 
+  filter(user_status == "User") %>%
+  group_by(subject_id) %>% 
+  summarise(total_cost = sum(unit_cost)) %>% 
+  # drop_na(unit_cost_em) |> 
+  summarise(
+    n_attendances = n_distinct(subject_id),
+    mean_attendance_costs = mean(total_cost, na.rm = TRUE),
+    min_attendance_costs = min(total_cost, na.rm = TRUE),
+    median_attendance_costs = median(total_cost, na.rm = TRUE),
+    max_attendance_costs = max(total_cost, na.rm = TRUE),
+    sd_attendance_costs = sd(total_cost, na.rm = TRUE),
+    q1_attendance_costs = quantile(total_cost, probs = 0.25, na.rm = TRUE),
+    q3_attendance_costs = quantile(total_cost, probs = 0.75, na.rm = TRUE),
+    se               = sd_attendance_costs / sqrt(n_attendances),
+    ci_lower         = mean_attendance_costs - qt(0.975, df = n_attendances - 1) * se,
+    ci_upper         = mean_attendance_costs + qt(0.975, df = n_attendances - 1) * se,
+    .groups = "drop"
+  ) |> 
+  mutate(across(everything(), round, 2))
+
+all_summary_costs_stats_ae <- ae_attendance_data %>% 
+  group_by(subject_id) %>% 
+  summarise(total_cost = sum(unit_cost)) %>% 
+  # drop_na(unit_cost_em) |> 
+  summarise(
+    n_attendances = n_distinct(subject_id),
+    mean_attendance_costs = mean(total_cost, na.rm = TRUE),
+    min_attendance_costs = min(total_cost, na.rm = TRUE),
+    median_attendance_costs = median(total_cost, na.rm = TRUE),
+    max_attendance_costs = max(total_cost, na.rm = TRUE),
+    sd_attendance_costs = sd(total_cost, na.rm = TRUE),
+    q1_attendance_costs = quantile(total_cost, probs = 0.25, na.rm = TRUE),
+    q3_attendance_costs = quantile(total_cost, probs = 0.75, na.rm = TRUE),
+    se               = sd_attendance_costs / sqrt(n_attendances),
+    ci_lower         = mean_attendance_costs - qt(0.975, df = n_attendances - 1) * se,
+    ci_upper         = mean_attendance_costs + qt(0.975, df = n_attendances - 1) * se,
+    .groups = "drop"
+  ) |> 
+  mutate(across(everything(), round, 2))
+
+# Export the file
+library(writexl)
+
+ae_costs_list <- list(
+  summary_users_atts_costs = users_summary_costs_stats_ae,
+  summary_all_atts_costs = all_summary_costs_stats_ae
+)
+
+# Write to an Excel file
+write_xlsx(ae_costs_list, here::here("OMOP Analysis", "Results",
+                                     "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_OMOP.xlsx"))
+
+
+
