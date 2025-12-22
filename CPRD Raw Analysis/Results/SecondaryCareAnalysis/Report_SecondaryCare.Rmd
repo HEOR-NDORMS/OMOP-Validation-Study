@@ -25,14 +25,21 @@ library(readxl)
 ```
 
 
-Outpatient data were cleaned to ensure completeness of specialty information required by the HRG Grouper. When the main specialty (MAINSPEF) was missing but the treatment specialty (TRETSPEF) was valid, MAINSPEF was replaced with TRETSPEF, and vice versa when TRETSPEF was missing but MAINSPEF was valid. If MAINSPEF was missing and TRETSPEF contained an invalid code (for example, a text description such as “cardiology”), MAINSPEF was imputed using the most frequent MAINSPEF (mode) observed among all records sharing the same TRETSPEF. Similarly, if TRETSPEF was missing, it was imputed using the mode of TRETSPEF among records with the same MAINSPEF. When both specialties were missing and the appointment was attended, missing values were replaced with the overall (global) mode for each respective specialty variable. Non-attended records with both specialties missing were excluded. Invalid or unrecognized specialty codes were also replaced using the global mode, but only for attended appointments.
+## Data Cleaning and Imputation Rules
 
-The variable FIRSTATT (first attendance indicator) was cleaned by replacing the value “X” (denoting missingness) with “4”, corresponding to the least resource-intensive attendance category. This step was restricted to attended appointments (attendance code = 5) to maintain consistency with OMOP preprocessing standards.
-
-For cost data, missing or suppressed values in the national average unit cost field (denoted by “*”) were imputed within each combination of treatment specialty (TRETSPEF) and NAC HRG code. When all rows in a group contained suppressed values, the mean of available unit costs across the dataset was used. When some valid cost values were available, a weighted mean was calculated using the number of attendances as weights. In the OMOP dataset, HRG codes were clustered by their first four characters (for example, WF01A–D grouped as WF01), and unit costs were harmonized within each cluster using either a simple mean (if all costs were suppressed) or a weighted mean (if valid costs existed). This ensured consistency of cost estimates across HRG clusters while preserving relationships between specialty, activity level, and resource use.
-
-In the Admitted Patient Care (APC) data, missing Procode3 values required for grouper classification were replaced with valid codes drawn from a validated random sample. Validation was performed by checking 20 randomly selected patient records to confirm that the resulting HRG assignments were unchanged.
-For Accident & Emergency (AE) data, diagnosis codes misclassified under the treatment variable (Treatment_01)—including C109, D101, D102, D105, E101, E104, E105, E110, U212, Y981, Z411, Z413, and Z421—were identified and removed. AE attendances missing both main investigation and main treatment fields were excluded from the cost analysis.
+| Variable | Description | Issue | Rule Applied |
+|---------|-------------|-------|--------------|
+| **Inpatient** |  |  |  |
+| PROCODE3 | Organisation code | Missing | Replaced with valid codes drawn from a validated random sample |
+| PROVSPNO | Hospital spell number | Missing | Replaced with valid codes drawn from a validated random sample |
+| **Outpatient** |  |  |  |
+| MAINSPEF | Main specialty code for the appointment | Missing | Replaced with TRETSPEF when valid. If TRETSPEF missing/invalid, impute most frequent TRETSPEF among same MAINSPEF; otherwise use global mode |
+| TRETSPEF | Treatment specialty code for the appointment | Missing | Replaced with MAINSPEF when valid. If MAINSPEF missing/invalid, impute most frequent MAINSPEF among same TRETSPEF; otherwise use global mode |
+| MAINSPEF & TRETSPEF |  | Both missing | If attended, use global mode; if not attended, record excluded from cost calculations |
+| FIRSTATT | First or follow-up appointment indicator | Invalid (value = "X") | Replaced with "4" (Follow-up telephone or telemedicine; least resource-intensive option) |
+| **Emergency Care** |  |  |  |
+| INV | Emergency care clinical investigation | SNOMED codes not accepted by grouper | Converted to grouper-compatible values using ETOS v4.0.8 mapping |
+| TREAT | Treatment category care | SNOMED codes not accepted by grouper | Converted to grouper-compatible values using ETOS v4.0.8 mapping |
 
 # Outpatients HRCU Analysis {.tabset}
 
@@ -89,8 +96,8 @@ grid.arrange(Mean_visits_overall_Raw_g_with_title, Mean_visits_overall_OMOP_g_wi
 ```
 
 ```{r fig.height=6, fig.width=6}
-top_50_specialty_plot <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", "top_50_combined_specialty_plot.PNG")) 
-grid.raster(top_50_specialty_plot)
+top_30_specialty_plot <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", "top_30_combined_specialty_plot.PNG")) 
+grid.raster(top_30_specialty_plot)
 ```
 
 
@@ -134,8 +141,9 @@ omop_overall_observed_users <- import(here("OMOP Analysis", "Results", "Secondar
   select(`Data Source`, everything())
 
 
-overall_observed_visits_users <- rbind(source_overall_observed_users, 
-                                 omop_overall_observed_users)
+overall_observed_visits_users <- rbind(
+  source_overall_observed_users,
+  omop_overall_observed_users)
 
 overall_observed_visits_users %>% 
   gt() %>%
@@ -395,8 +403,9 @@ omop_yearly_all_patients_enc_obs <- import(here("OMOP Analysis", "Results", "Sec
    filter(group == "All Patients & all encounters") %>% 
   mutate(Cohort = "OMOP")
 
-yearly_all_patients_enc_obs <- rbind(source_yearly_all_patients_enc_obs,
-                                     omop_yearly_all_patients_enc_obs) %>% 
+yearly_all_patients_enc_obs <- rbind(
+  source_yearly_all_patients_enc_obs,
+  omop_yearly_all_patients_enc_obs) %>% 
   select(Cohort, everything()) %>% 
   select(!group) %>% 
   arrange(year_after_index)
@@ -523,12 +532,13 @@ omop_yearly_users_all_enc_boot <- import(here("OMOP Analysis", "Results", "Secon
     `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
     `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
     ) %>% 
-  mutate(Cohort = "OMOP") %>% 
-  arrange(`Year After Index`)
+  mutate(Cohort = "OMOP") 
 
-yearly_users_all_enc_boot <- rbind(source_yearly_users_all_enc_boot,
-                                   omop_yearly_users_all_enc_boot) %>% 
-  select(Cohort, everything())
+yearly_users_all_enc_boot <- rbind(
+  source_yearly_users_all_enc_boot,
+  omop_yearly_users_all_enc_boot) %>% 
+  select(Cohort, everything()) %>% 
+  arrange(`Year After Index`)
 
 yearly_users_all_enc_boot %>% 
   gt() %>%
@@ -1748,13 +1758,13 @@ ae_omop_overall_costs_observed_users <- import(here("OMOP Analysis", "Results", 
 
 ae_overall_observed_visits_costs_users <- rbind(
   ae_source_overall_costs_observed_users,
-  omop_overall_costs_observed_users)
+  ae_omop_overall_costs_observed_users)
 
 ae_overall_observed_visits_costs_users %>% 
   gt() %>%
   tab_header(
-    title = md("**Overall HES Outpatient Visit Costs**"),
-    subtitle = md("**Healthcare HES Outpatient Users**")
+    title = md("**Overall HES Accident & Emergency Visit Costs**"),
+    subtitle = md("**Healthcare HES Accident & Emergency Users**")
   ) %>%
   opt_all_caps() %>% 
     tab_options(
@@ -1766,14 +1776,65 @@ ae_overall_observed_visits_costs_users %>%
     ) |> 
   opt_stylize(style = 3) %>% 
   cols_label(
-    n = "Number of Patients",
-    mean = "Mean",
-    min = "Minimum",
-    max = "Maximum",
-    sd = "Standard Deviation",
-    median = "Median",
-    lower_q = "Lower Quartile",
-    upper_q = "Upper Quartile",
+    n_attendances = "Number of Patients",
+    mean_attendance_costs = "Mean",
+    min_attendance_costs = "Minimum",
+    median_attendance_costs = "Median",
+    max_attendance_costs = "Maximum",
+    sd_attendance_costs = "Standard Deviation",
+    q1_attendance_costs = "Lower Quartile",
+    q3_attendance_costs = "Upper Quartile",
+    se = "Standard Error",
+    ci_lower = "95% CI Lower",
+    ci_upper = "95% CI Upper"
+  )
+```
+
+
+```{r}
+ae_source_overall_costs_observed_all <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_Raw.xlsx"),
+                                  sheet = "summary_users_atts_costs") %>% 
+  mutate(`Patient Category` = "All Patients & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(`Data Source` = "Source") %>% 
+  select(`Data Source`, everything()) 
+
+ae_omop_overall_costs_observed_all <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_OMOP.xlsx"),
+                                  sheet = "summary_users_atts_costs") %>% 
+  mutate(`Patient Category` = "All Patients & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(`Data Source` = "OMOP") %>% 
+  select(`Data Source`, everything())
+
+
+ae_overall_observed_visits_costs_all <- rbind(
+  ae_source_overall_costs_observed_all,
+  ae_omop_overall_costs_observed_all)
+
+ae_overall_observed_visits_costs_all %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Overall HES Accident & Emergency Visit Costs**"),
+    subtitle = md("**All Patients**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    n_attendances = "Number of Patients",
+    mean_attendance_costs = "Mean",
+    min_attendance_costs = "Minimum",
+    median_attendance_costs = "Median",
+    max_attendance_costs = "Maximum",
+    sd_attendance_costs = "Standard Deviation",
+    q1_attendance_costs = "Lower Quartile",
+    q3_attendance_costs = "Upper Quartile",
     se = "Standard Error",
     ci_lower = "95% CI Lower",
     ci_upper = "95% CI Upper"
@@ -1803,7 +1864,7 @@ ae_yearly_all_patients_costs <- rbind(
 ae_yearly_all_patients_costs %>% 
   gt() %>%
   tab_header(
-    title = md("**Yearly HES Outpatient Visit Costs**"),
+    title = md("**Yearly HES Accident & Emergency Visit Costs**"),
     subtitle = md("**All Patients**")
   ) %>%
   opt_all_caps() %>% 
@@ -1853,8 +1914,8 @@ ae_yearly_users_enc_obs_costs <- rbind(
 ae_yearly_users_enc_obs_costs %>% 
   gt() %>%
   tab_header(
-    title = md("**Yearly HES Outpatient Visit Costs**"),
-    subtitle = md("**Healthcare HES Outpatient Users**")
+    title = md("**Yearly HES Accident & Emergency Visit Costs**"),
+    subtitle = md("**Healthcare HES Accident & Emergency Users**")
   ) %>%
   opt_all_caps() %>% 
     tab_options(
@@ -1927,13 +1988,14 @@ ae_omop_yearly_users_costs_boot <- import(here("OMOP Analysis", "Results", "Seco
 ae_yearly_users_all_costs_boot <- rbind(
   ae_source_yearly_users_costs_boot,
   ae_omop_yearly_users_costs_boot) %>% 
-  select(Cohort, everything())
+  select(Cohort, everything()) %>% 
+  arrange(`Year After Index`)
 
 ae_yearly_users_all_costs_boot %>% 
   gt() %>%
   tab_header(
-    title = md("**Bootstrap Yearly HES Outpatient Visit Costs**"),
-    subtitle = md("**Healthcare HES Outpatient Users**")
+    title = md("**Bootstrap Yearly HES Accident & Emergency Visit Costs**"),
+    subtitle = md("**Healthcare HES Accident & Emergency Users**")
   ) %>%
   opt_all_caps() %>% 
     tab_options(
@@ -1983,7 +2045,8 @@ ae_omop_yearly_all_patients_costs_boot <- import(here("OMOP Analysis", "Results"
     `95% Lower CI-Bootstrap percentile interval` = ci_lower_perc,
     `95% Upper CI-Bootstrap percentile interval` = ci_upper_perc
     ) %>% 
-   mutate(Cohort = "OMOP")
+   mutate(Cohort = "OMOP") %>% 
+  arrange(`Year After Index`)
 
 ae_yearly_all_patients_costs_boot <- rbind(
   ae_source_yearly_all_patients_costs_boot,
@@ -1994,7 +2057,7 @@ ae_yearly_all_patients_costs_boot <- rbind(
 ae_yearly_all_patients_costs_boot %>% 
   gt() %>%
   tab_header(
-    title = md("**Bootstrap Yearly HES Outpatient Visit Costs**"),
+    title = md("**Bootstrap Yearly HES Accident & Emergency Visit Costs**"),
     subtitle = md("**All Patients**")
   ) %>%
   opt_all_caps() %>% 
@@ -2072,12 +2135,13 @@ ae_omop_monthly_all_patients_costs <- import(here("OMOP Analysis", "Results", "S
 ae_monthly_all_patients_all_enc_costs_boot <- rbind(
   ae_source_monthly_all_patients_costs,
   ae_omop_monthly_all_patients_costs) %>% 
-  select(Cohort, everything())
+  select(Cohort, everything()) %>% 
+  arrange(`Month After Index`)
 
 ae_monthly_all_patients_all_enc_costs_boot %>% 
   gt() %>%
   tab_header(
-    title = md("**Bootstrap Monthly HES Outpatient Visit Costs**"),
+    title = md("**Bootstrap Monthly HES Accident & Emergency Visit Costs**"),
     subtitle = md("**All Patients**")
   ) %>%
   opt_all_caps() %>% 
@@ -2113,7 +2177,7 @@ ae_source_monthly_users_costs <- import(here("CPRD Raw Analysis", "Results", "Se
    mutate(Cohort = "SOURCE")
   
 
-ae_omop_monthly_users_costs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_costs_OMOP.xlsx")) %>% 
+ae_omop_monthly_users_costs <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly", "monthly_combined_bootstrap_summary_costs_SOURCE.xlsx")) %>% 
   filter(group == "Users & all encounters") %>% 
   select(-group) %>% 
   rename(
@@ -2134,13 +2198,14 @@ ae_omop_monthly_users_costs <- import(here("OMOP Analysis", "Results", "Secondar
 ae_monthly_users_all_enc_boot_costs <- rbind(
   ae_source_monthly_users_costs,
   ae_omop_monthly_users_costs) %>% 
-  select(Cohort, everything())
+  select(Cohort, everything()) %>% 
+  arrange(`Month After Index`)
 
 ae_monthly_users_all_enc_boot_costs %>% 
   gt() %>%
   tab_header(
-    title = md("**Bootstrap Monthly HES Outpatient Visit Costs**"),
-    subtitle = md("**Healthcare HES Outpatient Users**")
+    title = md("**Bootstrap Monthly HES Accident & Emergency Visit Costs**"),
+    subtitle = md("**Healthcare HES Accident & Emergency Users**")
   ) %>%
   opt_all_caps() %>% 
     tab_options(
