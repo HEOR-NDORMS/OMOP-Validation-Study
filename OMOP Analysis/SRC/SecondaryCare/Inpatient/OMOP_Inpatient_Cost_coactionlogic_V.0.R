@@ -58,19 +58,33 @@ cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
 # --- 5) Append specialty (mainspef / tretspef) ----------------------------
 provider <- cdm$provider %>% collect()
 # 1.Import cost inputs
-validated_map <- rio::import("OMOP Analysis/SRC/SecondaryCare/Inpatient/check_mainspef_tretspef_inpatient_outpatient_ValidationStudy_GF.xlsx")
+validated_map <- rio::import("OMOP Analysis/SRC/SecondaryCare/Inpatient/check_mainspef_tretspef_inpatient_outpatient_ValidationStudy_coactionlogic_GF.xlsx") %>% 
+  mutate(
+    specialty_source_value = specialty_source_value %>%
+      str_remove("\\s*\\([^\\)]+\\)") %>%
+      str_replace_all("&", "and") %>%
+      str_to_lower() %>%
+      str_trim()
+  )
 
 cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
   left_join(
-    provider %>% dplyr:: select(provider_id, specialty_concept_id),
+    provider %>% dplyr:: select(provider_id, specialty_source_value),
     by = "provider_id"
   ) %>%
+  mutate(
+    specialty_source_value = specialty_source_value %>%
+      str_remove("\\s*\\([^\\)]+\\)") %>%
+      str_replace_all("&", "and") %>%
+      str_to_lower() %>%
+      str_trim()
+  ) %>% 
   left_join(
     validated_map %>%
-      dplyr:: select(specialty_concept_id, concept_name, mainspef, tretspef,
+      dplyr:: select(specialty_source_value, concept_name, mainspef, tretspef,
                      mainspef_code, tretspef_code) %>%
       distinct(),
-    by = "specialty_concept_id"
+    by = "specialty_source_value"
   ) 
 
 # how many with both mainspef and tretspef missing?
@@ -566,7 +580,7 @@ nhs_im_cost_weighted <- nhs_im_cost %>%
 # --- 11) Append HRG and Costs  ---------------------------------------------------
 
 # Import HRG output ---
-hrg_output_inpatient <- read.csv("OMOP Analysis/SRC/SecondaryCare/Inpatient/Output_inpatient_grouper_coactionlogic_spell_rel.csv") 
+hrg_output_inpatient <- read.csv("OMOP Analysis/SRC/SecondaryCare/Inpatient/output_coactionlogic3_spell_rel.csv") 
 
 # delete spells with errors
 hrg_output_inpatient <- hrg_output_inpatient %>%  
