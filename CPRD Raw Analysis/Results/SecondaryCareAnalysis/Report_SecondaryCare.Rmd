@@ -1,7 +1,13 @@
 ---
-title: "Secondary Care Analysis Report"
-output: html_document
-date: "2025-10-07"
+title: "Validating secondary care resource use and costs based on OMOP-mapped CPRD data against corresponding source data: the case of postmenopausal fragility fractures in the UK"
+date: "`r format(Sys.Date(), '%A, %d %B %Y')`"
+author: "Health Economics Group"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+css: custom_style.css
 ---
 
 ```{r setup, include=FALSE}
@@ -802,6 +808,57 @@ overall_observed_visits_costs_users %>%
   )
 ```
 
+```{r}
+source_overall_costs_observed_all <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "OP", "Overall","Output_Costs_Raw.xlsx"),
+                                  sheet = "summary_all_appts_costs") %>% 
+  mutate(`Patient Category` = "All Patients & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(`Data Source` = "Source") %>% 
+  select(`Data Source`, everything()) 
+
+omop_overall_costs_observed_all <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "OP", "Overall","Output_Costs_OMOP.xlsx"),
+                                  sheet = "summary_all_appts_costs") %>% 
+  mutate(`Patient Category` = "All Patients & all encounters") %>% 
+  select(!`Patient Category`) %>% 
+  mutate(`Data Source` = "OMOP") %>% 
+  select(`Data Source`, everything())
+
+
+overall_observed_visits_costs_all <- rbind(
+  source_overall_costs_observed_all,
+  omop_overall_costs_observed_all)
+
+overall_observed_visits_costs_all %>% 
+  gt() %>%
+  tab_header(
+    title = md("**Overall HES Outpatient Visit Costs**"),
+    subtitle = md("**All Patients**")
+  ) %>%
+  opt_all_caps() %>% 
+    tab_options(
+      table.width = px(800),
+      #heading.title.font.weight = "bold",
+      heading.align = "left",
+      #table.font.names = "Times New Roman"
+      table.font.size = px(14)
+    ) |> 
+  opt_stylize(style = 3) %>% 
+  cols_label(
+    n = "Number of Patients",
+    mean = "Mean",
+    min = "Minimum",
+    max = "Maximum",
+    sd = "Standard Deviation",
+    median = "Median",
+    lower_q = "Lower Quartile",
+    upper_q = "Upper Quartile",
+    se = "Standard Error",
+    ci_lower = "95% CI Lower",
+    ci_upper = "95% CI Upper"
+  )
+```
+
+
 ## Yearly {.tabset}
 
 ### Observed
@@ -818,7 +875,8 @@ omop_yearly_all_patients_costs <- import(here("OMOP Analysis", "Results", "Secon
 yearly_all_patients_costs <- rbind(source_yearly_all_patients_costs,
                                      omop_yearly_all_patients_costs) %>% 
   select(Cohort, everything()) %>% 
-  select(!group)
+  select(!group) %>% 
+  arrange(year_after_index)
 
 yearly_all_patients_costs %>% 
   gt() %>%
@@ -867,7 +925,8 @@ yearly_users_enc_obs_costs <- rbind(
   source_yearly_users_costs,
   omop_yearly_users_costs) %>% 
   select(Cohort, everything()) %>% 
-  select(!group)
+  select(!group) %>% 
+  arrange(year_after_index)
 
 yearly_users_enc_obs_costs %>% 
   gt() %>%
@@ -943,9 +1002,11 @@ omop_yearly_users_costs_boot <- import(here("OMOP Analysis", "Results", "Seconda
     ) %>% 
   mutate(Cohort = "OMOP")
 
-yearly_users_all_costs_boot <- rbind(source_yearly_users_costs_boot,
-                                   omop_yearly_users_costs_boot) %>% 
-  select(Cohort, everything())
+yearly_users_all_costs_boot <- rbind(
+  source_yearly_users_costs_boot,
+  omop_yearly_users_costs_boot) %>% 
+  select(Cohort, everything())%>% 
+  arrange(`Year After Index`)
 
 yearly_users_all_costs_boot %>% 
   gt() %>%
@@ -1007,7 +1068,8 @@ yearly_all_patients_costs_boot <- rbind(
   source_yearly_all_patients_costs_boot,
   omop_yearly_all_patients_costs_boot
 ) %>% 
-  select(Cohort, everything())
+  select(Cohort, everything())%>% 
+  arrange(`Year After Index`)
 
 yearly_all_patients_costs_boot %>% 
   gt() %>%
@@ -1090,7 +1152,8 @@ omop_monthly_all_patients_costs <- import(here("OMOP Analysis", "Results", "Seco
 monthly_all_patients_all_enc_costs_boot <- rbind(
   source_monthly_all_patients_costs,
   omop_monthly_all_patients_costs) %>% 
-  select(Cohort, everything())
+  select(Cohort, everything())%>% 
+  arrange(`Month After Index`)
 
 monthly_all_patients_all_enc_costs_boot %>% 
   gt() %>%
@@ -1149,9 +1212,11 @@ omop_monthly_users_costs <- import(here("OMOP Analysis", "Results", "SecondaryCa
     ) %>% 
    mutate(Cohort = "OMOP")
 
-monthly_users_all_enc_boot_costs <- rbind(source_monthly_users_costs,
-                                           omop_monthly_users_costs) %>% 
-  select(Cohort, everything())
+monthly_users_all_enc_boot_costs <- rbind(
+  source_monthly_users_costs,
+  omop_monthly_users_costs) %>% 
+  select(Cohort, everything())%>% 
+  arrange(`Month After Index`)
 
 monthly_users_all_enc_boot_costs %>% 
   gt() %>%
@@ -1770,14 +1835,14 @@ ae_overall_observed_visits_costs_users %>%
 
 ```{r}
 ae_source_overall_costs_observed_all <- import(here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_Raw.xlsx"),
-                                  sheet = "summary_users_atts_costs") %>% 
+                                  sheet = "summary_all_atts_costs") %>% 
   mutate(`Patient Category` = "All Patients & all encounters") %>% 
   select(!`Patient Category`) %>% 
   mutate(`Data Source` = "Source") %>% 
   select(`Data Source`, everything()) 
 
 ae_omop_overall_costs_observed_all <- import(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "AE", "Overall","Output_Costs_OMOP.xlsx"),
-                                  sheet = "summary_users_atts_costs") %>% 
+                                  sheet = "summary_all_atts_costs") %>% 
   mutate(`Patient Category` = "All Patients & all encounters") %>% 
   select(!`Patient Category`) %>% 
   mutate(`Data Source` = "OMOP") %>% 

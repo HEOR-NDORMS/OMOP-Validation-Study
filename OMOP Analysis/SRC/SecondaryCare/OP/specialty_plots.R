@@ -1,8 +1,8 @@
-op_specialty_groups_df_omop <- import("outpatient_specialty_categories_hes_omop.V.0.xlsx",
+op_specialty_groups_df_omop <- import("outpatient_specialty_categories_hes_omop.V.0.1.xlsx",
                                  sheet = "OP_OMOP_specialty") |> 
   janitor::clean_names()
 
-op_specialty_groups_df_raw <- import("outpatient_specialty_categories_hes_omop.V.0.xlsx",
+op_specialty_groups_df_raw <- import("outpatient_specialty_categories_hes_omop.V.0.1.xlsx",
                                       sheet = "OP_source_mainspef") |> 
   janitor::clean_names()
 
