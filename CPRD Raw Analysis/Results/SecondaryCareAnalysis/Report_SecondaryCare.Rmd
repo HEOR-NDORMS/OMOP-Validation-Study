@@ -1138,7 +1138,7 @@ yearly_all_patients_costs_boot %>%
 
 ### Plots
 
-```{r fig.cap="Mean Monthly Visit Costs for Healthcare HES Outpatient Users"}
+```{r fig.cap="Mean Monthly Visits Costs for Healthcare HES Outpatient Users"}
 # Read images
 Mean_monthly_visit_costs_users <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots", "bootstrap_mean_costs_plot_users.PNG"))
 
@@ -1146,7 +1146,7 @@ grid.raster(Mean_monthly_visit_costs_users)
 
 ```
 
-```{r fig.cap="Mean Monthly Visit Costs for All Patients"}
+```{r fig.cap="Mean Monthly Visits Costs for All Patients"}
 Mean_monthly_visit_costs_all <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "OP", "Plots",  "bootstrap_mean_costs_plot_all.PNG"))
 grid.raster(Mean_monthly_visit_costs_all)
 ```
@@ -1676,17 +1676,17 @@ ae_yearly_all_patients_all_enc_boot %>%
 ### Plots
 
 
-```{r fig.cap="Mean Monthly Visits for Healthcare HES Outpatient Users"}
+```{r fig.cap="Mean Monthly Visits for Healthcare HES A&E Users"}
 # Read images
-AE_Mean_monthly_visits_users <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots", "bootstrap_mean_visits_plot_users.PNG"))
+AE_Mean_monthly_visits_users <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots", "bootstrap_mean_visits_plot_users.PNG"))
 
-grid.raster(Mean_monthly_visits_users)
+grid.raster(AE_Mean_monthly_visits_users)
 
 ```
 
 ```{r fig.cap="Mean Monthly Visits for All Patients"}
-AE_Mean_monthly_visits_all <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots",  "boostratp_mean_visits_plot_all.PNG"))
-grid.raster(Mean_monthly_visits_all)
+AE_Mean_monthly_visits_all <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots", "boostratp_mean_visits_plot_all.PNG"))
+grid.raster(AE_Mean_monthly_visits_all)
 ```
 
 
@@ -2163,7 +2163,7 @@ ae_yearly_all_patients_costs_boot %>%
 
 ### Plots
 
-```{r fig.width=5, fig.height=6}
+```{r fig.width=5, fig.height=6, fig.cap="Mean Monthly Visits Costs for Healthcare HES A&E Users"}
 # Read images
 AE_Mean_monthly_visit_costs_users <- readPNG(here("OMOP Analysis","Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots", "bootstrap_mean_costs_plot_users.PNG"))
 
@@ -2171,7 +2171,7 @@ grid.raster(AE_Mean_monthly_visit_costs_users)
 
 ```
 
-```{r fig.cap="Mean Monthly Visit Costs for All Patients"}
+```{r fig.cap="Mean Monthly Visits Costs for All Patients"}
 AE_Mean_monthly_visit_costs_all <- readPNG(here("OMOP Analysis", "Results", "SecondaryCareAnalysis", "Comparison", "AE", "Plots",  "bootstrap_mean_costs_plot_all.PNG"))
 grid.raster(AE_Mean_monthly_visit_costs_all)
 ```
