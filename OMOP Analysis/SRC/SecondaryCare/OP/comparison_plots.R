@@ -1,3 +1,4 @@
+# HRCU ----
 monthly_bootstrap_combined_data_visits_users <- rbind(
   monthly_bootstrap_users_all_encounters_all_months_omop |> 
     mutate(data_source = "OMOP"), 
