@@ -12,7 +12,7 @@ library(boot)
 
 ## Read the files ----
 op_hrg_df <- read_csv(
-  "H:/Projects/Validation/HES HRG/Source/OP/OP_costs_HRG_output_attend.csv"
+  "H:/Projects/Validation/HES HRG/Source/OP/OP_costs_data_HRG_attend.csv"
   ) |> 
   clean_names()
 
@@ -314,7 +314,7 @@ users_overall_by_tretspef_c <- op_costs_final_data_recoded_raw |>
 
 rio::export(users_overall_by_tretspef_c,
             here::here("CPRD Raw Analysis", "Results",
-                       "SecondaryCareAnalysis","OP", "Output_costs_by_tretspef-Users_Raw.xlsx"))
+                       "SecondaryCareAnalysis","OP", "Overall","Output_costs_by_tretspef-Users_Raw.xlsx"))
 users_overall_by_tretspef_v <- op_costs_final_data_recoded_raw %>%
   filter(user_status == "User") %>% 
   group_by(patid, tretspef_recoded) %>%                     # group data per patient
@@ -329,7 +329,7 @@ users_overall_by_tretspef_v <- op_costs_final_data_recoded_raw %>%
             .groups = "drop")
 rio::export(users_overall_by_tretspef_v,
             here::here("CPRD Raw Analysis", "Results",
-                       "SecondaryCareAnalysis","OP", "Output_appointments_by_tretspef-Users_Raw.xlsx"))
+                       "SecondaryCareAnalysis","OP", "Overall", "Output_appointments_by_tretspef-Users_Raw.xlsx"))
 
 
 
@@ -372,7 +372,7 @@ all_overall_by_tretspef_c <- op_costs_final_data_recoded_raw |>
 
 rio::export(all_overall_by_tretspef_c,
             here::here("CPRD Raw Analysis", "Results",
-                       "SecondaryCareAnalysis", "OP","Output_costs_by_tretspef-All_Raw.xlsx"))
+                       "SecondaryCareAnalysis", "OP", "Overall", "Output_costs_by_tretspef-All_Raw.xlsx"))
 all_overall_by_tretspef_v <- op_costs_final_data_recoded_raw %>%
   group_by(patid, tretspef_recoded) %>%  
   mutate(tretspef_recoded = if_else(is.na(tretspef_recoded), "Non-User", tretspef_recoded)) |> # group data per patient
@@ -391,7 +391,7 @@ all_overall_by_tretspef_v <- op_costs_final_data_recoded_raw %>%
 
 rio::export(all_overall_by_tretspef_v,
             here::here("CPRD Raw Analysis", "Results",
-                       "SecondaryCareAnalysis","OP", "Output_appointments_by_tretspef-All_Raw.xlsx"))
+                       "SecondaryCareAnalysis","OP", "Overall", "Output_appointments_by_tretspef-All_Raw.xlsx"))
 
 
 # Export the file
@@ -404,7 +404,7 @@ costs_list <- list(
 
 # Write to an Excel file
 write_xlsx(costs_list, here::here("CPRD Raw Analysis", "Results",
-                                  "SecondaryCareAnalysis", "OP","Output_Costs_Raw.xlsx"))
+                                  "SecondaryCareAnalysis", "OP","Overall", "Output_Costs_Raw.xlsx"))
 
 # Bootstrap visit costs -----
 

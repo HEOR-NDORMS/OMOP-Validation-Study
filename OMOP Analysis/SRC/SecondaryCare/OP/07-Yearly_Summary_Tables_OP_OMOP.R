@@ -355,7 +355,7 @@ combined_encounters_bootstrap_summary_yearly <- bind_rows(
 
 
 # Compute max exposed year per patient ---
-cohort_years_all_years <- cohort_table %>%
+cohort_years_all_years <- cohort_table_omop %>%
   mutate(
     index_date = ymd(index_date),
     follow_up_end = ymd(follow_up_end),
