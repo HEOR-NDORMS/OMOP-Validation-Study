@@ -143,8 +143,8 @@ combined_bt_summary_hospitalisation <- bind_rows(
   dplyr::select(group, everything())
 
 ## Save outputs
-write.csv(combined_summary_hospitalisation, "CPRD Raw Analysis/Results/SecondaryCareAnalysis/APC/combined_summary_hospitalisation.csv", row.names = FALSE)
-write.csv(combined_bt_summary_hospitalisation,"CPRD Raw Analysis/Results/SecondaryCareAnalysis/APC/combined_bt_summary_hospitalisation.csv", row.names = FALSE)
+write.csv(combined_summary_hospitalisation, "CPRD Raw Analysis/SRC/SecondaryCare/APC/GL/combined_summary_hospitalisation.csv", row.names = FALSE)
+write.csv(combined_bt_summary_hospitalisation,"CPRD Raw Analysis/SRC/SecondaryCare/APC/GL/combined_bt_summary_hospitalisation.csv", row.names = FALSE)
 
 # --- Plot inpatient spells  ----
 plot_inpatient_spells <- ggplot(
@@ -167,7 +167,7 @@ plot_inpatient_spells <- ggplot(
     plot.title = element_text(face = "bold", size = 14)
   )
 
-ggsave("CPRD Raw Analysis/Results/SecondaryCareAnalysis/APC/plot_inpatient_spells.png", 
+ggsave("CPRD Raw Analysis/SRC/SecondaryCare/APC/GL/plot_inpatient_spells.png", 
        plot = plot_inpatient_spells, 
        width = 10, height = 6, dpi = 300)
 
@@ -228,5 +228,5 @@ boot_los <- bootstrap_summary(cohort_hospital_data_user, varname = "los")
 
 ## Save outputs
 
-write.csv(los_summary, "CPRD Raw Analysis/Results/SecondaryCareAnalysis/APC/los_summary.csv", row.names = FALSE)
-write.csv(boot_los,"CPRD Raw Analysis/Results/SecondaryCareAnalysis/APC/boot_los.csv",row.names = FALSE)
+write.csv(los_summary, "CPRD Raw Analysis/SRC/SecondaryCare/APC/GL/los_summary.csv", row.names = FALSE)
+write.csv(boot_los,"CPRD Raw Analysis/SRC/SecondaryCare/APC/GL/boot_los.csv",row.names = FALSE)

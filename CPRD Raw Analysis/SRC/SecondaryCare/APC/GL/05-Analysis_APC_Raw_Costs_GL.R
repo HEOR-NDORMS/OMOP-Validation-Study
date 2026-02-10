@@ -213,12 +213,76 @@ cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
 
 # --- 6) Mainspef/Tretspef---------------------------------------------------
 
-# tretspef = "&" means "not known" and is replaced with mainspef code
+#  "&" means "not known" and is replaced with mainspef code
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>% 
+  mutate(
+    mainspef = if_else(mainspef %in% c("&", "-"), NA_character_, mainspef),
+    tretspef = if_else(tretspef %in% c("&", "-"), NA_character_, tretspef),
+  )
 
+# 1) If only MAINSPEF missing, copy from TRETSPEF (and vice versa) ----
 cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
   mutate(
-    tretspef = if_else(tretspef == "&", mainspef, tretspef)
-  ) 
+    mainspef = if_else(
+      is.na(mainspef) & !is.na(tretspef) & !tretspef %in% invalid_mainspef,
+      tretspef,
+      mainspef
+    ),
+    tretspef = if_else(
+      is.na(tretspef) & !is.na(mainspef) & !mainspef %in% invalid_tretspef,
+      mainspef,
+      tretspef
+    )
+  )
+
+# 2) If mainspef/tretspef or both are still missing we replace with the mode across all appointments with same tretspef/mainspef or global mode if that does not exist
+
+get_mode <- function(x) {
+  x <- na.omit(x)
+  if (length(x) == 0) return(NA)
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+# global mode
+global_mode_mainspef <- get_mode(cohort_hospital_episodes_data_user$mainspef)
+global_mode_tretspef <- get_mode(cohort_hospital_episodes_data_user$tretspef)
+
+# conditional modes
+# TRETSPEF mode by MAINSPEF
+tretspef_mode_by_mainspef <- cohort_hospital_episodes_data_user %>%
+  group_by(mainspef) %>%
+  summarise(
+    mode_tretspef = get_mode(tretspef),
+    .groups = "drop"
+  )
+
+# MAINSPEF mode by TRETSPEF
+mainspef_mode_by_tretspef <- cohort_hospital_episodes_data_user %>%
+  group_by(tretspef) %>%
+  summarise(
+    mode_mainspef = get_mode(mainspef),
+    .groups = "drop"
+  )
+
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  left_join(tretspef_mode_by_mainspef, by = "mainspef") %>%
+  left_join(mainspef_mode_by_tretspef, by = "tretspef") %>%
+  mutate(
+    tretspef = if_else(
+      is.na(tretspef),
+      coalesce(mode_tretspef, global_mode_tretspef),
+      tretspef
+    ),
+    mainspef = if_else(
+      is.na(mainspef),
+      coalesce(mode_mainspef, global_mode_mainspef),
+      mainspef
+    )
+  ) %>%
+  select(-mode_tretspef, -mode_mainspef)
+
+
 
 # --- 7) Add age and sex ---------------------------------------------------
 cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
@@ -315,7 +379,7 @@ write.csv(cohort_hospital_episodes_data_user_grouper,
 
 # --- 9) Prepare NHS cost collection ---------------------------------------------------
 
-nhs_im_cost <- rio::import("CPRD Raw Analysis/SRC/SecondaryCare/APC/Admitted Patient Care.xlsx") # Admitted Patient Care is from 2024/25 version
+nhs_im_cost <- rio::import("CPRD Raw Analysis/SRC/SecondaryCare/APC/NHS_Collection_Costs_2023_2024.xlsx", sheet = "APC") 
 
 nhs_im_cost_weighted <- nhs_im_cost %>%
   mutate(
@@ -450,7 +514,10 @@ combined_summary_inpatient_costs <- bind_rows(
   in_costs_users
 ) 
 
+<<<<<<< HEAD:CPRD Raw Analysis/SRC/SecondaryCare/APC/05-Analysis_APC_Raw_Costs_GL.R
 
+=======
+>>>>>>> f7a096d482f6a4d8c5efb78ce5ce1d34e39c9499:CPRD Raw Analysis/SRC/SecondaryCare/APC/GL/05-Analysis_APC_Raw_Costs_GL.R
 # =====================================================
 # B) Bootstrap summaries for inpatient costs
 # =====================================================
@@ -508,7 +575,10 @@ combined_bt_summary_inpatient_costs <- bind_rows(
 ) %>%
   dplyr::select(group, everything())
 
+<<<<<<< HEAD:CPRD Raw Analysis/SRC/SecondaryCare/APC/05-Analysis_APC_Raw_Costs_GL.R
 ## Save outputs
 write.csv(combined_summary_inpatient_costs, "CPRD Raw Analysis/Results/SecondaryCareAnalysis/APC/combined_summary_inpatient_costs.csv", row.names = FALSE)
 write.csv(combined_bt_summary_inpatient_costs,"CPRD Raw Analysis/Results/SecondaryCareAnalysis/APC/combined_bt_summary_inpatient_costs.csv", row.names = FALSE)
 
+=======
+>>>>>>> f7a096d482f6a4d8c5efb78ce5ce1d34e39c9499:CPRD Raw Analysis/SRC/SecondaryCare/APC/GL/05-Analysis_APC_Raw_Costs_GL.R

@@ -615,6 +615,7 @@ combined_encounters_bootstrap_summary_monthly_raw <- bind_rows(
   select(group, everything())
 
 # Export
+library(writexl)
 write_xlsx(combined_encounters_bootstrap_summary_monthly_raw, 
            here::here("CPRD Raw Analysis", "Results", "SecondaryCareAnalysis", "AE", "Monthly",
                       "monthly_combined_bootstrap_summary_encounters_SOURCE.xlsx"))
@@ -1140,7 +1141,7 @@ write_xlsx(combined_costs_bootstrap_summary_monthly_raw,
 
 library(ggplot2)
 
-### OP visits plots ----
+### AE visits plots ----
 # Add group identifiers and combine into one dataframe
 df_boot_means_raw <- bind_rows(
   monthly_bootstrap_all_patients_all_encounters_all_months_raw %>%

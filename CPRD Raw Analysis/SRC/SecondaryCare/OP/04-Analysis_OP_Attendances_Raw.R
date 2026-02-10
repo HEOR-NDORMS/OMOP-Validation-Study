@@ -399,10 +399,8 @@ costs_data_hrg_op <- costs_data_hrg_op %>%
 
 # Filter for users only
 op_costs_users_data <- costs_data_hrg_op %>% 
-  filter(!is.na(apptdate)) %>% 
-  mutate(startage = as.numeric(format(apptdate, "%Y")) - yob) %>% 
-  rename(sex = gender) %>% 
-  mutate(sex = if_else(sex == "F", 2, 1)) 
+  filter(!is.na(apptdate))
+  
 
 # Assessing missing mainspef and tretspef ----
 (missing_summary <- op_costs_users_data |>
@@ -415,20 +413,21 @@ op_costs_users_data <- costs_data_hrg_op %>%
 
 # missing mainspef
 missing_mainspef <- op_costs_users_data  %>% 
-  filter(is.na(mainspef_code))  %>% 
-  dplyr::count(mainspef_code, sort = TRUE)
+  filter(is.na(mainspef))  %>% 
+  dplyr::count(mainspef, sort = TRUE)
 
 # missing tretspef
 missing_tretspef <- op_costs_users_data |>
-  filter(is.na(tretspef_code)) |>
-  dplyr::count(tretspef_code, sort = TRUE)
+  filter(is.na(tretspef)) |>
+  dplyr::count(tretspef, sort = TRUE)
 
 ### Define valid specialty codes ----
 valid_mainspef_codes <- c(
   100, 101, 107, 110, 120, 130, 140, 141, 142, 143, 145, 146, 147, 148, 149, 150, 160, 170, 171,
-  180, 190, 192, 300, 301, 302, 303, 304, 305, 310, 311, 313, 314, 315, 317, 320, 321, 330, 340,
-  350, 352, 360, 361, 370, 371, 400, 401, 410, 420, 421, 430, 450, 460, 501, 502, 560, 600, 601,
-  700, 710, 711, 712, 713, 715, 800, 810, 822, 823, 824, 830, 831, 900, 901, 902, 903, 950
+  180, 190, 192, 300, 301, 302, 303, 304, 305, 310, 311, 313, 314, 315, 317, 320, 321, 
+  325, 326, 330, 340,350, 352, 360, 361, 370, 371, 400, 401, 410, 420, 421, 430, 450, 460,
+  501, 502, 560, 600, 601, 700, 710, 711, 712, 713, 715, 800, 810, 820, 822, 823, 824, 
+  830, 831, 833, 900, 901, 902, 903, 950
 )
 
 valid_tretspef_codes <- c(
@@ -446,133 +445,167 @@ valid_tretspef_codes <- c(
   
 )
 
+# Helper: mode function
+get_mode <- function(x) {
+  x2 <- na.omit(x)
+  if (length(x2) == 0) return(NA_real_)
+  ux <- unique(x2)
+  ux[which.max(tabulate(match(x2, ux)))]
+}
+
 ### 1: If MAINSPEF missing, copy from TRETSPEF (and vice versa) if valid ----
+# apply the rule and keep new columns (do not overwrite original yet)
 rule1_applied <- costs_data_hrg %>%
-  
-  # Let's filter out the op non_users, as in primary analysis they'll 
-  # have cost = 0, so we will bring them back
-  filter(!is.na(apptdate)) %>% 
-  
+  filter(!is.na(apptdate)) %>%
   group_by(patid, apptdate, firstatt) %>%
-  
   mutate(
-    mainspef = if_else(
-      (is.na(mainspef) | !(mainspef %in% valid_mainspef_codes)) & tretspef %in% valid_mainspef_codes,
+    new_mainspef = if_else(
+      (is.na(mainspef) | !(mainspef %in% valid_mainspef_codes)) &
+        tretspef %in% valid_mainspef_codes,
       tretspef,
       mainspef
     ),
-    
-    tretspef = if_else(
-      (is.na(tretspef) | !(tretspef %in% valid_tretspef_codes)) & mainspef %in% valid_tretspef_codes,
+    new_tretspef = if_else(
+      (is.na(tretspef) | !(tretspef %in% valid_tretspef_codes)) &
+        mainspef %in% valid_tretspef_codes,
       mainspef,
       tretspef
     )
-    
   ) %>%
-  
   ungroup()
 
-#### Count cases where replacements were made ----
-(rule1_mainspef_replaced <- sum(
-  (is.na(costs_data_hrg$mainspef) | 
-     costs_data_hrg$tretspef %in% valid_mainspef_codes & costs_data_hrg$tretspef %in% valid_mainspef_codes
-  )))
+# Accurate replacement counts
+rule1_mainspef_replaced <- sum(
+  !is.na(rule1_applied$new_mainspef) &
+    (is.na(costs_data_hrg$mainspef) |
+       rule1_applied$new_mainspef != costs_data_hrg$mainspef),
+  na.rm = TRUE
+)
 
-(rule1_tretspef_replaced <- sum(
-  is.na(costs_data_hrg$tretspef) | 
-    costs_data_hrg$mainspef %in% valid_tretspef_codes & costs_data_hrg$mainspef %in% valid_tretspef_codes
-))
+rule1_tretspef_replaced <- sum(
+  !is.na(rule1_applied$new_tretspef) &
+    (is.na(costs_data_hrg$tretspef) |
+       rule1_applied$new_tretspef != costs_data_hrg$tretspef),
+  na.rm = TRUE
+)
 
 cat("MAINSPEF replaced from TRETSPEF in", rule1_mainspef_replaced, "cases.\n")
 cat("TRETSPEF replaced from MAINSPEF in", rule1_tretspef_replaced, "cases.\n")
 
-### 2: If both specialties missing: ----
-# drop if not attended, impute mode if attended
 
-# Function to get the code
-get_mode <- function(x) {
-  ux <- na.omit(unique(x))
-  ux[which.max(tabulate(match(x, ux)))]
-}
-mode_mainspef <- get_mode(costs_data_hrg$mainspef)
-mode_tretspef <- get_mode(costs_data_hrg$tretspef)
+## 2 & 3: If both specialties missing & Invalid mainspef and tretspef: ----
 
-cat("Mode of mainspef:", mode_mainspef, "\n")
-cat("Mode of tretspef:", mode_tretspef, "\n")
+# If one specialty is missing but the other is present and valid, fill the 
+# missing value with the mode of that missing specialty among all appointments 
+# that have the present specialty code.
+# (E.g. if tretspef == 320 and mainspef is missing, replace mainspef with the 
+# mode of mainspef across rows where tretspef==320.)
+
+# If both missing and the patient attended, fall back to the global mode
+
+# Where no conditional-mode exists (e.g. sparse codes), 
+# fall back to global mode only for attended rows.
+
+# Global modes
+mode_mainspef_global <- get_mode(rule1_applied$new_mainspef)
+mode_tretspef_global <- get_mode(rule1_applied$new_tretspef)
+
+# Build conditional-mode lookups:
+#  - mode of mainspef for each tretspef value (only use valid pairs)
+mainspef_mode_by_tret <- rule1_applied %>%
+  filter(!is.na(new_mainspef), !is.na(new_tretspef),
+         new_mainspef %in% valid_mainspef_codes,
+         new_tretspef %in% valid_tretspef_codes) %>%
+  group_by(new_tretspef) %>%
+  summarise(mode_mainspef = get_mode(new_mainspef), .groups = "drop")
+
+#  - mode of tretspef for each mainspef value
+tretspef_mode_by_main <- rule1_applied %>%
+  filter(!is.na(new_mainspef), !is.na(new_tretspef),
+         new_mainspef %in% valid_mainspef_codes,
+         new_tretspef %in% valid_tretspef_codes) %>%
+  group_by(new_mainspef) %>%
+  summarise(mode_tretspef = get_mode(new_tretspef), .groups = "drop")
 
 
-rule2_applied <- rule1_applied %>%
-  group_by(patid, apptdate) %>%
+rule2_3_applied <- rule1_applied %>%
+  left_join(mainspef_mode_by_tret, by = c("new_tretspef")) %>%
+  left_join(tretspef_mode_by_main, by = c("new_mainspef")) %>%
   mutate(
-    both_missing = is.na(mainspef) & is.na(tretspef),
-    attended_flag = attended == 5 # this is already done in the further cleaning
-  ) %>%
-  mutate(
-    mainspef = ifelse(both_missing & attended_flag, mode_mainspef, mainspef),
-    tretspef = ifelse(both_missing & attended_flag, mode_tretspef, tretspef)
-  ) %>% 
-  ungroup()
-
-#### Count cases where imputations were made ----
-rule2_imputed <- sum(rule2_applied$both_missing & rule2_applied$attended_flag,
-                     na.rm = TRUE)
-
-cat("Rule 2 imputed", rule2_imputed, "appoinments.\n")
-
-### 3. Invalid mainspef and tretspef -----
-# Replace remaining NAs in mainspef and tretspef with their respective 
-# mode values only if the patient attended.
-rule3_applied <- rule2_applied %>% 
-  group_by(patid, apptdate) %>%
-  mutate(
-    mainspef = ifelse(is.na(mainspef), mode_mainspef, mainspef),
-    tretspef = ifelse(is.na(tretspef), mode_tretspef, tretspef)
-  ) %>% 
-  ungroup()
-
-#### Count cases where imputations were made ----
-rule3_mainspef_imputed <- sum(is.na(rule2_applied$mainspef), na.rm = TRUE)
-rule3_tretspef_imputed <- sum(is.na(rule2_applied$tretspef), na.rm = TRUE)
-
-cat("Final imputation applied to:\n")
-cat(" - MAINSPEF:", rule3_mainspef_imputed, "cases\n")
-cat(" - TRETSPEF:", rule3_tretspef_imputed, "cases\n")
+    attended_flag = attended == 5,
+    
+    new_mainspef2 = if_else(
+      is.na(new_mainspef) & !is.na(mode_mainspef),
+      mode_mainspef,
+      new_mainspef
+    ),
+    
+    new_tretspef2 = if_else(
+      is.na(new_tretspef) & !is.na(mode_tretspef),
+      mode_tretspef,
+      new_tretspef
+    ),
+    
+    # global fallback (source uses attended-only)
+    new_mainspef3 = if_else(
+      is.na(new_mainspef2) & attended_flag,
+      mode_mainspef_global,
+      new_mainspef2
+    ),
+    
+    new_tretspef3 = if_else(
+      is.na(new_tretspef2) & attended_flag,
+      mode_tretspef_global,
+      new_tretspef2
+    )
+  )
 
 ### 4. Handle FIRSTATT == "X" ----
 # In the earlier cleaning steps we select attended == 5 
 # since Antonella did the same for omop
 # After checking the single option with Grouper, we replace X with 4,
 # which is least resource use intensive.
-rule4_applied <- rule3_applied %>% 
+rule4_applied <- rule2_3_applied %>% 
   mutate(firstatt = case_when(
     firstatt == "X" ~ "4",
     TRUE ~ firstatt
   ))
 
-rule4_firstatt_imputed <- sum(rule3_applied$firstatt == "X", na.rm = TRUE)
+rule4_firstatt_imputed <- sum(rule2_3_applied$firstatt == "X", na.rm = TRUE)
 cat(" Replace firstatt == X with 4:", rule4_firstatt_imputed, "cases\n")
 
-### 4. Final OP costs data ----
+## Final OP costs dataset ----
 op_costs_data <- rule4_applied %>%
-  rename(sex = gender) %>% 
-  select(startage, sex, mainspef, tretspef, firstatt) %>%
+  arrange(patid) %>%
+  select(startage, gender, new_mainspef3, new_tretspef3, firstatt) %>%
+  rename(
+    sex = gender,
+    mainspef = new_mainspef3,
+    tretspef = new_tretspef3
+  ) %>%
   rename_with(toupper)
+
 
 # lets check that we dont have any nas
 sapply(op_costs_data, function(x) sum(is.na(x))) # YAS!!!
 
 rio::export(op_costs_data, here::here("CPRD Raw Analysis", "Results",
-                                               "SecondaryCareAnalysis", "op_costs_data.csv"))
-rule4_applied_ids <- rule4_applied %>% 
+                                      "SecondaryCareAnalysis", "op_costs_data.csv"))
+rule4_applied <- rule4_applied %>% 
+  arrange(patid) %>% 
   select(patid)
 
 rio::export(rule4_applied_ids, here::here("CPRD Raw Analysis", "Results",
-                                      "SecondaryCareAnalysis", "op_costs_data_ids.csv"))
+                                          "SecondaryCareAnalysis", "op_costs_data_ids.csv"))
 
 op_costs_non_users <- costs_data_hrg %>% 
   filter(is.na(apptdate))
 rio::export(op_costs_non_users, here::here("CPRD Raw Analysis", "Results",
-                                      "SecondaryCareAnalysis", "op_costs_non_users.csv"))
+                                           "SecondaryCareAnalysis", "op_costs_non_users.csv"))
+rio::export(appt_data, here::here("CPRD Raw Analysis", "Results",
+                                  "SecondaryCareAnalysis", "OP", 
+                                  "appt_data_raw.csv"))
+
 # Costs have been done from my local R, but the script is uploaded in the Github.
 
 # Bootstrap cost summaries ----

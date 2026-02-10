@@ -25,7 +25,7 @@ export(monthly_bootstrap_combined_data_visits_users, here::here(
     )) +
     
     labs(
-      title = "Bootstrap Mean Monthly Outpatient Encounters Over Time\nfor Healthcare Users",
+      title = "Bootstrap Mean Monthly A&E Attendances Encounters Over Time\nfor Healthcare Users",
       x = "Month After Index",
       y = "Mean Number of Encounters",
       color = "Data Source"
@@ -75,7 +75,7 @@ monthly_bootstrap_combined_data_visits_all <- rbind(
     )) +
     
     labs(
-      title = "Bootstrap Mean Monthly Outpatient Encounters Over Time\nfor All Patients",
+      title = "Bootstrap Mean Monthly A&E Attendances Encounters Over Time\nfor All Patients",
       x = "Month After Index",
       y = "Mean Number of Encounters",
       color = "Data Source"
@@ -137,7 +137,7 @@ export(monthly_bootstrap_combined_data_costs_all, here::here(
     )) +
     
     labs(
-      title = "Mean Monthly Outpatient Costs Over Time\nfor All Patients",
+      title = "Bootstrap Mean Monthly A&E Attendances Costs Over Time\nfor All Patients",
       x = "Month After Index",
       y = "Mean Costs",
       color = "Data Source"
@@ -194,7 +194,7 @@ export(monthly_bootstrap_combined_data_costs_users, here::here(
     )) +
     
     labs(
-      title = "Mean Monthly Outpatient Costs Over Time\nfor Healthcare Users",
+      title = "Bootstrap Mean Monthly A&E Attendances Costs Over Time\nfor Healthcare Users",
       x = "Month After Index",
       y = "Mean Costs",
       color = "Data Source"

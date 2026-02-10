@@ -35,7 +35,7 @@ library(rio)
 # Start by running 05-CreatingCosts_OP_omop.R
 # Then from the server, save cohort_table dataset and appt_data
 
-cohort_table <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
+cohort_table_omop <- import("H:/Projects/Validation/Data/cohort_data_omop.csv")
 
 appt_data_omop <- import("H:/Projects/Validation/Data/appt_data_omop.csv") |> 
   arrange(subject_id)
@@ -427,7 +427,7 @@ observed_cost_summary_all_patients_all_encounters_all_years <- final_long_df_cos
     q3                 = quantile(total_costs, 0.75, na.rm = TRUE),
     n_exposed          = sum(!is.na(total_costs)),
     total_costs        = sum(total_costs, na.rm = TRUE),
-    mean_all_patients  = total_costs / n_all_pts_omop,
+    mean_all_patients  = total_costs / n_all_pts,
     .groups = "drop"
   ) %>%
   mutate(
