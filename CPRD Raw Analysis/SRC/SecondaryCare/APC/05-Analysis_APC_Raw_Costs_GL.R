@@ -450,3 +450,65 @@ combined_summary_inpatient_costs <- bind_rows(
   in_costs_users
 ) 
 
+
+# =====================================================
+# B) Bootstrap summaries for inpatient costs
+# =====================================================
+
+bootstrap_summary_cost <- function(data, varname = "total_in_cost", R = 1000, seed = 626) {
+  
+  stat_fn <- function(d, i) {
+    d_sample <- d[i, ]
+    mean(d_sample[[varname]], na.rm = TRUE)
+  }
+  
+  set.seed(seed)
+  boot_result <- boot(data = data, statistic = stat_fn, R = R)
+  boot_ci <- boot.ci(boot_result, type = c("norm", "basic", "perc"))
+  
+  boot_mean     <- mean(boot_result$t)
+  boot_values   <- boot_result$t
+  boot_variance <- var(as.numeric(boot_values))
+  boot_sd       <- sd(boot_values)
+  
+  ci_norm  <- boot_ci$normal[2:3]
+  ci_basic <- boot_ci$basic[4:5]
+  ci_perc  <- boot_ci$perc[4:5]
+  
+  tibble(
+    mean     = boot_mean,
+    variance = boot_variance,
+    sd       = boot_sd,
+    ci_norm_lower = ci_norm[1],
+    ci_norm_upper = ci_norm[2],
+    ci_basic_lower = ci_basic[1],
+    ci_basic_upper = ci_basic[2],
+    ci_perc_lower = ci_perc[1],
+    ci_perc_upper = ci_perc[2]
+  ) %>%
+    mutate(across(everything(), ~ round(.x, 3)))
+}
+
+## All patients
+boot_cost_all <- bootstrap_summary_cost(cohort_hospital_all_costs, varname = "total_in_cost") %>%
+  mutate(group = "All Patients")
+
+
+## Users only
+boot_cost_users <- cohort_hospital_all_costs %>%
+  filter(user_status_inpatient == "User") %>%
+  bootstrap_summary_cost(varname = "total_in_cost") %>%
+  mutate(group = "Users")
+
+
+# Combine bootstrap results
+combined_bt_summary_inpatient_costs <- bind_rows(
+  boot_cost_all,
+  boot_cost_users
+) %>%
+  dplyr::select(group, everything())
+
+## Save outputs
+write.csv(combined_summary_inpatient_costs, "CPRD Raw Analysis/Results/SecondaryCareAnalysis/APC/combined_summary_inpatient_costs.csv", row.names = FALSE)
+write.csv(combined_bt_summary_inpatient_costs,"CPRD Raw Analysis/Results/SecondaryCareAnalysis/APC/combined_bt_summary_inpatient_costs.csv", row.names = FALSE)
+
