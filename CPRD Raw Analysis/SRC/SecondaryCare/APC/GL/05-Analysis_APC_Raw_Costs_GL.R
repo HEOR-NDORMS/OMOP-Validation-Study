@@ -213,12 +213,76 @@ cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
 
 # --- 6) Mainspef/Tretspef---------------------------------------------------
 
-# tretspef = "&" means "not known" and is replaced with mainspef code
+#  "&" means "not known" and is replaced with mainspef code
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>% 
+  mutate(
+    mainspef = if_else(mainspef %in% c("&", "-"), NA_character_, mainspef),
+    tretspef = if_else(tretspef %in% c("&", "-"), NA_character_, tretspef),
+  )
 
+# 1) If only MAINSPEF missing, copy from TRETSPEF (and vice versa) ----
 cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
   mutate(
-    tretspef = if_else(tretspef == "&", mainspef, tretspef)
-  ) 
+    mainspef = if_else(
+      is.na(mainspef) & !is.na(tretspef) & !tretspef %in% invalid_mainspef,
+      tretspef,
+      mainspef
+    ),
+    tretspef = if_else(
+      is.na(tretspef) & !is.na(mainspef) & !mainspef %in% invalid_tretspef,
+      mainspef,
+      tretspef
+    )
+  )
+
+# 2) If mainspef/tretspef or both are still missing we replace with the mode across all appointments with same tretspef/mainspef or global mode if that does not exist
+
+get_mode <- function(x) {
+  x <- na.omit(x)
+  if (length(x) == 0) return(NA)
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+# global mode
+global_mode_mainspef <- get_mode(cohort_hospital_episodes_data_user$mainspef)
+global_mode_tretspef <- get_mode(cohort_hospital_episodes_data_user$tretspef)
+
+# conditional modes
+# TRETSPEF mode by MAINSPEF
+tretspef_mode_by_mainspef <- cohort_hospital_episodes_data_user %>%
+  group_by(mainspef) %>%
+  summarise(
+    mode_tretspef = get_mode(tretspef),
+    .groups = "drop"
+  )
+
+# MAINSPEF mode by TRETSPEF
+mainspef_mode_by_tretspef <- cohort_hospital_episodes_data_user %>%
+  group_by(tretspef) %>%
+  summarise(
+    mode_mainspef = get_mode(mainspef),
+    .groups = "drop"
+  )
+
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  left_join(tretspef_mode_by_mainspef, by = "mainspef") %>%
+  left_join(mainspef_mode_by_tretspef, by = "tretspef") %>%
+  mutate(
+    tretspef = if_else(
+      is.na(tretspef),
+      coalesce(mode_tretspef, global_mode_tretspef),
+      tretspef
+    ),
+    mainspef = if_else(
+      is.na(mainspef),
+      coalesce(mode_mainspef, global_mode_mainspef),
+      mainspef
+    )
+  ) %>%
+  select(-mode_tretspef, -mode_mainspef)
+
+
 
 # --- 7) Add age and sex ---------------------------------------------------
 cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
@@ -315,7 +379,7 @@ write.csv(cohort_hospital_episodes_data_user_grouper,
 
 # --- 9) Prepare NHS cost collection ---------------------------------------------------
 
-nhs_im_cost <- rio::import("CPRD Raw Analysis/SRC/SecondaryCare/APC/Admitted Patient Care.xlsx") # Admitted Patient Care is from 2024/25 version
+nhs_im_cost <- rio::import("CPRD Raw Analysis/SRC/SecondaryCare/APC/NHS_Collection_Costs_2023_2024.xlsx", sheet = "APC") 
 
 nhs_im_cost_weighted <- nhs_im_cost %>%
   mutate(
@@ -449,4 +513,61 @@ combined_summary_inpatient_costs <- bind_rows(
   in_costs_all,
   in_costs_users
 ) 
+
+# =====================================================
+# B) Bootstrap summaries for inpatient costs
+# =====================================================
+
+bootstrap_summary_cost <- function(data, varname = "total_in_cost", R = 1000, seed = 626) {
+  
+  stat_fn <- function(d, i) {
+    d_sample <- d[i, ]
+    mean(d_sample[[varname]], na.rm = TRUE)
+  }
+  
+  set.seed(seed)
+  boot_result <- boot(data = data, statistic = stat_fn, R = R)
+  boot_ci <- boot.ci(boot_result, type = c("norm", "basic", "perc"))
+  
+  boot_mean     <- mean(boot_result$t)
+  boot_values   <- boot_result$t
+  boot_variance <- var(as.numeric(boot_values))
+  boot_sd       <- sd(boot_values)
+  
+  ci_norm  <- boot_ci$normal[2:3]
+  ci_basic <- boot_ci$basic[4:5]
+  ci_perc  <- boot_ci$perc[4:5]
+  
+  tibble(
+    mean     = boot_mean,
+    variance = boot_variance,
+    sd       = boot_sd,
+    ci_norm_lower = ci_norm[1],
+    ci_norm_upper = ci_norm[2],
+    ci_basic_lower = ci_basic[1],
+    ci_basic_upper = ci_basic[2],
+    ci_perc_lower = ci_perc[1],
+    ci_perc_upper = ci_perc[2]
+  ) %>%
+    mutate(across(everything(), ~ round(.x, 3)))
+}
+
+## All patients
+boot_cost_all <- bootstrap_summary_cost(cohort_hospital_all_costs, varname = "total_in_cost") %>%
+  mutate(group = "All Patients")
+
+
+## Users only
+boot_cost_users <- cohort_hospital_all_costs %>%
+  filter(user_status_inpatient == "User") %>%
+  bootstrap_summary_cost(varname = "total_in_cost") %>%
+  mutate(group = "Users")
+
+
+# Combine bootstrap results
+combined_bt_summary_inpatient_costs <- bind_rows(
+  boot_cost_all,
+  boot_cost_users
+) %>%
+  dplyr::select(group, everything())
 
