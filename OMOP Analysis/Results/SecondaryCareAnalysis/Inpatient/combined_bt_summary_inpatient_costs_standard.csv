@@ -1,0 +1,3 @@
+"group","mean","variance","sd","ci_norm_lower","ci_norm_upper","ci_basic_lower","ci_basic_upper","ci_perc_lower","ci_perc_upper"
+"All Patients",2464.119,940.751,30.672,2403.777,2524.008,2402.15,2522.978,2405.033,2525.862
+"Users",4701.346,2316.431,48.129,4608.611,4797.275,4604.661,4795.099,4609.189,4799.628

@@ -1,0 +1,3 @@
+"group","n_pts","n_op","mean","min","max","sd","median","lower_q","upper_q","se","ci_lower","ci_upper"
+"All Patients",22900,166660,7.28,0,241,9.72,5,2,9,0.06,7.15,7.4
+"Users",20512,166660,8.12,1,241,9.93,5,3,10,0.07,7.99,8.26

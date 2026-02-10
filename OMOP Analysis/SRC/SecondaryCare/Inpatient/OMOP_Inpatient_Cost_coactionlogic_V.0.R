@@ -9,6 +9,11 @@ library(stringr)
 library (lubridate)
 library(tidyr)
 library(ggplot2)
+library(scales)
+library(MetBrewer)
+library(tidytext)   # reorder_within / scale_x_reordered
+library(rlang)
+library(rio)
 
 # --- 1) Episodes in study period -----------------------------------------
 cdm[["episodes"]] <- cdm$visit_detail %>%
@@ -58,7 +63,7 @@ cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
 # --- 5) Append specialty (mainspef / tretspef) ----------------------------
 provider <- cdm$provider %>% collect()
 # 1.Import cost inputs
-validated_map <- rio::import("OMOP Analysis/SRC/SecondaryCare/Inpatient/check_mainspef_tretspef_inpatient_outpatient_ValidationStudy_coactionlogic_GF.xlsx") %>% 
+validated_map <- rio::import("OMOP Analysis/SRC/SecondaryCare/Inpatient/check_mainspef_tretspef_inpatient_outpatient_ValidationStudy_coactionlogic_GF2.xlsx") %>% 
   mutate(
     specialty_source_value = specialty_source_value %>%
       str_remove("\\s*\\([^\\)]+\\)") %>%
@@ -117,22 +122,19 @@ diagnoses_clean <- diagnoses %>%
 #  Pull inpatient observations 
 cdm[["observation"]] <- cdm$observation %>%
   filter(
-    observation_type_concept_id == 32829,           # inpatient observations
+    observation_type_concept_id == 32829, # inpatient observations
     observation_date >= study_start_date,
     observation_date <= study_end_date
+  ) %>%
+  left_join(
+    cdm$concept %>% select(concept_id, vocabulary_id), # Join concept vocabulary info so we can filter ICD10 observations
+    by = c("observation_source_concept_id" = "concept_id")
   ) %>%
   compute(name = "observation", overwrite = TRUE)
 
 observation <- cdm[["observation"]] %>% collect()
 
-# Join concept vocabulary info so we can filter ICD10 observations
-observation <- observation %>%
-  left_join(
-    cdm$concept %>% select(concept_id, vocabulary_id),
-    by = c("observation_source_concept_id" = "concept_id"),
-    copy = TRUE
-  )
-
+# select only ICD10 observations
 observation_diag <- observation %>%
   filter(vocabulary_id == "ICD10") %>%
   select(visit_detail_id, observation_concept_id, observation_source_value) 
@@ -261,6 +263,56 @@ cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
     matches("^DIAG_"),
     ~ ifelse(.x == "A09X", "A099", .x)
   ))
+
+# ICD: D752 is not accepted - so we use 9 that stands for unspecified 
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(across(
+    matches("^DIAG_"),
+    ~ ifelse(.x == "D752", "D759", .x)
+  ))
+
+# ICD: H547 is not accepted - so we use 9 that stands for unspecified 
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(across(
+    matches("^DIAG_"),
+    ~ ifelse(.x == "H547", "H549", .x)
+  ))
+
+# ICD: K359 is not accepted - so we use 8 that stands for unspecified 
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(across(
+    matches("^DIAG_"),
+    ~ ifelse(.x == "K359", "K358", .x)
+  ))
+
+# ICD: K85X is not accepted - so we use 9 that stands for unspecified 
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(across(
+    matches("^DIAG_"),
+    ~ ifelse(.x == "K85X", "K859", .x)
+  ))
+
+# ICD: L89X is not accepted - so we use 9 that stands for unspecified 
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(across(
+    matches("^DIAG_"),
+    ~ ifelse(.x == "L89X", "L899", .x)
+  ))
+
+# ICD: R501 is not accepted - so we use 9 that stands for unspecified 
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(across(
+    matches("^DIAG_"),
+    ~ ifelse(.x == "R501", "R509", .x)
+  ))
+
+# ICD: K350 is not accepted - so we use 9 that stands for unspecified 
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(across(
+    matches("^DIAG_"),
+    ~ ifelse(.x == "K350", "K358", .x)
+  ))
+
 
 # There are no U80|U81|U88|U89 in list of accepted ICD10 - we drop them
 cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
@@ -444,17 +496,29 @@ cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
     ~ ifelse(str_detect(.x, "Z010"), "Z019", .x)
   ))
 
+# OPCS: Z020 is not accepted - so we use 9 that stands for unspecified 
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(across(
+    matches("^OPER_"),
+    ~ ifelse(str_detect(.x, "Z020"), "Z029", .x)
+  ))
+
+# OPCS: Z437 is not accepted - so we use 9 that stands for unspecified 
+cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
+  mutate(across(
+    matches("^OPER_"),
+    ~ ifelse(str_detect(.x, "Z437"), "Z439", .x)
+  ))
 
 # --- 8) Add age and sex ---------------------------------------------------
+person_df <- cdm$person %>%
+  dplyr::select(person_id, year_of_birth, gender_concept_id) %>%
+  collect()
+
 cohort_hospital_episodes_data_user <- cohort_hospital_episodes_data_user %>%
-  left_join(
-    cdm$person %>%
-      dplyr::select(person_id, year_of_birth, gender_concept_id),
-    by = "person_id",
-    copy = TRUE
-  ) %>%
+  left_join(person_df, by = "person_id") %>%
   mutate(
-    startage = year(visit_detail_start_date) - year_of_birth,
+    startage = lubridate::year(visit_detail_start_date) - year_of_birth,
     sex = case_when(
       gender_concept_id == 8507 ~ 1,  # Male
       gender_concept_id == 8532 ~ 2,  # Female
@@ -558,7 +622,8 @@ write.csv(cohort_hospital_episodes_data_user_grouper,
 
 # --- 10) Prepare NHS cost collection ---------------------------------------------------
 
-nhs_im_cost <- rio::import("OMOP Analysis/SRC/SecondaryCare/Inpatient/Admitted Patient Care.xlsx") # Admitted Patient Care is from 2024/25 version
+#nhs_im_cost <- rio::import("OMOP Analysis/SRC/SecondaryCare/Inpatient/Admitted Patient Care.xlsx") # Admitted Patient Care is from 2024/25 version
+nhs_im_cost <- read_excel("OMOP Analysis/SRC/SecondaryCare/OP/GL/NHS_Collection_Costs_2023_2024.xlsx", sheet = "APC")
 
 nhs_im_cost_weighted <- nhs_im_cost %>%
   mutate(
@@ -580,7 +645,7 @@ nhs_im_cost_weighted <- nhs_im_cost %>%
 # --- 11) Append HRG and Costs  ---------------------------------------------------
 
 # Import HRG output ---
-hrg_output_inpatient <- read.csv("OMOP Analysis/SRC/SecondaryCare/Inpatient/output_coactionlogic3_spell_rel.csv") 
+hrg_output_inpatient <- read.csv("OMOP Analysis/SRC/SecondaryCare/Inpatient/output_inpatient_coactionlogic_2324_spell_rel.csv") 
 
 # delete spells with errors
 hrg_output_inpatient <- hrg_output_inpatient %>%  
@@ -696,7 +761,7 @@ combined_summary_inpatient_costs <- bind_rows(
 
 # Save outputs
 write.csv(combined_summary_inpatient_costs,
-          "OMOP Analysis/Results/SecondaryCareAnalysis/Inpatient/combined_summary_inpatient_costs.csv",
+          "OMOP Analysis/Results/SecondaryCareAnalysis/Inpatient/combined_summary_inpatient_costs_coactionlogic.csv",
           row.names = FALSE)
 
 # =====================================================
@@ -758,7 +823,7 @@ combined_bt_summary_inpatient_costs <- bind_rows(
 
 # Save bootstrap outputs
 write.csv(combined_bt_summary_inpatient_costs,
-          "OMOP Analysis/Results/SecondaryCareAnalysis/Inpatient/combined_bt_summary_inpatient_costs.csv",
+          "OMOP Analysis/Results/SecondaryCareAnalysis/Inpatient/combined_bt_summary_inpatient_costs_coactionlogic.csv",
           row.names = FALSE)
 
 # =====================================================
@@ -790,4 +855,108 @@ ggsave("OMOP Analysis/Results/SecondaryCareAnalysis/Inpatient/plot_in_costs.png"
        width = 10, height = 6, dpi = 300)
 
 
+# =====================================================
+# D) HRG analyses: counts, counts by strata, costs, costs by strata
+# =====================================================
 
+# import ICD10 names with full labels preserved
+hrg_names <- import("HRG_ICD10_OPCS.xlsx", sheet = "HRG") |>
+  rename(
+    hrg_name = "Description") %>% distinct()
+
+cohort_hospital_data_user_cost <- cohort_hospital_data_user_cost |>
+  left_join(
+    hrg_names |> dplyr::select(hrg_name, HRG),
+    by = c("SpellHRG" = "HRG")
+  )
+
+# Parameters
+LABEL_MAX <- 25  # characters for shortened HRG labels
+
+# helper palette
+palette_for_n <- function(n) {
+  if (n <= 8) MetBrewer::met.brewer("Signac", n = n) else colorRampPalette(MetBrewer::met.brewer("Signac", n = 8))(n)
+}
+
+# --- Ensure cohort has an HRG text field (fallback to code if missing) ---
+cohort_hospital_data_user_cost <- cohort_hospital_data_user_cost %>%
+  mutate(hrg_name = if_else(is.na(hrg_name) | hrg_name == "", SpellHRG, hrg_name))
+
+# ========================
+# 1) COUNT-BASED: Bar plot by HRG (exclude <1%)
+# ========================
+
+hrg_count <- cohort_hospital_data_user_cost %>%
+  filter(!is.na(SpellHRG) & SpellHRG != "") %>%
+  # we use hrg_name text (already attached); group by HRG name
+  group_by(SpellHRG, hrg_name) %>%
+  summarise(n_hrg = n(), .groups = "drop") %>%
+  mutate(prop = n_hrg / sum(n_hrg)) %>%
+  ungroup()
+
+# produce trimmed short labels separately (keep full name if you want)
+hrg_trim <- hrg_count %>%
+  distinct(SpellHRG, hrg_name) %>%
+  mutate(
+    hrg_name_trim = str_trim(str_remove(hrg_name, "\\s*\\([^\\)]+\\)")),
+    hrg_name_short = if_else(str_length(hrg_name_trim) > LABEL_MAX,
+                             paste0(str_sub(hrg_name_trim, 1, LABEL_MAX), "..."),
+                             hrg_name_trim)
+  )
+
+# join trimmed names to the hrg_count
+hrg_count <- hrg_count %>%
+  left_join(hrg_trim %>% dplyr::select(SpellHRG, hrg_name_short), by = "SpellHRG")
+
+# group <1% as Other (we'll use short labels for plotting)
+hrg_grouped <- hrg_count %>%
+  mutate(group = if_else(prop >= 0.01, hrg_name_short, "Other")) %>%
+  group_by(group) %>%
+  summarise(tot_n = sum(n_hrg), prop = sum(prop), .groups = "drop")
+
+# # ordering within facets using numeric prop
+# hrg_grouped <- hrg_grouped %>%
+#   group_by(cluster_name) %>%
+#   mutate(group_order = reorder_within(group, prop, cluster_name)) %>%
+#   ungroup()
+
+# palette (exclude Other)
+non_other <- sort(hrg_grouped %>% filter(group != "Other") %>% pull(group) %>% unique())
+palette <- MetBrewer::met.brewer("Signac", n = length(non_other))
+fill_cols <- c(setNames(palette, non_other), "Other" = "#B0B0B0")
+
+plot_df <- hrg_grouped %>% filter(group != "Other")
+
+plot_hrg_counts <- ggplot(
+  plot_df,
+  aes(x = reorder(group, prop), y = prop, fill = group)
+) +
+  geom_col(width = 0.7, colour = "white") +
+  geom_text(
+    aes(label = paste0(round(prop * 100, 1), "%")),
+    vjust = -0.35,
+    size = 2.6
+  ) +
+  scale_y_continuous(
+    labels = label_percent(accuracy = 1),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
+  scale_fill_manual(
+    values = fill_cols[names(fill_cols) %in% plot_df$group]
+  ) +
+  labs(
+    title = "Hospitalisations by Main HRG (counts)",
+    subtitle = "Percent of total hospitalisations. HRGs under 1% excluded.",
+    x = "Primary HRG",
+    y = "Percentage of hospitalisations"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+    legend.position = "none",
+    plot.title = element_text(size = 13, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 9, hjust = 0.5)
+  )
+
+ggsave("OMOP Analysis/Results/plot_inpatient_hrgs_counts_bars.png",
+       plot = plot_hrg_counts, width = 12, height = 10, dpi = 300)
