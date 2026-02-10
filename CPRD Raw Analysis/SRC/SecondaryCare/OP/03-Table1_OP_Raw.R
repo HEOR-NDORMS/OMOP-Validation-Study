@@ -106,7 +106,7 @@ table_one_op_raw_appt <- table_one_op_raw_appt %>%
   filter(attended == 5)
 
 # Merge cohort data
-# merge back to cohort data, inorder to have patients have been filtered out 
+# merge back to cohort data, in order to have patients have been filtered out 
 # in the previous step
 table_one_op_raw_appt <- left_join(
   cohort_table %>% select(patid, index_date, follow_up_end), table_one_op_raw_appt,
