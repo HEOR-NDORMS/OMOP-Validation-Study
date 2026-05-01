@@ -1,2 +1,0 @@
-# OMOP Validation Study
- 

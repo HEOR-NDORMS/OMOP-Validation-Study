@@ -1,3 +1,0 @@
-"group","n_pts","n_spells","mean","min","max","sd","median","lower_q","upper_q","se","ci_lower","ci_upper"
-"All Patients",22900,26643,1.16,0,317,4,1,0,2,0.03,1.11,1.22
-"Users",12000,26643,2.22,1,317,5.32,1,1,2,0.05,2.13,2.32
