@@ -59,7 +59,7 @@ are not available in the OMOP-mapped A&E data, so a weighted mean unit cost is a
 attendance. `Source_Emergency_Costs_HE_Sensitivity.R` applies that same unit cost to the source
 attendances, which isolates the effect of the costing method from the effect of the mapping.
 
-**The two sides exchange patient-level files.** On the OMOP server,
+The two sides exchange patient-level files (not included in this repo). On the OMOP server,
 `Save_results_for_comparison.R` writes 16 CSVs of patient-level resource use and costs, eight for
 OMOP-standard and eight for OMOP-source. Run only the half of that script matching the strategy just
 analysed: both halves read the same object names, so running the whole file in one session would
@@ -77,7 +77,7 @@ Not included here, obtained separately:
 
 - **NHS HRG4+ Payment Grouper** (2024/25 reference), NHS England
 - **National Schedule of NHS Costs 2023-24**, for hospital unit costs
-- **PSSRU Unit Costs of Health and Social Care 2024**, for primary care unit costs
+- **PSSRU Unit Costs of Health and Social Care 2024**, for primary care unit costs, Personal Social Services Research Unit (PSSRU)
 
 Reference inputs are included, none of which contain patient-level data.
 
